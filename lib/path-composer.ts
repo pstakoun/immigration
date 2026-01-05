@@ -28,6 +28,7 @@ export interface PathRequirements {
   maxEducation?: Education; // e.g., student_bachelors shouldn't show if you already have a master's
   minExperience?: Experience;
   hasExtraordinaryAbility?: boolean;
+  isOutstandingResearcher?: boolean;
   isExecutive?: boolean;
   isMarried?: boolean;
   hasInvestment?: boolean;
@@ -231,6 +232,34 @@ export const STATUS_PATHS: StatusPath[] = [
     permStartOffset: null,
   },
   {
+    id: "l1b",
+    name: "L-1B Specialized",
+    emoji: "",
+    description: "Intracompany transfer with specialized knowledge. Requires PERM for green card",
+    validFromStatuses: ["canada", "other"],
+    requirements: {
+      minEducation: "bachelors",
+    },
+    stages: [
+      { nodeId: "l1b", duration: { min: 1, max: 5, display: "1-5 yr" }, note: "5-year max stay" },
+    ],
+    permStartOffset: 0.5,
+  },
+  {
+    id: "o1",
+    name: "O-1 Extraordinary",
+    emoji: "",
+    description: "Work visa for extraordinary ability. Strong path to EB-1A green card",
+    validFromStatuses: ["canada", "tn", "h1b", "opt", "other"],
+    requirements: {
+      hasExtraordinaryAbility: true,
+    },
+    stages: [
+      { nodeId: "o1", duration: { min: 1, max: 3, display: "1-3 yr" }, note: "Renewable" },
+    ],
+    permStartOffset: null, // O-1 holders typically use EB-1A (no PERM)
+  },
+  {
     id: "none",
     name: "Direct Filing",
     emoji: "",
@@ -250,11 +279,12 @@ export const GC_METHODS: GCMethod[] = [
     name: "PERM",
     requiresPerm: true,
     stages: [
-      { nodeId: "pwd", duration: { min: 0.33, max: 0.5, display: "4-6 mo" } },
+      // Real DOL data as of Dec 2025: PWD ~5-6mo, PERM analyst review ~16mo
+      { nodeId: "pwd", duration: { min: 0.42, max: 0.58, display: "5-7 mo" } },
       { nodeId: "recruit", duration: { min: 0.17, max: 0.25, display: "2-3 mo" } },
-      { nodeId: "perm", duration: { min: 0.5, max: 1, display: "6-12 mo" } },
-      { nodeId: "i140", duration: { min: 0.04, max: 0.5, display: "15d-6mo" } },
-      { nodeId: "i485", duration: { min: 0.5, max: 1.5, display: "6-18 mo" }, concurrent: true },
+      { nodeId: "perm", duration: { min: 1.17, max: 1.5, display: "14-18 mo" } },
+      { nodeId: "i140", duration: { min: 0.04, max: 0.75, display: "15d-9mo" }, note: "15 days w/ premium" },
+      { nodeId: "i485", duration: { min: 0.88, max: 1.5, display: "10-18 mo" }, concurrent: true },
       { nodeId: "gc", duration: { min: 0, max: 0, display: "" } },
     ],
     requirements: {
@@ -266,9 +296,9 @@ export const GC_METHODS: GCMethod[] = [
     name: "EB-2 NIW",
     requiresPerm: false,
     stages: [
-      { nodeId: "eb2niw", duration: { min: 0.5, max: 1, display: "6-12 mo" }, note: "I-140 NIW (45 days w/ premium)" },
-      { nodeId: "i485", duration: { min: 0.5, max: 1.5, display: "6-18 mo" }, concurrent: true, note: "Concurrent with I-140" },
-      { nodeId: "gc", duration: { min: 0, max: 0, display: "Done!" } },
+      { nodeId: "eb2niw", duration: { min: 0.1, max: 0.75, display: "45d-9mo" }, note: "45 days w/ premium processing" },
+      { nodeId: "i485", duration: { min: 0.88, max: 1.5, display: "10-18 mo" }, concurrent: true, note: "Concurrent with I-140" },
+      { nodeId: "gc", duration: { min: 0, max: 0, display: "" } },
     ],
     requirements: {
       minEducation: "masters", // NIW requires advanced degree (or bachelor's + 5yr)
@@ -280,28 +310,41 @@ export const GC_METHODS: GCMethod[] = [
     name: "EB-1A",
     requiresPerm: false,
     stages: [
-      { nodeId: "eb1", duration: { min: 0.04, max: 0.5, display: "15d-6mo" }, note: "I-140 EB-1A (15 days w/ premium)" },
-      { nodeId: "i485", duration: { min: 0.5, max: 1.5, display: "6-18 mo" }, concurrent: true, note: "Concurrent with I-140" },
-      { nodeId: "gc", duration: { min: 0, max: 0, display: "Done!" } },
+      { nodeId: "eb1", duration: { min: 0.04, max: 0.75, display: "15d-9mo" }, note: "15 days w/ premium processing" },
+      { nodeId: "i485", duration: { min: 0.88, max: 1.5, display: "10-18 mo" }, concurrent: true, note: "Concurrent with I-140" },
+      { nodeId: "gc", duration: { min: 0, max: 0, display: "" } },
     ],
     requirements: {
       hasExtraordinaryAbility: true,
-      // No education requirement - based purely on extraordinary ability
     },
     fixedCategory: "EB-1A",
+  },
+  {
+    id: "eb1b",
+    name: "EB-1B",
+    requiresPerm: false,
+    stages: [
+      { nodeId: "eb1", duration: { min: 0.04, max: 0.75, display: "15d-9mo" }, note: "15 days w/ premium processing" },
+      { nodeId: "i485", duration: { min: 0.88, max: 1.5, display: "10-18 mo" }, concurrent: true, note: "Concurrent with I-140" },
+      { nodeId: "gc", duration: { min: 0, max: 0, display: "" } },
+    ],
+    requirements: {
+      isOutstandingResearcher: true,
+      minEducation: "phd", // or 3+ years research experience
+    },
+    fixedCategory: "EB-1B",
   },
   {
     id: "eb1c",
     name: "EB-1C",
     requiresPerm: false,
     stages: [
-      { nodeId: "eb1", duration: { min: 0.04, max: 0.5, display: "15d-6mo" }, note: "EB-1C petition" },
-      { nodeId: "i485", duration: { min: 0.5, max: 1.5, display: "6-18 mo" }, concurrent: true, note: "Concurrent with I-140" },
-      { nodeId: "gc", duration: { min: 0, max: 0, display: "Done!" } },
+      { nodeId: "eb1", duration: { min: 0.04, max: 0.75, display: "15d-9mo" }, note: "15 days w/ premium processing" },
+      { nodeId: "i485", duration: { min: 0.88, max: 1.5, display: "10-18 mo" }, concurrent: true, note: "Concurrent with I-140" },
+      { nodeId: "gc", duration: { min: 0, max: 0, display: "" } },
     ],
     requirements: {
       isExecutive: true,
-      // No education requirement - based on executive/manager role
     },
     fixedCategory: "EB-1C",
   },
@@ -393,6 +436,7 @@ function meetsRequirements(
 
   // Check special qualifications
   if (requirements.hasExtraordinaryAbility && !filters.hasExtraordinaryAbility) return false;
+  if (requirements.isOutstandingResearcher && !filters.isOutstandingResearcher) return false;
   if (requirements.isExecutive && !filters.isExecutive) return false;
   if (requirements.isMarried && !filters.isMarriedToUSCitizen) return false;
   if (requirements.hasInvestment && !filters.hasInvestmentCapital) return false;

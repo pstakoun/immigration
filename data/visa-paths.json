@@ -178,6 +178,61 @@
         "7-year maximum stay"
       ]
     },
+    "l1b": {
+      "id": "l1b",
+      "name": "L-1B",
+      "fullName": "Intracompany Specialized Knowledge Transfer",
+      "category": "work",
+      "description": "For employees with specialized knowledge transferring from a foreign office to US. Requires PERM for green card.",
+      "requirements": [
+        "1 year employment with company abroad in last 3 years",
+        "Specialized knowledge of company products/services",
+        "US office must exist or be established"
+      ],
+      "filings": [
+        { "form": "I-129", "name": "L-1B Petition", "fee": 1385, "filed_by": "Employer", "processing": "3-6 months" },
+        { "form": "I-907", "name": "Premium Processing (optional)", "fee": 2805, "filed_by": "Employer", "processing": "15 business days" }
+      ],
+      "stats": {
+        "approvalRate": 0.72,
+        "rfeRate": 0.45,
+        "annualVolume": 35000,
+        "source": "USCIS FY2023"
+      },
+      "tips": [
+        "5-year maximum stay (vs 7 for L-1A)",
+        "Requires PERM labor certification for green card",
+        "Higher scrutiny than L-1A - document specialized knowledge thoroughly"
+      ]
+    },
+    "o1": {
+      "id": "o1",
+      "name": "O-1",
+      "fullName": "Extraordinary Ability/Achievement Visa",
+      "category": "work",
+      "description": "Work visa for individuals with extraordinary ability in sciences, arts, education, business, or athletics.",
+      "requirements": [
+        "Sustained national/international acclaim",
+        "Evidence meeting at least 3 of 8 criteria",
+        "Coming to US to work in area of extraordinary ability"
+      ],
+      "filings": [
+        { "form": "I-129", "name": "O-1 Petition", "fee": 1385, "filed_by": "Employer/Agent", "processing": "3-6 months" },
+        { "form": "I-907", "name": "Premium Processing", "fee": 2805, "filed_by": "Employer", "processing": "15 business days" }
+      ],
+      "stats": {
+        "approvalRate": 0.91,
+        "rfeRate": 0.25,
+        "annualVolume": 18000,
+        "source": "USCIS FY2023"
+      },
+      "tips": [
+        "No annual cap or lottery",
+        "Strong path to EB-1A green card (similar criteria)",
+        "Can be self-sponsored through agent",
+        "Initial 3-year stay, renewable in 1-year increments"
+      ]
+    },
     "pwd": {
       "id": "pwd",
       "name": "Prevailing Wage",

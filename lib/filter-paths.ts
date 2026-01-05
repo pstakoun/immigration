@@ -7,6 +7,7 @@ export interface FilterState {
   experience: Experience;
   currentStatus: CurrentStatus;
   hasExtraordinaryAbility: boolean;
+  isOutstandingResearcher: boolean;
   isExecutive: boolean;
   isStem: boolean;
   isMarriedToUSCitizen: boolean;
@@ -29,6 +30,7 @@ export const defaultFilters: FilterState = {
   experience: "lt2",
   currentStatus: "canada",
   hasExtraordinaryAbility: false,
+  isOutstandingResearcher: false,
   isExecutive: false,
   isStem: false,
   isMarriedToUSCitizen: false,
