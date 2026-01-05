@@ -98,7 +98,7 @@ export const STATUS_PATHS: StatusPath[] = [
     name: "Student → Master's",
     emoji: "",
     description: "Get a US Master's degree to qualify for EB-2. Work on OPT while pursuing green card",
-    validFromStatuses: ["canada", "tn", "h1b"],
+    validFromStatuses: ["canada", "tn", "h1b", "f1", "opt", "other"],
     requirements: {
       minEducation: "bachelors",
       maxEducation: "bachelors",
@@ -115,7 +115,7 @@ export const STATUS_PATHS: StatusPath[] = [
     name: "Student → PhD",
     emoji: "",
     description: "Get a US PhD. Strong for NIW/EB-1A self-petition. Work on OPT while pursuing green card",
-    validFromStatuses: ["canada", "tn", "h1b"],
+    validFromStatuses: ["canada", "tn", "h1b", "f1", "opt", "other"],
     requirements: {
       minEducation: "bachelors",
       maxEducation: "masters",
@@ -147,8 +147,8 @@ export const STATUS_PATHS: StatusPath[] = [
     id: "tn_direct",
     name: "TN Professional",
     emoji: "",
-    description: "TN visa for professionals in eligible USMCA occupations",
-    validFromStatuses: ["canada", "tn", "h1b"],
+    description: "TN visa for professionals in eligible USMCA occupations. Canadians can apply at border",
+    validFromStatuses: ["canada", "tn", "h1b", "f1", "opt"],
     requirements: {
       minEducation: "bachelors",
     },
@@ -183,6 +183,36 @@ export const STATUS_PATHS: StatusPath[] = [
     },
     stages: [
       { nodeId: "h1b", duration: { min: 1, max: 6, display: "1-6 yr" } },
+    ],
+    permStartOffset: 0,
+  },
+  {
+    id: "opt_to_tn",
+    name: "OPT → TN",
+    emoji: "",
+    description: "Use OPT initially, then switch to TN for more flexibility. No lottery required",
+    validFromStatuses: ["f1", "opt"],
+    requirements: {
+      minEducation: "bachelors",
+    },
+    stages: [
+      { nodeId: "opt", duration: { min: 0.5, max: 1, display: "6-12 mo" }, note: "Initial work authorization" },
+      { nodeId: "tn", duration: { min: 2, max: 3, display: "2-3 yr" }, note: "Switch to TN" },
+    ],
+    permStartOffset: 0.5,
+  },
+  {
+    id: "tn_to_h1b",
+    name: "TN → H-1B",
+    emoji: "",
+    description: "Start on TN, then switch to H-1B. H-1B allows dual intent for green card",
+    validFromStatuses: ["canada", "tn"],
+    requirements: {
+      minEducation: "bachelors",
+    },
+    stages: [
+      { nodeId: "tn", duration: { min: 1, max: 2, display: "1-2 yr" }, note: "Initial TN status" },
+      { nodeId: "h1b", duration: { min: 1, max: 3, display: "1-3 yr" }, note: "H-1B via lottery" },
     ],
     permStartOffset: 0,
   },
