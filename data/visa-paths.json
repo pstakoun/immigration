@@ -145,9 +145,10 @@
         "source": "USCIS FY2023"
       },
       "tips": [
+        "No annual cap or lottery - can apply anytime",
         "Need to meet 3 of 8 criteria with strong evidence",
-        "Quality of recommendation letters is crucial",
-        "Can lead to EB-1A green card (self-petition)"
+        "Can be self-sponsored through an agent",
+        "Strong path to EB-1A green card (similar criteria)"
       ]
     },
     "l1a": {
@@ -203,34 +204,6 @@
         "5-year maximum stay (vs 7 for L-1A)",
         "Requires PERM labor certification for green card",
         "Higher scrutiny than L-1A - document specialized knowledge thoroughly"
-      ]
-    },
-    "o1": {
-      "id": "o1",
-      "name": "O-1",
-      "fullName": "Extraordinary Ability/Achievement Visa",
-      "category": "work",
-      "description": "Work visa for individuals with extraordinary ability in sciences, arts, education, business, or athletics.",
-      "requirements": [
-        "Sustained national/international acclaim",
-        "Evidence meeting at least 3 of 8 criteria",
-        "Coming to US to work in area of extraordinary ability"
-      ],
-      "filings": [
-        { "form": "I-129", "name": "O-1 Petition", "fee": 1385, "filed_by": "Employer/Agent", "processing": "3-6 months" },
-        { "form": "I-907", "name": "Premium Processing", "fee": 2805, "filed_by": "Employer", "processing": "15 business days" }
-      ],
-      "stats": {
-        "approvalRate": 0.91,
-        "rfeRate": 0.25,
-        "annualVolume": 18000,
-        "source": "USCIS FY2023"
-      },
-      "tips": [
-        "No annual cap or lottery",
-        "Strong path to EB-1A green card (similar criteria)",
-        "Can be self-sponsored through agent",
-        "Initial 3-year stay, renewable in 1-year increments"
       ]
     },
     "pwd": {
@@ -297,7 +270,7 @@
         "Employer ability to pay offered wage"
       ],
       "filings": [
-        { "form": "ETA-9089", "name": "PERM Application", "fee": 0, "filed_by": "Employer", "processing": "6-12 months" }
+        { "form": "ETA-9089", "name": "PERM Application", "fee": 0, "filed_by": "Employer", "processing": "14-18 months" }
       ],
       "stats": {
         "approvalRate": 0.89,

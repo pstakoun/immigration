@@ -336,7 +336,7 @@ export const GC_METHODS: GCMethod[] = [
     ],
     requirements: {
       isOutstandingResearcher: true,
-      minEducation: "phd", // or 3+ years research experience
+      minEducation: "masters", // Advanced degree or equivalent research experience
     },
     fixedCategory: "EB-1B",
   },
