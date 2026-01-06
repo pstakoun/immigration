@@ -42,7 +42,7 @@ export default function FilterPanel({
               onChange={(e) =>
                 updateFilter("education", e.target.value as Education)
               }
-              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
             >
               {Object.entries(educationLabels).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -62,7 +62,7 @@ export default function FilterPanel({
               onChange={(e) =>
                 updateFilter("experience", e.target.value as Experience)
               }
-              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
             >
               {Object.entries(experienceLabels).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -82,7 +82,7 @@ export default function FilterPanel({
               onChange={(e) =>
                 updateFilter("currentStatus", e.target.value as CurrentStatus)
               }
-              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
             >
               {Object.entries(statusLabels).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -101,7 +101,7 @@ export default function FilterPanel({
               type="checkbox"
               checked={filters.isStem}
               onChange={(e) => updateFilter("isStem", e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
             />
             <span className="text-sm text-gray-700">STEM field</span>
           </label>
@@ -114,7 +114,7 @@ export default function FilterPanel({
               onChange={(e) =>
                 updateFilter("hasExtraordinaryAbility", e.target.checked)
               }
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
             />
             <span className="text-sm text-gray-700">Extraordinary ability</span>
           </label>
@@ -127,7 +127,7 @@ export default function FilterPanel({
               onChange={(e) =>
                 updateFilter("isOutstandingResearcher", e.target.checked)
               }
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
             />
             <span className="text-sm text-gray-700">Outstanding researcher</span>
           </label>
@@ -138,7 +138,7 @@ export default function FilterPanel({
               type="checkbox"
               checked={filters.isExecutive}
               onChange={(e) => updateFilter("isExecutive", e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
             />
             <span className="text-sm text-gray-700">Executive/Manager</span>
           </label>
@@ -169,7 +169,7 @@ export default function FilterPanel({
         {/* Results summary */}
         <div className="mt-3 text-sm text-gray-600">
           Showing{" "}
-          <span className="font-semibold text-blue-600">{matchingCount}</span>{" "}
+          <span className="font-semibold text-brand-600">{matchingCount}</span>{" "}
           {matchingCount === 1 ? "path" : "paths"} for your situation
         </div>
       </div>

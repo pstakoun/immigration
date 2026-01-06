@@ -1,7 +1,7 @@
 // Types for dynamic processing times from USCIS and DOL
-// This module provides adapters between DynamicImmigrationData and the internal ProcessingTimes format
+// This module provides adapters between DynamicData and the internal ProcessingTimes format
 
-import { DynamicImmigrationData } from "./dynamic-data";
+import { DynamicData } from "./dynamic-data";
 
 export interface USCISFormTimes {
   serviceCenter: string;
@@ -40,8 +40,8 @@ export interface ProcessingTimes {
   dol: DOLTimes;
 }
 
-// Convert DynamicImmigrationData to ProcessingTimes format
-export function adaptDynamicData(data: DynamicImmigrationData): ProcessingTimes {
+// Convert DynamicData to ProcessingTimes format
+export function adaptDynamicData(data: DynamicData): ProcessingTimes {
   const { processingTimes } = data;
 
   // Helper to create form times with optional premium

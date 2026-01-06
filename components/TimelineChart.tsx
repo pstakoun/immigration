@@ -19,7 +19,7 @@ interface TimelineChartProps {
 }
 
 const categoryColors: Record<string, { bg: string; border: string; text: string }> = {
-  entry: { bg: "bg-blue-500", border: "border-blue-600", text: "text-white" },
+  entry: { bg: "bg-brand-600", border: "border-brand-700", text: "text-white" },
   work: { bg: "bg-emerald-500", border: "border-emerald-600", text: "text-white" },
   greencard: { bg: "bg-amber-500", border: "border-amber-600", text: "text-white" },
   citizenship: { bg: "bg-purple-500", border: "border-purple-600", text: "text-white" },
@@ -162,7 +162,7 @@ export default function TimelineChart({
                       {path.totalYears.display} · ${path.estimatedCost.toLocaleString()}
                     </div>
                     <div className="flex items-center justify-end gap-1.5 mt-0.5">
-                      <span className="text-[10px] text-blue-600 font-medium">
+                      <span className="text-[10px] text-brand-600 font-medium">
                         {path.gcCategory}
                       </span>
                       {path.hasLottery && (
@@ -275,7 +275,7 @@ export default function TimelineChart({
                         key={`${stage.nodeId}-${idx}`}
                         className={`absolute rounded cursor-pointer transition-all duration-150 border
                           ${colors.bg} ${colors.border} ${colors.text}
-                          ${isHovered ? "ring-2 ring-offset-1 ring-blue-400 scale-105 z-30" : "z-10"}
+                          ${isHovered ? "ring-2 ring-offset-1 ring-brand-400 scale-105 z-30" : "z-10"}
                           ${isCurrentStatus ? "ring-2 ring-offset-1 ring-red-500" : ""}
                         `}
                         style={{
@@ -340,7 +340,7 @@ export default function TimelineChart({
             <span className="text-sm text-gray-600">GC Process</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-blue-500" />
+            <div className="w-4 h-4 rounded bg-brand-600" />
             <span className="text-sm text-gray-600">Entry Visa</span>
           </div>
           <div className="flex items-center gap-2">

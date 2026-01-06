@@ -1,11 +1,11 @@
-// API route for dynamic immigration data
+// API route for dynamic data
 // Fetches from: DOL FLAG, USCIS (via GitHub), Visa Bulletin
 import { NextResponse } from "next/server";
-import { getDynamicData, DynamicImmigrationData } from "@/lib/dynamic-data";
+import { getDynamicData, DynamicData } from "@/lib/dynamic-data";
 
 export const dynamic = "force-dynamic"; // Don't cache this route
 
-// GET: Return all dynamic immigration data
+// GET: Return all dynamic data
 export async function GET() {
   try {
     const data = await getDynamicData();
@@ -25,7 +25,7 @@ export async function GET() {
   } catch (error) {
     console.error("Error fetching dynamic data:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch immigration data" },
+      { success: false, error: "Failed to fetch data" },
       { status: 500 }
     );
   }

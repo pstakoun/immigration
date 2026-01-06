@@ -15,7 +15,7 @@ export default function PathDetail({ nodeId, onClose }: PathDetailProps) {
 
   const categoryColors: Record<string, string> = {
     origin: "bg-gray-500",
-    entry: "bg-blue-500",
+    entry: "bg-brand-600",
     work: "bg-emerald-500",
     greencard: "bg-amber-500",
     citizenship: "bg-purple-500",
@@ -95,7 +95,7 @@ export default function PathDetail({ nodeId, onClose }: PathDetailProps) {
               )}
               {"annualVolume" in (node.stats as Record<string, unknown>) && (
                 <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-2xl font-bold text-brand-700">
                     {((node.stats as { annualVolume: number }).annualVolume / 1000).toFixed(0)}k
                   </div>
                   <div className="text-xs text-gray-500">Annual Volume</div>
@@ -144,10 +144,10 @@ export default function PathDetail({ nodeId, onClose }: PathDetailProps) {
             <h3 className="font-semibold text-gray-900 mb-3">Forms & Filings</h3>
             <div className="space-y-3">
               {(node.filings as Array<{form: string; name: string; fee: number | string; filed_by: string; processing?: string; note?: string}>).map((filing, i) => (
-                <div key={i} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div key={i} className="bg-brand-50 border border-brand-200 rounded-lg p-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <span className="font-mono text-sm font-bold text-blue-800">{filing.form}</span>
+                      <span className="font-mono text-sm font-bold text-brand-800">{filing.form}</span>
                       <p className="text-sm text-gray-700">{filing.name}</p>
                     </div>
                     <span className="text-sm font-medium text-gray-900">
@@ -167,7 +167,7 @@ export default function PathDetail({ nodeId, onClose }: PathDetailProps) {
                     )}
                   </div>
                   {filing.note && (
-                    <p className="mt-1 text-xs text-blue-700">{filing.note}</p>
+                    <p className="mt-1 text-xs text-brand-700">{filing.note}</p>
                   )}
                 </div>
               ))}

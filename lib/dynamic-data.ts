@@ -4,7 +4,7 @@
 // - USCIS via GitHub: jzebedee/uscis daily SQLite releases
 // - Visa Bulletin: travel.state.gov (priority dates)
 
-export interface DynamicImmigrationData {
+export interface DynamicData {
   lastUpdated: string;
   sources: {
     dol: { url: string; fetchedAt: string };
@@ -72,7 +72,7 @@ async function fetchDOLData(): Promise<{
 }> {
   try {
     const response = await fetch("https://flag.dol.gov/processingtimes", {
-      headers: { "User-Agent": "ImmigrationPathways/1.0" },
+      headers: { "User-Agent": "Stateside/1.0" },
     });
 
     if (!response.ok) throw new Error(`DOL fetch failed: ${response.status}`);
@@ -113,7 +113,7 @@ async function fetchDOLData(): Promise<{
 }
 
 // Fetch Visa Bulletin priority dates
-async function fetchVisaBulletin(): Promise<DynamicImmigrationData["priorityDates"]> {
+async function fetchVisaBulletin(): Promise<DynamicData["priorityDates"]> {
   // Default values based on Jan 2026 bulletin
   const defaults = {
     eb1: { allOther: "Current", china: "Feb 2023", india: "Feb 2023" },
@@ -132,7 +132,7 @@ async function fetchVisaBulletin(): Promise<DynamicImmigrationData["priorityDate
     const url = `https://travel.state.gov/content/travel/en/legal/visa-law0/visa-bulletin/${year}/visa-bulletin-for-${month}-${year}.html`;
 
     const response = await fetch(url, {
-      headers: { "User-Agent": "ImmigrationPathways/1.0" },
+      headers: { "User-Agent": "Stateside/1.0" },
     });
 
     if (!response.ok) throw new Error(`Visa Bulletin fetch failed: ${response.status}`);
@@ -189,7 +189,7 @@ async function fetchVisaBulletin(): Promise<DynamicImmigrationData["priorityDate
 }
 
 // Type for USCIS form processing times
-type USCISProcessingTimes = Pick<DynamicImmigrationData["processingTimes"], "i140" | "i485" | "i765" | "i130" | "i129">;
+type USCISProcessingTimes = Pick<DynamicData["processingTimes"], "i140" | "i485" | "i765" | "i130" | "i129">;
 
 // Fetch USCIS processing times from GitHub database
 async function fetchUSCISFromGitHub(): Promise<USCISProcessingTimes> {
@@ -200,7 +200,7 @@ async function fetchUSCISFromGitHub(): Promise<USCISProcessingTimes> {
       {
         headers: {
           "Accept": "application/vnd.github.v3+json",
-          "User-Agent": "ImmigrationPathways/1.0",
+          "User-Agent": "Stateside/1.0",
         },
       }
     );
@@ -234,7 +234,7 @@ async function fetchUSCISFromGitHub(): Promise<USCISProcessingTimes> {
 
 // Current USCIS fees (as of Jan 2026)
 // These are updated less frequently - major fee rules every few years
-function getCurrentFees(): DynamicImmigrationData["fees"] {
+function getCurrentFees(): DynamicData["fees"] {
   return {
     i140: 715,
     i485: 1440,
@@ -247,7 +247,7 @@ function getCurrentFees(): DynamicImmigrationData["fees"] {
 }
 
 // Main fetch function - gets all dynamic data
-export async function fetchAllDynamicData(): Promise<DynamicImmigrationData> {
+export async function fetchAllDynamicData(): Promise<DynamicData> {
   const now = new Date().toISOString();
 
   // Fetch all data in parallel
@@ -280,11 +280,11 @@ export async function fetchAllDynamicData(): Promise<DynamicImmigrationData> {
 }
 
 // Cache for dynamic data
-let cachedData: DynamicImmigrationData | null = null;
+let cachedData: DynamicData | null = null;
 let cacheTimestamp: number = 0;
 const CACHE_TTL = 12 * 60 * 60 * 1000; // 12 hours
 
-export async function getDynamicData(forceRefresh = false): Promise<DynamicImmigrationData> {
+export async function getDynamicData(forceRefresh = false): Promise<DynamicData> {
   const now = Date.now();
 
   if (!forceRefresh && cachedData && (now - cacheTimestamp) < CACHE_TTL) {
@@ -297,6 +297,6 @@ export async function getDynamicData(forceRefresh = false): Promise<DynamicImmig
   return cachedData;
 }
 
-export function getCachedDataSync(): DynamicImmigrationData | null {
+export function getCachedDataSync(): DynamicData | null {
   return cachedData;
 }
