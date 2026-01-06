@@ -59,7 +59,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 px-6 py-3 flex-shrink-0">
         <div className="max-w-7xl mx-auto text-xs text-gray-500 text-center">
-          Data from USCIS FY2023. Timelines are estimates. Always consult an immigration attorney.
+          Live data from DOL, USCIS, and State Dept. Timelines are estimates. Always consult an immigration attorney.
         </div>
       </footer>
     </main>

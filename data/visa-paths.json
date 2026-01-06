@@ -39,7 +39,7 @@
         "Apply within 60 days of graduation"
       ],
       "filings": [
-        { "form": "I-765", "name": "Application for Employment Authorization", "fee": 410, "filed_by": "You", "processing": "3-5 months" }
+        { "form": "I-765", "name": "Application for Employment Authorization", "fee": 260, "filed_by": "You", "processing": "3-5 months" }
       ],
       "stats": {
         "approvalRate": 0.95,
@@ -384,9 +384,9 @@
         "PERM labor certification (unless NIW)"
       ],
       "filings": [
-        { "form": "PERM", "name": "Labor Certification", "fee": "5000-10000", "filed_by": "Employer", "processing": "12-18 months" },
-        { "form": "I-140", "name": "Immigrant Petition", "fee": 700, "filed_by": "Employer", "processing": "6-12 months" },
-        { "form": "I-485", "name": "Adjustment of Status", "fee": 1225, "filed_by": "You", "processing": "12-24 months" }
+        { "form": "PERM", "name": "Labor Certification", "fee": "5000-10000", "filed_by": "Employer", "processing": "15-19 months" },
+        { "form": "I-140", "name": "Immigrant Petition", "fee": 715, "filed_by": "Employer", "processing": "6-9 months" },
+        { "form": "I-485", "name": "Adjustment of Status", "fee": 1440, "filed_by": "You", "processing": "10-18 months" }
       ],
       "stats": {
         "approvalRate": 0.95,
@@ -442,9 +442,9 @@
         "Job offer from US employer"
       ],
       "filings": [
-        { "form": "PERM", "name": "Labor Certification", "fee": "5000-10000", "filed_by": "Employer", "processing": "12-18 months" },
-        { "form": "I-140", "name": "Immigrant Petition", "fee": 700, "filed_by": "Employer", "processing": "6-12 months" },
-        { "form": "I-485", "name": "Adjustment of Status", "fee": 1225, "filed_by": "You", "processing": "12-24 months" }
+        { "form": "PERM", "name": "Labor Certification", "fee": "5000-10000", "filed_by": "Employer", "processing": "15-19 months" },
+        { "form": "I-140", "name": "Immigrant Petition", "fee": 715, "filed_by": "Employer", "processing": "6-9 months" },
+        { "form": "I-485", "name": "Adjustment of Status", "fee": 1440, "filed_by": "You", "processing": "10-18 months" }
       ],
       "stats": {
         "approvalRate": 0.94,
@@ -502,7 +502,7 @@
       "filings": [
         { "form": "I-526E", "name": "Immigrant Petition for Regional Center", "fee": 11160, "filed_by": "You", "processing": "24-36 months" },
         { "form": "I-526", "name": "Immigrant Petition (Direct)", "fee": 11160, "filed_by": "You", "processing": "36-48 months" },
-        { "form": "I-485", "name": "Adjustment of Status", "fee": 1225, "filed_by": "You", "processing": "12-24 months" },
+        { "form": "I-485", "name": "Adjustment of Status", "fee": 1440, "filed_by": "You", "processing": "10-18 months" },
         { "form": "I-829", "name": "Remove Conditions (after 2 years)", "fee": 3035, "filed_by": "You" }
       ],
       "stats": {
@@ -530,7 +530,7 @@
       ],
       "filings": [
         { "form": "I-130", "name": "Petition for Alien Relative", "fee": 625, "filed_by": "US Spouse", "processing": "8-14 months" },
-        { "form": "I-485", "name": "Adjustment of Status", "fee": 1225, "filed_by": "You", "processing": "8-14 months" },
+        { "form": "I-485", "name": "Adjustment of Status", "fee": 1440, "filed_by": "You", "processing": "8-14 months" },
         { "form": "I-864", "name": "Affidavit of Support", "fee": 0, "filed_by": "US Spouse" },
         { "form": "I-751", "name": "Remove Conditions (if married < 2yr)", "fee": 760, "filed_by": "Both", "processing": "12-24 months" }
       ],
@@ -561,7 +561,7 @@
       "filings": [
         { "form": "I-129F", "name": "Petition for Fiance(e)", "fee": 675, "filed_by": "US Fiance", "processing": "8-14 months" },
         { "form": "DS-160", "name": "Visa Application", "fee": 265, "filed_by": "You" },
-        { "form": "I-485", "name": "Adjustment after marriage", "fee": 1225, "filed_by": "You", "processing": "8-14 months" }
+        { "form": "I-485", "name": "Adjustment after marriage", "fee": 1440, "filed_by": "You", "processing": "8-14 months" }
       ],
       "stats": {
         "approvalRate": 0.83,

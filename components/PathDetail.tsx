@@ -229,7 +229,7 @@ export default function PathDetail({ nodeId, onClose }: PathDetailProps) {
       {/* Footer */}
       <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4">
         <p className="text-xs text-gray-500">
-          Data from USCIS FY2023. Always consult an immigration attorney for your
+          Processing times updated live from official sources. Always consult an immigration attorney for your
           specific case.
         </p>
       </div>
