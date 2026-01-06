@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "Stateside - Your path to US immigration";
+export const alt = "Stateside - US immigration paths";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -16,83 +16,87 @@ export default function OpenGraphImage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%)",
+          background: "white",
           fontFamily: "system-ui, sans-serif",
         }}
       >
-        {/* Logo mark */}
+        {/* Logo */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            marginBottom: "32px",
+            gap: "16px",
+            marginBottom: "24px",
           }}
         >
-          <svg
-            width="100"
-            height="100"
-            viewBox="0 0 120 120"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+          <div
+            style={{
+              width: "64px",
+              height: "64px",
+              borderRadius: "16px",
+              background: "#22c55e",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
-            <path
-              d="M75 28c0-7.7-6.3-14-14-14H42c-7.7 0-14 6.3-14 14s6.3 14 14 14h19c7.7 0 14 6.3 14 14s-6.3 14-14 14H47"
-              stroke="white"
-              strokeWidth="13"
-              strokeLinecap="round"
-            />
-            <path
-              d="M56 70l-12 12M56 70l-12-12"
-              stroke="#fbbf24"
-              strokeWidth="9"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-
-        {/* Brand name */}
-        <div
-          style={{
-            fontSize: "72px",
-            fontWeight: "bold",
-            color: "white",
-            marginBottom: "16px",
-            letterSpacing: "-2px",
-          }}
-        >
-          Stateside
+            <svg
+              width="36"
+              height="36"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M5 12h14M12 5l7 7-7 7"
+                stroke="white"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <span
+            style={{
+              fontSize: "56px",
+              fontWeight: "600",
+              color: "#111827",
+              letterSpacing: "-1px",
+            }}
+          >
+            Stateside
+          </span>
         </div>
 
         {/* Tagline */}
         <div
           style={{
             fontSize: "28px",
-            color: "rgba(255, 255, 255, 0.8)",
+            color: "#6b7280",
             marginBottom: "48px",
           }}
         >
-          Your path to US immigration
+          Find your fastest path to a US green card
         </div>
 
-        {/* Feature pills */}
+        {/* Feature chips */}
         <div
           style={{
             display: "flex",
-            gap: "16px",
+            gap: "12px",
           }}
         >
-          {["Visa Pathways", "Green Card Timeline", "Live USCIS Data"].map(
+          {["Live USCIS data", "Timeline estimates", "All visa types"].map(
             (feature) => (
               <div
                 key={feature}
                 style={{
-                  padding: "12px 24px",
+                  padding: "10px 20px",
                   borderRadius: "999px",
-                  background: "rgba(255, 255, 255, 0.15)",
-                  color: "white",
+                  background: "#f0fdf4",
+                  color: "#166534",
                   fontSize: "18px",
+                  fontWeight: "500",
                 }}
               >
                 {feature}
@@ -106,8 +110,8 @@ export default function OpenGraphImage() {
           style={{
             position: "absolute",
             bottom: "32px",
-            fontSize: "20px",
-            color: "rgba(255, 255, 255, 0.6)",
+            fontSize: "18px",
+            color: "#9ca3af",
           }}
         >
           stateside.app

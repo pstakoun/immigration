@@ -14,29 +14,21 @@ export default function AppleIcon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%)",
+          background: "#22c55e",
           borderRadius: "32px",
         }}
       >
         <svg
-          width="120"
-          height="120"
-          viewBox="0 0 120 120"
+          width="100"
+          height="100"
+          viewBox="0 0 24 24"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Stylized S as pathway */}
           <path
-            d="M75 28c0-7.7-6.3-14-14-14H42c-7.7 0-14 6.3-14 14s6.3 14 14 14h19c7.7 0 14 6.3 14 14s-6.3 14-14 14H47"
+            d="M5 12h14M12 5l7 7-7 7"
             stroke="white"
-            strokeWidth="13"
-            strokeLinecap="round"
-          />
-          {/* Arrow accent */}
-          <path
-            d="M56 70l-12 12M56 70l-12-12"
-            stroke="#fbbf24"
-            strokeWidth="9"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
           />

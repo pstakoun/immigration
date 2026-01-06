@@ -18,39 +18,32 @@ export default function Home() {
   return (
     <main className="h-screen flex flex-col">
       {/* Header */}
-      <header className="bg-gradient-to-r from-brand-800 to-brand-700 px-6 py-4 flex-shrink-0">
-        <div className="max-w-7xl mx-auto flex items-center gap-3">
+      <header className="bg-white border-b border-gray-200 px-6 py-3 flex-shrink-0">
+        <div className="max-w-7xl mx-auto flex items-center gap-2.5">
           {/* Logo */}
-          <svg
-            width="36"
-            height="36"
-            viewBox="0 0 120 120"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="flex-shrink-0"
-          >
-            <path
-              d="M75 28c0-7.7-6.3-14-14-14H42c-7.7 0-14 6.3-14 14s6.3 14 14 14h19c7.7 0 14 6.3 14 14s-6.3 14-14 14H47"
-              stroke="white"
-              strokeWidth="13"
-              strokeLinecap="round"
-            />
-            <path
-              d="M56 70l-12 12M56 70l-12-12"
-              stroke="#fbbf24"
-              strokeWidth="9"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">
-              Stateside
-            </h1>
-            <p className="text-brand-200 text-sm">
-              Your path to US immigration
-            </p>
+          <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M5 12h14M12 5l7 7-7 7"
+                stroke="white"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
+          <span className="text-xl font-semibold text-gray-900 tracking-tight">
+            Stateside
+          </span>
+          <span className="text-sm text-gray-400 hidden sm:inline">
+            US immigration paths
+          </span>
         </div>
       </header>
 
@@ -82,9 +75,9 @@ export default function Home() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-brand-900 px-6 py-3 flex-shrink-0">
-        <div className="max-w-7xl mx-auto text-xs text-brand-300 text-center">
-          Live data from DOL, USCIS, and State Dept. Timelines are estimates. Always consult an immigration attorney.
+      <footer className="bg-gray-50 border-t border-gray-200 px-6 py-3 flex-shrink-0">
+        <div className="max-w-7xl mx-auto text-xs text-gray-500 text-center">
+          Live data from DOL, USCIS, and State Dept. Timelines are estimates. Consult an immigration attorney for your situation.
         </div>
       </footer>
     </main>
