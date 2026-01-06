@@ -1,49 +1,53 @@
-// API route for processing times
+// API route for dynamic immigration data
+// Fetches from: DOL FLAG, USCIS (via GitHub), Visa Bulletin
 import { NextResponse } from "next/server";
-import { getProcessingTimes, isDataStale, getCacheAgeHours } from "@/lib/cache-processing-times";
+import { getDynamicData, DynamicImmigrationData } from "@/lib/dynamic-data";
 
 export const dynamic = "force-dynamic"; // Don't cache this route
 
-// GET: Return cached processing times
+// GET: Return all dynamic immigration data
 export async function GET() {
   try {
-    const times = await getProcessingTimes();
-    const stale = isDataStale();
-    const ageHours = getCacheAgeHours();
+    const data = await getDynamicData();
 
     return NextResponse.json({
-      data: times,
+      success: true,
+      data,
       meta: {
-        isStale: stale,
-        cacheAgeHours: Math.round(ageHours * 10) / 10,
-        lastUpdated: times.lastUpdated,
+        cacheInfo: "Data refreshed every 12 hours automatically",
+        sources: [
+          "DOL FLAG (flag.dol.gov) - PWD/PERM processing times",
+          "USCIS via GitHub (jzebedee/uscis) - Form processing times",
+          "State Dept Visa Bulletin - Priority dates",
+        ],
       },
     });
   } catch (error) {
-    console.error("Error in processing-times GET:", error);
+    console.error("Error fetching dynamic data:", error);
     return NextResponse.json(
-      { error: "Failed to fetch processing times" },
+      { success: false, error: "Failed to fetch immigration data" },
       { status: 500 }
     );
   }
 }
 
-// POST: Force refresh cache
+// POST: Force refresh the cache
 export async function POST() {
   try {
-    const times = await getProcessingTimes(true); // Force refresh
+    const data = await getDynamicData(true); // Force refresh
 
     return NextResponse.json({
-      data: times,
+      success: true,
+      data,
       meta: {
         refreshed: true,
-        lastUpdated: times.lastUpdated,
+        refreshedAt: new Date().toISOString(),
       },
     });
   } catch (error) {
-    console.error("Error in processing-times POST:", error);
+    console.error("Error refreshing data:", error);
     return NextResponse.json(
-      { error: "Failed to refresh processing times" },
+      { success: false, error: "Failed to refresh data" },
       { status: 500 }
     );
   }

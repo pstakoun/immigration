@@ -1,4 +1,7 @@
 // Types for dynamic processing times from USCIS and DOL
+// This module provides adapters between DynamicImmigrationData and the internal ProcessingTimes format
+
+import { DynamicImmigrationData } from "./dynamic-data";
 
 export interface USCISFormTimes {
   serviceCenter: string;
@@ -35,6 +38,62 @@ export interface ProcessingTimes {
     "I-129": USCISFormTimes[]; // H-1B, L-1, O-1
   };
   dol: DOLTimes;
+}
+
+// Convert DynamicImmigrationData to ProcessingTimes format
+export function adaptDynamicData(data: DynamicImmigrationData): ProcessingTimes {
+  const { processingTimes } = data;
+
+  // Helper to create form times with optional premium
+  const makeFormTimes = (
+    form: { min: number; max: number; premiumDays?: number },
+    asOf: string
+  ): USCISFormTimes[] => {
+    const times: USCISFormTimes[] = [
+      {
+        serviceCenter: "National",
+        processingTime: { min: form.min, max: form.max },
+        asOf,
+      },
+    ];
+    if (form.premiumDays !== undefined && form.premiumDays > 0) {
+      times.push({
+        serviceCenter: "Premium",
+        processingTime: { min: form.premiumDays / 30, max: form.premiumDays / 30 },
+        asOf,
+      });
+    }
+    return times;
+  };
+
+  return {
+    lastUpdated: data.lastUpdated,
+    uscis: {
+      "I-140": makeFormTimes(processingTimes.i140, data.lastUpdated),
+      "I-485": makeFormTimes(processingTimes.i485, data.lastUpdated),
+      "I-765": makeFormTimes(processingTimes.i765, data.lastUpdated),
+      "I-130": makeFormTimes(processingTimes.i130, data.lastUpdated),
+      "I-129": makeFormTimes(processingTimes.i129, data.lastUpdated),
+    },
+    dol: {
+      pwd: {
+        currentlyProcessing: processingTimes.pwd.currentlyProcessing,
+        estimatedMonths: processingTimes.pwd.months,
+        asOf: data.lastUpdated,
+      },
+      perm: {
+        analystReview: {
+          currentlyProcessing: processingTimes.perm.currentlyProcessing,
+          estimatedMonths: processingTimes.perm.months,
+        },
+        auditReview: {
+          currentlyProcessing: processingTimes.permAudit.currentlyProcessing,
+          estimatedMonths: processingTimes.permAudit.months,
+        },
+        asOf: data.lastUpdated,
+      },
+    },
+  };
 }
 
 // Default fallback values if fetch fails

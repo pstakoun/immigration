@@ -4,7 +4,8 @@ import { useState, useMemo, useEffect } from "react";
 import visaData from "@/data/visa-paths.json";
 import { FilterState, statusToNodeId } from "@/lib/filter-paths";
 import { generatePaths, ComposedPath, ComposedStage, setProcessingTimes, getProcessingTimes } from "@/lib/path-composer";
-import { ProcessingTimes, DEFAULT_PROCESSING_TIMES } from "@/lib/processing-times";
+import { ProcessingTimes, DEFAULT_PROCESSING_TIMES, adaptDynamicData } from "@/lib/processing-times";
+import { DynamicImmigrationData } from "@/lib/dynamic-data";
 
 const PIXELS_PER_YEAR = 160;
 const MAX_YEARS = 8;
@@ -30,6 +31,14 @@ const trackLabels: Record<string, string> = {
   gc: "GC Process",
 };
 
+// Extended state for dynamic data
+interface DynamicDataState {
+  processingTimes: ProcessingTimes;
+  priorityDates: DynamicImmigrationData["priorityDates"] | null;
+  sources: DynamicImmigrationData["sources"] | null;
+  fees: DynamicImmigrationData["fees"] | null;
+}
+
 export default function TimelineChart({
   onStageClick,
   filters,
@@ -37,7 +46,12 @@ export default function TimelineChart({
 }: TimelineChartProps) {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [hoveredStage, setHoveredStage] = useState<string | null>(null);
-  const [processingTimes, setLocalProcessingTimes] = useState<ProcessingTimes>(DEFAULT_PROCESSING_TIMES);
+  const [dynamicData, setDynamicData] = useState<DynamicDataState>({
+    processingTimes: DEFAULT_PROCESSING_TIMES,
+    priorityDates: null,
+    sources: null,
+    fees: null,
+  });
   const [dataLastUpdated, setDataLastUpdated] = useState<string | null>(null);
   const [isLoadingTimes, setIsLoadingTimes] = useState(false);
 
@@ -49,9 +63,18 @@ export default function TimelineChart({
         const response = await fetch("/api/processing-times");
         if (response.ok) {
           const result = await response.json();
-          setProcessingTimes(result.data);
-          setLocalProcessingTimes(result.data);
-          setDataLastUpdated(result.meta.lastUpdated);
+          if (result.success && result.data) {
+            const data: DynamicImmigrationData = result.data;
+            const adapted = adaptDynamicData(data);
+            setProcessingTimes(adapted);
+            setDynamicData({
+              processingTimes: adapted,
+              priorityDates: data.priorityDates,
+              sources: data.sources,
+              fees: data.fees,
+            });
+            setDataLastUpdated(data.lastUpdated);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch processing times:", error);
@@ -73,7 +96,7 @@ export default function TimelineChart({
     const generatedPaths = generatePaths(filters);
     onMatchingCountChange(generatedPaths.length);
     return generatedPaths;
-  }, [filters, onMatchingCountChange, processingTimes]);
+  }, [filters, onMatchingCountChange, dynamicData.processingTimes]);
 
   // Check if a path has multiple tracks
   const hasMultipleTracks = (stages: ComposedStage[]) => {
@@ -323,20 +346,41 @@ export default function TimelineChart({
           {dataLastUpdated && (
             <div className="text-xs text-gray-500 mb-2">
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                Processing times updated: {new Date(dataLastUpdated).toLocaleDateString("en-US", {
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                Live data as of {new Date(dataLastUpdated).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
                 })}
               </span>
-              {processingTimes.dol.perm.analystReview.currentlyProcessing && (
+              {dynamicData.processingTimes.dol.perm.analystReview.currentlyProcessing && (
                 <span className="ml-3 text-gray-400">
-                  PERM queue: {processingTimes.dol.perm.analystReview.currentlyProcessing} cases
+                  PERM: processing {dynamicData.processingTimes.dol.perm.analystReview.currentlyProcessing} cases
                 </span>
               )}
             </div>
           )}
+
+          {/* Priority dates for Canadians (all other chargeability) */}
+          {dynamicData.priorityDates && (
+            <div className="text-xs text-gray-500 mb-2 flex items-center justify-center gap-4">
+              <span className="font-medium text-gray-600">Priority Dates:</span>
+              <span>EB-1: <span className="text-green-600 font-medium">{dynamicData.priorityDates.eb1.allOther}</span></span>
+              <span>EB-2: <span className="text-blue-600 font-medium">{dynamicData.priorityDates.eb2.allOther}</span></span>
+              <span>EB-3: <span className="text-amber-600 font-medium">{dynamicData.priorityDates.eb3.allOther}</span></span>
+            </div>
+          )}
+
+          {/* Data sources */}
+          {dynamicData.sources && (
+            <div className="text-[10px] text-gray-400 mb-2 flex items-center justify-center gap-3">
+              <span>Sources:</span>
+              <a href={dynamicData.sources.dol.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 underline">DOL FLAG</a>
+              <a href={dynamicData.sources.uscis.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 underline">USCIS Data</a>
+              <a href={dynamicData.sources.visaBulletin.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 underline">Visa Bulletin</a>
+            </div>
+          )}
+
           {isLoadingTimes && (
             <div className="text-xs text-gray-400 mb-2">
               Loading latest processing times...
