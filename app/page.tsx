@@ -1,56 +1,127 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import TimelineChart from "@/components/TimelineChart";
 import PathDetail from "@/components/PathDetail";
 import FilterPanel from "@/components/FilterPanel";
+import OnboardingQuiz from "@/components/OnboardingQuiz";
 import { FilterState, defaultFilters } from "@/lib/filter-paths";
+import { getStoredProfile, saveUserProfile } from "@/lib/storage";
 
 export default function Home() {
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [matchingCount, setMatchingCount] = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Load stored profile on mount
+  useEffect(() => {
+    const profile = getStoredProfile();
+    if (profile) {
+      setFilters(profile.filters);
+      setShowOnboarding(false);
+    } else {
+      setShowOnboarding(true);
+    }
+    setIsLoaded(true);
+  }, []);
 
   const handleMatchingCountChange = useCallback((count: number) => {
     setMatchingCount(count);
   }, []);
 
+  const handleOnboardingComplete = (newFilters: FilterState) => {
+    setFilters(newFilters);
+    saveUserProfile(newFilters);
+    setShowOnboarding(false);
+  };
+
+  const handleFiltersChange = (newFilters: FilterState) => {
+    setFilters(newFilters);
+    saveUserProfile(newFilters);
+  };
+
+  const handleEditProfile = () => {
+    setShowOnboarding(true);
+  };
+
+  // Don't render until we've checked localStorage (prevents flash)
+  if (!isLoaded) {
+    return (
+      <main className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 rounded-lg bg-brand-500 animate-pulse" />
+      </main>
+    );
+  }
+
   return (
     <main className="h-screen flex flex-col">
+      {/* Onboarding Quiz Modal */}
+      {showOnboarding && (
+        <OnboardingQuiz
+          onComplete={handleOnboardingComplete}
+          initialFilters={filters}
+        />
+      )}
+
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-3 flex-shrink-0">
-        <div className="max-w-7xl mx-auto flex items-center gap-2.5">
-          {/* Logo */}
-          <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            {/* Logo */}
+            <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5 12h14M12 5l7 7-7 7"
+                  stroke="white"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <span className="text-xl font-semibold text-gray-900 tracking-tight">
+              Stateside
+            </span>
+            <span className="text-sm text-gray-400 hidden sm:inline">
+              US immigration paths
+            </span>
+          </div>
+
+          {/* Edit Profile Button */}
+          <button
+            onClick={handleEditProfile}
+            className="text-sm text-gray-500 hover:text-brand-600 transition-colors flex items-center gap-1.5"
+          >
             <svg
-              width="20"
-              height="20"
+              width="16"
+              height="16"
               viewBox="0 0 24 24"
               fill="none"
-              xmlns="http://www.w3.org/2000/svg"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <path
-                d="M5 12h14M12 5l7 7-7 7"
-                stroke="white"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
             </svg>
-          </div>
-          <span className="text-xl font-semibold text-gray-900 tracking-tight">
-            Stateside
-          </span>
-          <span className="text-sm text-gray-400 hidden sm:inline">
-            US immigration paths
-          </span>
+            <span className="hidden sm:inline">Edit profile</span>
+          </button>
         </div>
       </header>
 
       {/* Filter Panel */}
       <FilterPanel
         filters={filters}
-        onChange={setFilters}
+        onChange={handleFiltersChange}
         matchingCount={matchingCount}
       />
 
