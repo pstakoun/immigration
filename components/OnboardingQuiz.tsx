@@ -38,9 +38,11 @@ const experienceOptions: { value: Experience; label: string; description: string
 ];
 
 const countryOptions: { value: CountryOfBirth; label: string; description: string }[] = [
-  { value: "other", label: "Other countries", description: "Faster green card processing" },
+  { value: "canada", label: "Canada", description: "TN visa eligible" },
+  { value: "mexico", label: "Mexico", description: "TN visa eligible" },
   { value: "india", label: "India", description: "Significant EB backlogs" },
   { value: "china", label: "China (mainland)", description: "EB backlogs apply" },
+  { value: "other", label: "Other", description: "No major backlogs" },
 ];
 
 function hasAnySpecialCircumstance(filters: FilterState): boolean {
@@ -58,7 +60,14 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
   const [showSpecial, setShowSpecial] = useState(() => hasAnySpecialCircumstance(initialFilters || defaultFilters));
 
   const updateFilter = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    setFilters((prev) => {
+      const updated = { ...prev, [key]: value };
+      // Reset citizenship flag when born in Canada/Mexico (not needed)
+      if (key === "countryOfBirth" && (value === "canada" || value === "mexico")) {
+        updated.isCanadianOrMexicanCitizen = false;
+      }
+      return updated;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -222,9 +231,9 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
                 Country of birth
               </label>
               <p className="text-xs text-gray-500 mb-3">
-                Affects green card wait times due to visa bulletin backlogs
+                Affects TN visa eligibility and green card wait times
               </p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-5 gap-2">
                 {countryOptions.map((option) => (
                   <button
                     key={option.value}
@@ -245,6 +254,22 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
                   </button>
                 ))}
               </div>
+
+              {/* Citizenship checkbox - only show if NOT born in Canada/Mexico */}
+              {filters.countryOfBirth !== "canada" && filters.countryOfBirth !== "mexico" && (
+                <label className="flex items-start gap-3 p-3 mt-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={filters.isCanadianOrMexicanCitizen}
+                    onChange={(e) => updateFilter("isCanadianOrMexicanCitizen", e.target.checked)}
+                    className="mt-0.5 w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
+                  />
+                  <div>
+                    <div className="font-medium text-sm text-gray-900">I&apos;m a Canadian or Mexican citizen</div>
+                    <div className="text-xs text-gray-500">Unlocks TN visa paths even if born elsewhere</div>
+                  </div>
+                </label>
+              )}
             </div>
 
             {/* Special Circumstances - Collapsible */}

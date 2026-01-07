@@ -1,4 +1,4 @@
-import { FilterState, CurrentStatus, Education, Experience } from "./filter-paths";
+import { FilterState, CurrentStatus, Education, Experience, isTNEligible } from "./filter-paths";
 import visaData from "@/data/visa-paths.json";
 import { ProcessingTimes, DEFAULT_PROCESSING_TIMES, formatMonths, calculatePriorityDateWait, getPriorityDateForPath, formatPriorityWait } from "./processing-times";
 import { DynamicData } from "./dynamic-data";
@@ -528,6 +528,12 @@ function isStatusPathValidForUser(statusPath: StatusPath, filters: FilterState):
 
   // Check if user meets requirements
   if (!meetsRequirements(filters, statusPath.requirements)) {
+    return false;
+  }
+
+  // TN visa paths require Canadian or Mexican citizenship
+  const tnPathIds = ["tn_direct", "opt_to_tn", "tn_to_h1b"];
+  if (tnPathIds.includes(statusPath.id) && !isTNEligible(filters)) {
     return false;
   }
 

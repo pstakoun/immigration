@@ -1,7 +1,7 @@
 export type Education = "highschool" | "bachelors" | "masters" | "phd";
 export type Experience = "lt2" | "2to5" | "gt5";
 export type CurrentStatus = "canada" | "f1" | "opt" | "tn" | "h1b" | "other";
-export type CountryOfBirth = "india" | "china" | "other";
+export type CountryOfBirth = "canada" | "mexico" | "india" | "china" | "other";
 
 export interface FilterState {
   education: Education;
@@ -14,6 +14,7 @@ export interface FilterState {
   isStem: boolean;
   isMarriedToUSCitizen: boolean;
   hasInvestmentCapital: boolean;
+  isCanadianOrMexicanCitizen: boolean; // for TN eligibility when not born in CA/MX
 }
 
 export interface PathEligibility {
@@ -31,13 +32,14 @@ export const defaultFilters: FilterState = {
   education: "bachelors",
   experience: "lt2",
   currentStatus: "canada",
-  countryOfBirth: "other",
+  countryOfBirth: "canada",
   hasExtraordinaryAbility: false,
   isOutstandingResearcher: false,
   isExecutive: false,
   isStem: false,
   isMarriedToUSCitizen: false,
   hasInvestmentCapital: false,
+  isCanadianOrMexicanCitizen: false,
 };
 
 // Education level ranking for comparison
@@ -170,7 +172,18 @@ export const statusLabels: Record<CurrentStatus, string> = {
 };
 
 export const countryLabels: Record<CountryOfBirth, string> = {
+  canada: "Canada",
+  mexico: "Mexico",
   india: "India",
   china: "China",
   other: "Other",
 };
+
+// Check if user is eligible for TN visa (Canadian or Mexican citizen)
+export function isTNEligible(filters: FilterState): boolean {
+  return (
+    filters.countryOfBirth === "canada" ||
+    filters.countryOfBirth === "mexico" ||
+    filters.isCanadianOrMexicanCitizen
+  );
+}

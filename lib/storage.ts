@@ -41,6 +41,11 @@ export function getStoredProfile(): UserProfile | null {
       profile.filters.countryOfBirth = "other";
     }
 
+    // Migration: add isCanadianOrMexicanCitizen for existing users
+    if (profile.filters.isCanadianOrMexicanCitizen === undefined) {
+      profile.filters.isCanadianOrMexicanCitizen = false;
+    }
+
     return profile;
   } catch (e) {
     console.warn("Failed to read user profile from localStorage:", e);

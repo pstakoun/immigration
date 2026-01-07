@@ -25,9 +25,14 @@ export default function ProfileSummary({
     experienceLabels[filters.experience],
   ];
 
-  // Show country only for India/China (backlogged countries)
+  // Show country of birth for relevant countries (TN-eligible or backlogged)
   if (filters.countryOfBirth !== "other") {
     tags.push(`Born in ${countryLabels[filters.countryOfBirth]}`);
+  }
+
+  // Show citizenship if Canadian/Mexican but born elsewhere
+  if (filters.isCanadianOrMexicanCitizen) {
+    tags.push("CA/MX citizen");
   }
 
   if (filters.isStem) tags.push("STEM");
