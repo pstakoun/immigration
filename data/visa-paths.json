@@ -891,6 +891,33 @@
         "Some couples prefer direct marriage + CR1/IR1 visa instead"
       ]
     },
+    "priority_wait": {
+      "id": "priority_wait",
+      "name": "Priority Date Wait",
+      "shortName": "PD Wait",
+      "fullName": "Visa Bulletin Backlog",
+      "category": "greencard",
+      "description": "Wait for your priority date to become current. Employment-based green cards are limited annually, creating backlogs for high-demand countries.",
+      "requirements": [
+        "Approved I-140 petition",
+        "Valid underlying status while waiting",
+        "Priority date established"
+      ],
+      "filings": [],
+      "stats": {
+        "approvalRate": 1.0,
+        "rfeRate": 0,
+        "annualVolume": 0,
+        "source": "N/A - waiting period"
+      },
+      "tips": [
+        "Monitor the monthly Visa Bulletin for movement",
+        "Consider EB-1 or NIW if you qualify - often shorter backlogs",
+        "Maintain valid work authorization while waiting",
+        "Priority date is portable if changing employers (after I-140 approval)",
+        "Some use this time to switch to EB-1 category if they qualify"
+      ]
+    },
     "gc": {
       "id": "gc",
       "name": "Green Card",

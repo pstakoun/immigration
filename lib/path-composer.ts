@@ -728,12 +728,21 @@ function composePath(
 
       // Update I-485 to start after the wait and NOT be concurrent
       const newI485Index = i485Index + 1;
-      stages[newI485Index].startYear = waitStartYear + waitYears;
+      const i485NewStart = waitStartYear + waitYears;
+      stages[newI485Index].startYear = i485NewStart;
       stages[newI485Index].isConcurrent = false;
       stages[newI485Index].note = "After priority date is current";
 
+      // Update any stages after I-485 (e.g., the gc marker)
+      const i485EndYear = i485NewStart + stages[newI485Index].durationYears.max;
+      for (let i = newI485Index + 1; i < stages.length; i++) {
+        if (stages[i].track === "gc") {
+          stages[i].startYear = i485EndYear;
+        }
+      }
+
       // Update GC tracking variables
-      gcMaxEndYear = stages[newI485Index].startYear + stages[newI485Index].durationYears.max;
+      gcMaxEndYear = i485EndYear;
       gcSequentialYear = gcMaxEndYear;
     }
   }
