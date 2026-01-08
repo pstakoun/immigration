@@ -5,6 +5,9 @@ import {
   educationLabels,
   experienceLabels,
   statusLabels,
+  countryLabels,
+  ebCategoryLabels,
+  formatPriorityDateShort,
 } from "@/lib/filter-paths";
 
 interface ProfileSummaryProps {
@@ -24,12 +27,31 @@ export default function ProfileSummary({
     experienceLabels[filters.experience],
   ];
 
+  // Show country of birth for relevant countries (TN-eligible or backlogged)
+  if (filters.countryOfBirth !== "other") {
+    tags.push(`Born in ${countryLabels[filters.countryOfBirth]}`);
+  }
+
+  // Show citizenship if Canadian/Mexican but born elsewhere
+  if (filters.isCanadianOrMexicanCitizen) {
+    tags.push("CA/MX citizen");
+  }
+
   if (filters.isStem) tags.push("STEM");
   if (filters.hasExtraordinaryAbility) tags.push("Extraordinary ability");
   if (filters.isOutstandingResearcher) tags.push("Outstanding researcher");
   if (filters.isExecutive) tags.push("Executive");
   if (filters.isMarriedToUSCitizen) tags.push("Married to US citizen");
   if (filters.hasInvestmentCapital) tags.push("EB-5 investor");
+
+  // Show existing priority date
+  if (filters.hasApprovedI140 && filters.existingPriorityDate) {
+    const pdStr = formatPriorityDateShort(filters.existingPriorityDate);
+    const category = filters.existingPriorityDateCategory
+      ? ebCategoryLabels[filters.existingPriorityDateCategory]
+      : "";
+    tags.push(`PD: ${pdStr}${category ? ` (${category})` : ""}`);
+  }
 
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-3">

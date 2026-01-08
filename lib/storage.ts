@@ -36,6 +36,27 @@ export function getStoredProfile(): UserProfile | null {
       return null;
     }
 
+    // Migration: add countryOfBirth for existing users
+    if (!profile.filters.countryOfBirth) {
+      profile.filters.countryOfBirth = "other";
+    }
+
+    // Migration: add isCanadianOrMexicanCitizen for existing users
+    if (profile.filters.isCanadianOrMexicanCitizen === undefined) {
+      profile.filters.isCanadianOrMexicanCitizen = false;
+    }
+
+    // Migration: add priority date fields for existing users
+    if (profile.filters.hasApprovedI140 === undefined) {
+      profile.filters.hasApprovedI140 = false;
+    }
+    if (profile.filters.existingPriorityDate === undefined) {
+      profile.filters.existingPriorityDate = null;
+    }
+    if (profile.filters.existingPriorityDateCategory === undefined) {
+      profile.filters.existingPriorityDateCategory = null;
+    }
+
     return profile;
   } catch (e) {
     console.warn("Failed to read user profile from localStorage:", e);

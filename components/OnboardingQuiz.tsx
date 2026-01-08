@@ -6,6 +6,8 @@ import {
   Education,
   Experience,
   CurrentStatus,
+  CountryOfBirth,
+  EBCategory,
   defaultFilters,
 } from "@/lib/filter-paths";
 
@@ -36,6 +38,29 @@ const experienceOptions: { value: Experience; label: string; description: string
   { value: "gt5", label: "5+ years", description: "Senior professional" },
 ];
 
+const countryOptions: { value: CountryOfBirth; label: string; description: string }[] = [
+  { value: "canada", label: "Canada", description: "TN visa eligible" },
+  { value: "mexico", label: "Mexico", description: "TN visa eligible" },
+  { value: "india", label: "India", description: "Significant EB backlogs" },
+  { value: "china", label: "China (mainland)", description: "EB backlogs apply" },
+  { value: "other", label: "Other", description: "No major backlogs" },
+];
+
+const ebCategoryOptions: { value: EBCategory; label: string; description: string }[] = [
+  { value: "eb1", label: "EB-1", description: "Priority workers" },
+  { value: "eb2", label: "EB-2", description: "Advanced degree / NIW" },
+  { value: "eb3", label: "EB-3", description: "Skilled workers" },
+];
+
+const months = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+// Generate years from 2000 to current year
+const currentYear = new Date().getFullYear();
+const years = Array.from({ length: currentYear - 1999 }, (_, i) => currentYear - i);
+
 function hasAnySpecialCircumstance(filters: FilterState): boolean {
   return (
     filters.hasExtraordinaryAbility ||
@@ -51,7 +76,14 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
   const [showSpecial, setShowSpecial] = useState(() => hasAnySpecialCircumstance(initialFilters || defaultFilters));
 
   const updateFilter = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    setFilters((prev) => {
+      const updated = { ...prev, [key]: value };
+      // Reset citizenship flag when born in Canada/Mexico (not needed)
+      if (key === "countryOfBirth" && (value === "canada" || value === "mexico")) {
+        updated.isCanadianOrMexicanCitizen = false;
+      }
+      return updated;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -209,6 +241,53 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
               </div>
             </div>
 
+            {/* Country of Birth */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                Country of birth
+              </label>
+              <p className="text-xs text-gray-500 mb-3">
+                Affects TN visa eligibility and green card wait times
+              </p>
+              <div className="grid grid-cols-5 gap-2">
+                {countryOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => updateFilter("countryOfBirth", option.value)}
+                    className={`p-3 rounded-xl border-2 text-center transition-all ${
+                      filters.countryOfBirth === option.value
+                        ? "border-brand-500 bg-brand-50"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className={`font-medium text-sm ${
+                      filters.countryOfBirth === option.value ? "text-brand-700" : "text-gray-900"
+                    }`}>
+                      {option.label}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">{option.description}</div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Citizenship checkbox - only show if NOT born in Canada/Mexico */}
+              {filters.countryOfBirth !== "canada" && filters.countryOfBirth !== "mexico" && (
+                <label className="flex items-start gap-3 p-3 mt-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={filters.isCanadianOrMexicanCitizen}
+                    onChange={(e) => updateFilter("isCanadianOrMexicanCitizen", e.target.checked)}
+                    className="mt-0.5 w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
+                  />
+                  <div>
+                    <div className="font-medium text-sm text-gray-900">I&apos;m a Canadian or Mexican citizen</div>
+                    <div className="text-xs text-gray-500">Unlocks TN visa paths even if born elsewhere</div>
+                  </div>
+                </label>
+              )}
+            </div>
+
             {/* Special Circumstances - Collapsible */}
             <div className="border border-gray-200 rounded-xl overflow-hidden">
               <button
@@ -309,6 +388,101 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
                       <div className="text-xs text-gray-500">Unlocks EB-5 investor visa path</div>
                     </div>
                   </label>
+                </div>
+              )}
+            </div>
+
+            {/* Existing Case / Priority Date */}
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <label className="flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={filters.hasApprovedI140}
+                  onChange={(e) => {
+                    updateFilter("hasApprovedI140", e.target.checked);
+                    if (!e.target.checked) {
+                      updateFilter("existingPriorityDate", null);
+                      updateFilter("existingPriorityDateCategory", null);
+                    }
+                  }}
+                  className="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-900">
+                    I have an approved I-140 with a priority date
+                  </span>
+                  <p className="text-xs text-gray-500">Your priority date is portable to new petitions</p>
+                </div>
+              </label>
+
+              {filters.hasApprovedI140 && (
+                <div className="p-4 space-y-4 border-t border-gray-200">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">
+                      Priority date
+                    </label>
+                    <div className="flex gap-2">
+                      <select
+                        value={filters.existingPriorityDate?.month || ""}
+                        onChange={(e) => {
+                          const month = parseInt(e.target.value);
+                          const year = filters.existingPriorityDate?.year || currentYear;
+                          updateFilter("existingPriorityDate", month ? { month, year } : null);
+                        }}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-brand-500 focus:border-brand-500"
+                      >
+                        <option value="">Month</option>
+                        {months.map((m, i) => (
+                          <option key={m} value={i + 1}>{m}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={filters.existingPriorityDate?.year || ""}
+                        onChange={(e) => {
+                          const year = parseInt(e.target.value);
+                          const month = filters.existingPriorityDate?.month || 1;
+                          updateFilter("existingPriorityDate", year ? { month, year } : null);
+                        }}
+                        className="w-28 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-brand-500 focus:border-brand-500"
+                      >
+                        <option value="">Year</option>
+                        {years.map((y) => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">
+                      EB category of your I-140
+                    </label>
+                    <div className="flex gap-2">
+                      {ebCategoryOptions.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => updateFilter("existingPriorityDateCategory", option.value)}
+                          className={`flex-1 p-2 rounded-lg border-2 text-center transition-all ${
+                            filters.existingPriorityDateCategory === option.value
+                              ? "border-brand-500 bg-brand-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <div className={`font-medium text-sm ${
+                            filters.existingPriorityDateCategory === option.value ? "text-brand-700" : "text-gray-900"
+                          }`}>
+                            {option.label}
+                          </div>
+                          <div className="text-xs text-gray-500">{option.description}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-gray-500 bg-blue-50 p-2 rounded-lg">
+                    💡 With an approved I-140, your priority date can be used for any new I-140 petition, even with a different employer.
+                  </p>
                 </div>
               )}
             </div>
