@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import visaData from "@/data/visa-paths.json";
 import { FilterState, statusToNodeId } from "@/lib/filter-paths";
 import { generatePaths, ComposedStage, setProcessingTimes } from "@/lib/path-composer";
 import { adaptDynamicData } from "@/lib/processing-times";
 import { DynamicData } from "@/lib/dynamic-data";
+import { trackStageClick, trackPathsGenerated } from "@/lib/analytics";
 
 const PIXELS_PER_YEAR = 160;
 const MAX_YEARS = 8;
@@ -79,6 +80,24 @@ export default function TimelineChart({
     onMatchingCountChange(generatedPaths.length);
     return generatedPaths;
   }, [filters, onMatchingCountChange, processingTimesLoaded, priorityDates, datesForFiling]);
+
+  // Track paths generated for analytics
+  useEffect(() => {
+    if (paths.length > 0) {
+      trackPathsGenerated(paths.length, filters);
+    }
+  }, [paths.length, filters]);
+
+  // Handle stage click with analytics tracking
+  const handleStageClick = useCallback(
+    (nodeId: string) => {
+      const node = getNode(nodeId);
+      const nodeName = node?.name || nodeId;
+      trackStageClick(nodeId, nodeName);
+      onStageClick(nodeId);
+    },
+    [onStageClick]
+  );
 
   // Check if a path has multiple tracks
   const hasMultipleTracks = (stages: ComposedStage[]) => {
@@ -247,7 +266,7 @@ export default function TimelineChart({
                             height: TRACK_HEIGHT,
                             top: `${top}px`,
                           }}
-                          onClick={() => onStageClick(stage.nodeId)}
+                          onClick={() => handleStageClick(stage.nodeId)}
                           onMouseEnter={() => setHoveredStage(`${path.id}-${idx}`)}
                           onMouseLeave={() => setHoveredStage(null)}
                         >
@@ -324,7 +343,7 @@ export default function TimelineChart({
                             left: `${left}px`,
                             top: `${top}px`,
                           }}
-                          onClick={() => onStageClick(stage.nodeId)}
+                          onClick={() => handleStageClick(stage.nodeId)}
                           onMouseEnter={() => setHoveredStage(`${path.id}-${idx}`)}
                           onMouseLeave={() => setHoveredStage(null)}
                         >
@@ -360,7 +379,7 @@ export default function TimelineChart({
                           height: TRACK_HEIGHT,
                           top: `${top}px`,
                         }}
-                        onClick={() => onStageClick(stage.nodeId)}
+                        onClick={() => handleStageClick(stage.nodeId)}
                         onMouseEnter={() => setHoveredStage(`${path.id}-${idx}`)}
                         onMouseLeave={() => setHoveredStage(null)}
                       >

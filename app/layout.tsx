@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { PostHogProvider } from "@/components/PostHogProvider";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://stateside.app"),
@@ -53,7 +54,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-gray-50 text-gray-900 min-h-screen">
-        {children}
+        <PostHogProvider>{children}</PostHogProvider>
       </body>
     </html>
   );
