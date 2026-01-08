@@ -10,6 +10,7 @@ import {
   EBCategory,
   defaultFilters,
 } from "@/lib/filter-paths";
+import { trackOnboardingComplete } from "@/lib/analytics";
 
 interface OnboardingQuizProps {
   onComplete: (filters: FilterState) => void;
@@ -88,6 +89,7 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    trackOnboardingComplete(filters);
     onComplete(filters);
   };
 
