@@ -353,7 +353,7 @@ export function calculateVelocityBasedWait(
     (userDate.getFullYear() - bulletinDate.getFullYear()) * 12 +
     (userDate.getMonth() - bulletinDate.getMonth());
   
-  // Get velocity data
+  // Get velocity data (base calculations)
   const velocityData = calculateVelocity(category, countryOfBirth);
   
   // Calculate estimated wait
@@ -364,10 +364,31 @@ export function calculateVelocityBasedWait(
   const rangeMin = Math.round(estimatedMonths * (1 - uncertainty));
   const rangeMax = Math.round(estimatedMonths * (1 + uncertainty));
   
+  // Generate explanation based on ACTUAL wait, not just velocity ratio
+  // This overrides the generic explanation from calculateVelocity
+  const years = Math.round(estimatedMonths / 12);
+  let explanation: string;
+  
+  if (estimatedMonths <= 6) {
+    explanation = `Short wait expected. Bulletin advances ~${velocityData.bulletinAdvancementMonthsPerYear.toFixed(1)} months/year for this category.`;
+  } else if (estimatedMonths <= 24) {
+    explanation = `Moderate backlog: ~${monthsBehind} months behind current cutoff. Bulletin advances ~${velocityData.bulletinAdvancementMonthsPerYear.toFixed(1)} months/year.`;
+  } else if (estimatedMonths <= 60) {
+    explanation = `Significant backlog: ~${monthsBehind} months behind cutoff. At current pace (~${velocityData.bulletinAdvancementMonthsPerYear.toFixed(1)} mo/yr), expect ~${years} year wait.`;
+  } else {
+    explanation = `Severe backlog: ~${monthsBehind} months behind cutoff. Bulletin advancing only ~${velocityData.bulletinAdvancementMonthsPerYear.toFixed(1)} months/year. ~${years}+ year wait expected.`;
+  }
+  
+  // Update velocity data with the correct explanation
+  const updatedVelocityData: VelocityData = {
+    ...velocityData,
+    explanation,
+  };
+  
   return {
     estimatedMonths,
     confidence: velocityData.confidence,
-    velocityData,
+    velocityData: updatedVelocityData,
     rangeMin,
     rangeMax,
   };

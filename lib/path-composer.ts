@@ -841,7 +841,12 @@ function composePath(
       // Update I-485 to start after the wait and NOT be concurrent
       const newI485Index = i485Index + 1;
       const i485NewStart = waitStartYear + waitYears;
-      stages[newI485Index].startYear = i485NewStart;
+      
+      // Defensive: ensure I-485 starts no earlier than where PD wait ends
+      const pdWaitEndYear = waitStartYear + waitYears;
+      const correctedI485Start = Math.max(i485NewStart, pdWaitEndYear);
+      
+      stages[newI485Index].startYear = correctedI485Start;
       stages[newI485Index].isConcurrent = false;
       stages[newI485Index].note = "After priority date is current for filing";
 
