@@ -863,8 +863,54 @@ function composePath(
       gcSequentialYear = gcMaxEndYear;
     } else if (canFileConcurrently && priorityWaitMonths > 0) {
       // CAN file concurrently, but will wait for approval
-      // I-485 stays concurrent, but add note about pending wait
-      stages[i485Index].note = `Concurrent filing OK. ~${formatPriorityWait(priorityWaitMonths)} wait for approval`;
+      // The actual time to green card is the LONGER of:
+      // 1. I-485 processing time (USCIS adjudication)
+      // 2. Priority date wait (visa availability)
+      
+      const i485Stage = stages[i485Index];
+      const normalProcessingMax = i485Stage.durationYears.max;
+      const approvalWaitYears = priorityWaitMonths / 12;
+      
+      // If PD wait is longer than processing time, we need to extend the I-485 duration
+      // or add a separate approval wait stage
+      if (approvalWaitYears > normalProcessingMax) {
+        // Add a separate "Approval Wait" stage after I-485 to show the visa availability wait
+        const approvalWaitDuration = approvalWaitYears - normalProcessingMax;
+        
+        // Find where I-485 ends
+        const i485EndYear = i485Stage.startYear + normalProcessingMax;
+        
+        // Insert approval wait stage after I-485
+        const approvalWaitStage: ComposedStage = {
+          nodeId: "priority_wait",
+          durationYears: {
+            min: approvalWaitDuration * 0.8,
+            max: approvalWaitDuration,
+            display: formatPriorityWait(Math.round(approvalWaitDuration * 12)),
+          },
+          track: "gc",
+          startYear: i485EndYear,
+          note: "Waiting for priority date to become current for approval",
+          isPriorityWait: true,
+          priorityDateStr,
+          velocityInfo,
+        };
+        
+        // Find the GC marker (should be after I-485)
+        const gcIndex = stages.findIndex((s, idx) => idx > i485Index && s.nodeId === "gc");
+        if (gcIndex >= 0) {
+          stages.splice(gcIndex, 0, approvalWaitStage);
+          // Update GC marker position
+          const approvalWaitEnd = i485EndYear + approvalWaitDuration;
+          stages[gcIndex + 1].startYear = approvalWaitEnd;
+          gcMaxEndYear = approvalWaitEnd;
+        }
+        
+        i485Stage.note = "Filed concurrent with I-140. Approval pending visa availability.";
+      } else {
+        // Processing time is longer than PD wait - no adjustment needed
+        i485Stage.note = `Concurrent filing OK. ~${formatPriorityWait(priorityWaitMonths)} wait included in processing.`;
+      }
     }
     // If canFileConcurrently && priorityWaitMonths === 0: Fully current, no changes needed
   }
