@@ -9,6 +9,21 @@ export interface PriorityDate {
   year: number;  // e.g., 2019
 }
 
+export type CaseType = "pwd" | "recruitment" | "perm" | "i140" | "i485" | "i765" | "i131" | "i129" | "n400";
+export type CaseStatus = "preparing" | "filed" | "audit" | "rfe" | "approved" | "denied" | "withdrawn";
+
+export interface UserCase {
+  id: string;
+  type: CaseType;
+  status: CaseStatus;
+  priorityDate?: PriorityDate; // For PERM/I-140
+  filedDate?: string; // ISO string YYYY-MM-DD
+  receiptDate?: string; // ISO string YYYY-MM-DD
+  approvalDate?: string; // ISO string YYYY-MM-DD
+  receiptNumber?: string;
+  notes?: string;
+}
+
 export interface FilterState {
   education: Education;
   experience: Experience;
@@ -21,10 +36,12 @@ export interface FilterState {
   isMarriedToUSCitizen: boolean;
   hasInvestmentCapital: boolean;
   isCanadianOrMexicanCitizen: boolean; // for TN eligibility when not born in CA/MX
-  // Existing case info
+  // Existing case info - legacy simplified flags
   hasApprovedI140: boolean;
   existingPriorityDate: PriorityDate | null;
   existingPriorityDateCategory: EBCategory | null;
+  // Detailed case tracking
+  userCases: UserCase[];
 }
 
 export interface PathEligibility {
@@ -53,6 +70,7 @@ export const defaultFilters: FilterState = {
   hasApprovedI140: false,
   existingPriorityDate: null,
   existingPriorityDateCategory: null,
+  userCases: [],
 };
 
 // Helper to format priority date as "Mon YYYY" string
@@ -208,6 +226,28 @@ export const ebCategoryLabels: Record<EBCategory, string> = {
   eb1: "EB-1",
   eb2: "EB-2",
   eb3: "EB-3",
+};
+
+export const caseTypeLabels: Record<CaseType, string> = {
+  pwd: "Prevailing Wage",
+  recruitment: "Recruitment",
+  perm: "PERM Labor Cert",
+  i140: "I-140 Petition",
+  i485: "I-485 Adjustment",
+  i765: "I-765 EAD",
+  i131: "I-131 Travel Doc",
+  i129: "I-129 Petition",
+  n400: "N-400 Citizenship",
+};
+
+export const caseStatusLabels: Record<CaseStatus, string> = {
+  preparing: "Preparing",
+  filed: "Filed / Pending",
+  audit: "Audit",
+  rfe: "RFE",
+  approved: "Approved",
+  denied: "Denied",
+  withdrawn: "Withdrawn",
 };
 
 // Check if user is eligible for TN visa (Canadian or Mexican citizen)

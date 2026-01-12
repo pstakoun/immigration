@@ -14,12 +14,14 @@ interface ProfileSummaryProps {
   filters: FilterState;
   matchingCount: number;
   onEdit: () => void;
+  onTrackCases?: () => void;
 }
 
 export default function ProfileSummary({
   filters,
   matchingCount,
   onEdit,
+  onTrackCases,
 }: ProfileSummaryProps) {
   const tags: string[] = [
     statusLabels[filters.currentStatus],
@@ -66,13 +68,29 @@ export default function ProfileSummary({
                 {tag}
               </span>
             ))}
+            {filters.userCases && filters.userCases.length > 0 && (
+                 <span className="px-2.5 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full whitespace-nowrap">
+                    {filters.userCases.length} active case{filters.userCases.length !== 1 ? 's' : ''}
+                 </span>
+            )}
           </div>
           <button
             onClick={onEdit}
-            className="text-sm text-brand-600 hover:text-brand-700 font-medium whitespace-nowrap"
+            className="text-sm text-gray-500 hover:text-gray-900 font-medium whitespace-nowrap"
           >
-            Edit
+            Edit Profile
           </button>
+          {onTrackCases && (
+            <>
+                <span className="text-gray-300">|</span>
+                <button
+                    onClick={onTrackCases}
+                    className="text-sm text-brand-600 hover:text-brand-700 font-medium whitespace-nowrap"
+                >
+                    Track Cases
+                </button>
+            </>
+          )}
         </div>
 
         <div className="text-sm text-gray-600 whitespace-nowrap">

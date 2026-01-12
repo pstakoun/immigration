@@ -5,6 +5,7 @@ import TimelineChart from "@/components/TimelineChart";
 import PathDetail from "@/components/PathDetail";
 import ProfileSummary from "@/components/ProfileSummary";
 import OnboardingQuiz from "@/components/OnboardingQuiz";
+import CaseTracker from "@/components/CaseTracker";
 import { FilterState, defaultFilters } from "@/lib/filter-paths";
 import { getStoredProfile, saveUserProfile } from "@/lib/storage";
 
@@ -13,6 +14,7 @@ export default function Home() {
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [matchingCount, setMatchingCount] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showCaseTracker, setShowCaseTracker] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Load stored profile on mount
@@ -40,6 +42,11 @@ export default function Home() {
   const handleEditProfile = () => {
     setShowOnboarding(true);
   };
+  
+  const handleCaseUpdate = (newFilters: FilterState) => {
+    setFilters(newFilters);
+    saveUserProfile(newFilters);
+  };
 
   // Don't render until we've checked localStorage (prevents flash)
   if (!isLoaded) {
@@ -57,6 +64,15 @@ export default function Home() {
         <OnboardingQuiz
           onComplete={handleOnboardingComplete}
           initialFilters={filters}
+        />
+      )}
+      
+      {/* Case Tracker Modal */}
+      {showCaseTracker && (
+        <CaseTracker
+            filters={filters}
+            onUpdate={handleCaseUpdate}
+            onClose={() => setShowCaseTracker(false)}
         />
       )}
 
@@ -95,6 +111,7 @@ export default function Home() {
         filters={filters}
         matchingCount={matchingCount}
         onEdit={handleEditProfile}
+        onTrackCases={() => setShowCaseTracker(true)}
       />
 
       {/* Timeline area */}

@@ -83,6 +83,101 @@ function getDynamicDuration(nodeId: string): Duration | null {
   return null;
 }
 
+// Check if a stage is completed or in-progress based on user cases
+function getStageProgress(
+  nodeId: string,
+  userCases: FilterState['userCases'],
+  defaultDuration: Duration
+): { duration: Duration; isCompleted: boolean; notes?: string } {
+  // Map nodeId to CaseType
+  const caseTypeMap: Record<string, string> = {
+    pwd: 'pwd',
+    recruit: 'recruitment',
+    perm: 'perm',
+    i140: 'i140',
+    i485: 'i485',
+    eb1: 'i140',
+    eb2niw: 'i140',
+    marriage: 'i130', // Marriage usually implies I-130
+  };
+
+  const caseType = caseTypeMap[nodeId];
+  if (!caseType || !userCases) return { duration: defaultDuration, isCompleted: false };
+
+  // CHECK IMPLIED COMPLETION
+  // If a later stage is started, earlier stages are implicitly done
+  if (nodeId === 'pwd' || nodeId === 'recruit') {
+     const hasPerm = userCases.some(c => c.type === 'perm' && ['filed', 'audit', 'rfe', 'approved'].includes(c.status));
+     const hasI140 = userCases.some(c => c.type === 'i140' && ['filed', 'rfe', 'approved'].includes(c.status));
+     if (hasPerm || hasI140) {
+         return { duration: { min: 0, max: 0, display: 'Done' }, isCompleted: true, notes: 'Completed' };
+     }
+  }
+  
+  if (nodeId === 'perm') {
+     const hasI140 = userCases.some(c => c.type === 'i140' && ['filed', 'rfe', 'approved'].includes(c.status));
+     if (hasI140) {
+         return { duration: { min: 0, max: 0, display: 'Done' }, isCompleted: true, notes: 'Completed' };
+     }
+  }
+
+  // Find the most relevant case (prioritize approved, then filed)
+  const userCase = userCases
+    .filter(c => c.type === caseType)
+    .sort((a, b) => {
+        if (a.status === 'approved' && b.status !== 'approved') return -1;
+        if (b.status === 'approved' && a.status !== 'approved') return 1;
+        return 0;
+    })[0];
+
+  if (!userCase) return { duration: defaultDuration, isCompleted: false };
+
+  if (userCase.status === 'approved') {
+    return { 
+        duration: { min: 0, max: 0, display: 'Done' }, 
+        isCompleted: true,
+        notes: userCase.approvalDate ? `Approved ${new Date(userCase.approvalDate).toLocaleDateString()}` : 'Approved'
+    };
+  }
+
+  if (userCase.status === 'filed' || userCase.status === 'audit' || userCase.status === 'rfe') {
+    // Calculate time elapsed since filing
+    let elapsedYears = 0;
+    let filedDate: Date | undefined;
+    
+    if (userCase.filedDate) {
+      filedDate = new Date(userCase.filedDate);
+    } else if (userCase.receiptDate) {
+      filedDate = new Date(userCase.receiptDate);
+    }
+
+    if (filedDate) {
+      const now = new Date();
+      elapsedYears = Math.max(0, (now.getTime() - filedDate.getTime()) / (1000 * 60 * 60 * 24 * 365));
+    }
+
+    // Reduce duration by elapsed time
+    const remainingMin = Math.max(0, defaultDuration.min - elapsedYears);
+    const remainingMax = Math.max(0, defaultDuration.max - elapsedYears);
+    
+    // If it's been longer than expected, show small remaining time (don't show 0 or negative)
+    const displayMin = remainingMin <= 0 ? 0.1 : remainingMin;
+    const displayMax = remainingMax <= 0 ? 0.2 : remainingMax;
+
+    return {
+      duration: {
+        min: displayMin,
+        max: displayMax,
+        display: `${Math.ceil(displayMin * 12)}-${Math.ceil(displayMax * 12)} mo left`,
+      },
+      isCompleted: false,
+      notes: filedDate ? `Filed ${filedDate.toLocaleDateString()}` : 'Filed'
+    };
+  }
+
+  return { duration: defaultDuration, isCompleted: false };
+}
+
 // Duration range in years
 export interface Duration {
   min: number;
@@ -676,13 +771,31 @@ function composePath(
   let gcSequentialYear = gcStartYear;
   let gcMaxEndYear = gcStartYear;
 
+  // Track priority date
+  let effectivePriorityDate = filters.existingPriorityDate;
+  // If user has APPROVED I-140 case, use its PD
+  if (filters.userCases) {
+      const approvedI140 = filters.userCases.find(c => (c.type === 'i140' || c.type === 'perm') && c.status === 'approved' && c.priorityDate);
+      if (approvedI140?.priorityDate) {
+          effectivePriorityDate = approvedI140.priorityDate;
+      }
+  }
+
   for (let i = 0; i < gcMethod.stages.length; i++) {
     const stage = gcMethod.stages[i];
     const isConcurrent = stage.concurrent && i > 0;
 
     // Get dynamic duration if available, otherwise use default
     const dynamicDuration = getDynamicDuration(stage.nodeId);
-    const duration = dynamicDuration ?? stage.duration;
+    let duration = dynamicDuration ?? stage.duration;
+    let note = stage.note;
+
+    // CHECK USER PROGRESS
+    const progress = getStageProgress(stage.nodeId, filters.userCases, duration);
+    duration = progress.duration;
+    if (progress.notes) {
+        note = note ? `${note} (${progress.notes})` : progress.notes;
+    }
 
     // For concurrent stages, start at same time as previous stage
     // For sequential stages, start after the latest end time
@@ -701,7 +814,7 @@ function composePath(
       },
       track: "gc",
       startYear: stageStartYear,
-      note: stage.note,
+      note,
       isConcurrent,
     });
 
@@ -740,15 +853,15 @@ function composePath(
     // Convert gcCategory to EBCategory for velocity calculations
     const ebCategory = gcCategoryToEBCategory(gcCategory);
 
-    if (filters.hasApprovedI140 && filters.existingPriorityDate) {
+    if (filters.hasApprovedI140 && effectivePriorityDate) {
       // User has existing I-140 with priority date
-      const userPDStr = priorityDateToString(filters.existingPriorityDate);
+      const userPDStr = priorityDateToString(effectivePriorityDate);
 
       // Calculate FILING wait (Dates for Filing chart)
       if (filingDatesChart) {
         filingDateStr = getPriorityDateForPath(filingDatesChart, gcCategory, filters.countryOfBirth);
         const filingResult = calculateWaitForExistingPDWithVelocity(
-          filters.existingPriorityDate,
+          effectivePriorityDate,
           filingDateStr,
           filters.countryOfBirth,
           ebCategory
@@ -769,7 +882,7 @@ function composePath(
       if (approvalDatesChart) {
         approvalDateStr = getPriorityDateForPath(approvalDatesChart, gcCategory, filters.countryOfBirth);
         const approvalResult = calculateWaitForExistingPDWithVelocity(
-          filters.existingPriorityDate,
+          effectivePriorityDate,
           approvalDateStr,
           filters.countryOfBirth,
           ebCategory

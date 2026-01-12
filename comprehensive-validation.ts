@@ -59,6 +59,7 @@ const baseFilters: FilterState = {
   hasApprovedI140: false,
   existingPriorityDate: null,
   existingPriorityDateCategory: null,
+  userCases: [],
 };
 
 console.log('='.repeat(80));
