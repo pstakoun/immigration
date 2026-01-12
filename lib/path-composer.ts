@@ -1,6 +1,7 @@
 import { FilterState, CurrentStatus, Education, Experience, isTNEligible, priorityDateToString } from "./filter-paths";
 import visaData from "@/data/visa-paths.json";
-import { ProcessingTimes, DEFAULT_PROCESSING_TIMES, formatMonths, calculatePriorityDateWait, getPriorityDateForPath, formatPriorityWait, calculateWaitForExistingPD } from "./processing-times";
+import { ProcessingTimes, DEFAULT_PROCESSING_TIMES, formatMonths, calculatePriorityDateWait, getPriorityDateForPath, formatPriorityWait, calculateWaitForExistingPD, calculateWaitForExistingPDWithVelocity, WaitCalculationResult, getVelocityForCategory, calculateNewFilerWait } from "./processing-times";
+import { EBCategory } from "./filter-paths";
 import { DynamicData } from "./dynamic-data";
 
 // Current processing times (can be updated dynamically)
@@ -160,6 +161,15 @@ export interface ComposedStage {
   isConcurrent?: boolean; // true if this stage runs concurrently with the previous stage
   isPriorityWait?: boolean; // true if this is a priority date wait stage
   priorityDateStr?: string; // the priority date string (e.g., "Jul 2013")
+  // Velocity data for priority date wait stages
+  velocityInfo?: {
+    bulletinAdvancementMonthsPerYear: number;
+    velocityRatio: number;
+    explanation: string;
+    rangeMin: number;
+    rangeMax: number;
+    confidence: number;
+  };
 }
 
 // Education ranking for comparisons
@@ -169,6 +179,15 @@ const EDUCATION_RANK: Record<Education, number> = {
   masters: 2,
   phd: 3,
 };
+
+// Convert GC category string (e.g., "EB-2", "EB-3") to EBCategory type
+function gcCategoryToEBCategory(gcCategory: string): EBCategory | undefined {
+  const normalized = gcCategory.toLowerCase().replace(/[- ]/g, "");
+  if (normalized.includes("eb1")) return "eb1";
+  if (normalized.includes("eb2")) return "eb2";
+  if (normalized.includes("eb3")) return "eb3";
+  return undefined; // Marriage-based, EB-5, etc.
+}
 
 const EXPERIENCE_RANK: Record<Experience, number> = {
   lt2: 0,
@@ -695,121 +714,235 @@ function composePath(
     gcMaxEndYear = Math.max(gcMaxEndYear, stageEndYear);
   }
 
-  // Check for priority date backlog and determine concurrent filing eligibility
+  // Check for priority date backlog and determine filing/approval timing
   // This applies to employment-based categories (EB-1, EB-2, EB-3)
   //
   // IMPORTANT: The Visa Bulletin has TWO charts:
-  // 1. "Dates for Filing" - determines when you can SUBMIT your I-485
-  // 2. "Final Action Dates" - determines when your case will be APPROVED
+  // 1. "Dates for Filing" (Chart B) - determines when you can SUBMIT your I-485
+  //    - Filing early gives benefits: EAD, Advance Parole, AC21 portability after 180 days
+  // 2. "Final Action Dates" (Chart A) - determines when your case will be APPROVED
+  //    - Your green card is issued when your PD is current here
   //
-  // For concurrent filing: use Dates for Filing
-  // For wait time until approval: use Final Action Dates
-  let priorityWaitMonths = 0;
-  let priorityDateStr = "Current";
+  // Timeline: I-140 → [Filing Wait] → I-485 Filed → [Approval Wait] → GC
+  let filingWaitMonths = 0;      // Wait until can FILE I-485 (Dates for Filing)
+  let approvalWaitMonths = 0;    // Wait until I-485 APPROVED (Final Action)
+  let filingDateStr = "Current";
+  let approvalDateStr = "Current";
   let canFileConcurrently = true;
+  let filingVelocityInfo: ComposedStage["velocityInfo"] | undefined;
+  let approvalVelocityInfo: ComposedStage["velocityInfo"] | undefined;
 
   if (!gcMethod.fixedCategory?.includes("Marriage") && !gcMethod.fixedCategory?.includes("EB-5")) {
-    // Determine filing eligibility using Dates for Filing chart
-    const filingDates = datesForFiling || priorityDates; // Fall back to final action if no filing dates
-    // Determine approval wait using Final Action Dates
-    const approvalDates = priorityDates;
+    // Get both charts
+    const filingDatesChart = datesForFiling || priorityDates;
+    const approvalDatesChart = priorityDates;
+
+    // Convert gcCategory to EBCategory for velocity calculations
+    const ebCategory = gcCategoryToEBCategory(gcCategory);
 
     if (filters.hasApprovedI140 && filters.existingPriorityDate) {
-      priorityDateStr = priorityDateToString(filters.existingPriorityDate);
+      // User has existing I-140 with priority date
+      const userPDStr = priorityDateToString(filters.existingPriorityDate);
 
-      // Check if can file concurrently (using Dates for Filing)
-      if (filingDates) {
-        const filingCutoff = getPriorityDateForPath(filingDates, gcCategory, filters.countryOfBirth);
-        const filingWait = calculateWaitForExistingPD(
+      // Calculate FILING wait (Dates for Filing chart)
+      if (filingDatesChart) {
+        filingDateStr = getPriorityDateForPath(filingDatesChart, gcCategory, filters.countryOfBirth);
+        const filingResult = calculateWaitForExistingPDWithVelocity(
           filters.existingPriorityDate,
-          filingCutoff,
-          filters.countryOfBirth
+          filingDateStr,
+          filters.countryOfBirth,
+          ebCategory
         );
-        canFileConcurrently = filingWait === 0;
+        filingWaitMonths = filingResult.estimatedMonths;
+        canFileConcurrently = filingWaitMonths === 0;
+        filingVelocityInfo = {
+          bulletinAdvancementMonthsPerYear: filingResult.velocityData.bulletinAdvancementMonthsPerYear,
+          velocityRatio: filingResult.velocityData.velocityRatio,
+          explanation: filingResult.velocityData.explanation,
+          rangeMin: filingResult.rangeMin,
+          rangeMax: filingResult.rangeMax,
+          confidence: filingResult.confidence,
+        };
       }
 
-      // Calculate wait for approval (using Final Action Dates)
-      if (approvalDates) {
-        const approvalCutoff = getPriorityDateForPath(approvalDates, gcCategory, filters.countryOfBirth);
-        priorityWaitMonths = calculateWaitForExistingPD(
+      // Calculate APPROVAL wait (Final Action chart)
+      if (approvalDatesChart) {
+        approvalDateStr = getPriorityDateForPath(approvalDatesChart, gcCategory, filters.countryOfBirth);
+        const approvalResult = calculateWaitForExistingPDWithVelocity(
           filters.existingPriorityDate,
-          approvalCutoff,
-          filters.countryOfBirth
+          approvalDateStr,
+          filters.countryOfBirth,
+          ebCategory
         );
+        approvalWaitMonths = approvalResult.estimatedMonths;
+        approvalVelocityInfo = {
+          bulletinAdvancementMonthsPerYear: approvalResult.velocityData.bulletinAdvancementMonthsPerYear,
+          velocityRatio: approvalResult.velocityData.velocityRatio,
+          explanation: approvalResult.velocityData.explanation,
+          rangeMin: approvalResult.rangeMin,
+          rangeMax: approvalResult.rangeMax,
+          confidence: approvalResult.confidence,
+        };
       }
-    } else if (approvalDates) {
-      // No existing PD - calculate from visa bulletin (new filing)
-      priorityDateStr = getPriorityDateForPath(approvalDates, gcCategory, filters.countryOfBirth);
-      priorityWaitMonths = calculatePriorityDateWait(priorityDateStr);
+    } else {
+      // No existing PD - new filer (PD will be ~today when I-140 approved)
+      
+      // Calculate FILING wait for new filer
+      if (filingDatesChart) {
+        filingDateStr = getPriorityDateForPath(filingDatesChart, gcCategory, filters.countryOfBirth);
+        const filingResult = calculateNewFilerWait(filingDateStr, filters.countryOfBirth, ebCategory);
+        filingWaitMonths = filingResult.estimatedMonths;
+        canFileConcurrently = filingWaitMonths === 0;
+        filingVelocityInfo = {
+          bulletinAdvancementMonthsPerYear: filingResult.velocityData.bulletinAdvancementMonthsPerYear,
+          velocityRatio: filingResult.velocityData.velocityRatio,
+          explanation: filingResult.velocityData.explanation,
+          rangeMin: filingResult.rangeMin,
+          rangeMax: filingResult.rangeMax,
+          confidence: filingResult.confidence,
+        };
+      }
 
-      // For new filers, check Dates for Filing for concurrent eligibility
-      if (filingDates) {
-        const filingDateStr = getPriorityDateForPath(filingDates, gcCategory, filters.countryOfBirth);
-        const filingWait = calculatePriorityDateWait(filingDateStr);
-        canFileConcurrently = filingWait === 0;
+      // Calculate APPROVAL wait for new filer
+      if (approvalDatesChart) {
+        approvalDateStr = getPriorityDateForPath(approvalDatesChart, gcCategory, filters.countryOfBirth);
+        const approvalResult = calculateNewFilerWait(approvalDateStr, filters.countryOfBirth, ebCategory);
+        approvalWaitMonths = approvalResult.estimatedMonths;
+        approvalVelocityInfo = {
+          bulletinAdvancementMonthsPerYear: approvalResult.velocityData.bulletinAdvancementMonthsPerYear,
+          velocityRatio: approvalResult.velocityData.velocityRatio,
+          explanation: approvalResult.velocityData.explanation,
+          rangeMin: approvalResult.rangeMin,
+          rangeMax: approvalResult.rangeMax,
+          confidence: approvalResult.confidence,
+        };
       }
     }
   }
 
-  // Handle priority date backlog based on filing eligibility
+  // Handle priority date backlog - show BOTH filing wait and approval wait separately
   //
-  // Three scenarios:
-  // 1. canFileConcurrently=true, waitMonths=0 → Fully current, concurrent I-485, no wait
-  // 2. canFileConcurrently=true, waitMonths>0 → Can file now, but wait for approval (concurrent I-485 with pending wait)
-  // 3. canFileConcurrently=false, waitMonths>0 → Can't file yet, wait stage blocks I-485
+  // Timeline: I-140 → [Filing Wait] → I-485 (pending, get EAD/AP) → [Approval Wait] → GC
+  //
+  // Filing Wait: Based on "Dates for Filing" chart - when you can SUBMIT I-485
+  // Approval Wait: Based on "Final Action" chart - when I-485 is APPROVED
+  //
+  // Benefits of filing early (even if approval wait remains):
+  // - EAD (work permit) - work for any employer
+  // - Advance Parole (travel document)
+  // - AC21 Portability after 180 days - can change jobs
 
   const i140Index = stages.findIndex(s => s.nodeId === "i140" || s.nodeId === "eb1" || s.nodeId === "eb2niw");
   const i485Index = stages.findIndex(s => s.nodeId === "i485");
 
   if (i140Index >= 0 && i485Index >= 0) {
-    if (!canFileConcurrently && priorityWaitMonths > 0) {
-      // CANNOT file concurrently - show wait stage before I-485
-      const i140Stage = stages[i140Index];
-      const waitStartYear = i140Stage.startYear + i140Stage.durationYears.max;
-      const waitYears = priorityWaitMonths / 12;
+    const i140Stage = stages[i140Index];
+    const i485Stage = stages[i485Index];
+    const i485ProcessingTime = i485Stage.durationYears.max; // Normal USCIS processing time
+    
+    let currentI485Index = i485Index;
+    let stagesInserted = 0;
 
-      // Insert priority wait stage
-      const priorityWaitStage: ComposedStage = {
+    // STEP 1: Add Filing Wait if needed (Dates for Filing not current)
+    if (filingWaitMonths > 0) {
+      const filingWaitYears = filingWaitMonths / 12;
+      const filingWaitStart = i140Stage.startYear + i140Stage.durationYears.max;
+      
+      const filingWaitStage: ComposedStage = {
         nodeId: "priority_wait",
         durationYears: {
-          min: waitYears,
-          max: waitYears,
-          display: formatPriorityWait(priorityWaitMonths),
+          min: filingVelocityInfo?.rangeMin ? filingVelocityInfo.rangeMin / 12 : filingWaitYears,
+          max: filingVelocityInfo?.rangeMax ? filingVelocityInfo.rangeMax / 12 : filingWaitYears,
+          display: formatPriorityWait(filingWaitMonths),
         },
         track: "gc",
-        startYear: waitStartYear,
-        note: `Wait until ${priorityDateStr} is current for filing`,
+        startYear: filingWaitStart,
+        note: `Wait for Dates for Filing to reach your PD. Current: ${filingDateStr}`,
         isPriorityWait: true,
-        priorityDateStr,
+        priorityDateStr: filingDateStr,
+        velocityInfo: filingVelocityInfo,
       };
 
-      // Insert after I-140 (before I-485)
-      stages.splice(i485Index, 0, priorityWaitStage);
+      // Insert before I-485
+      stages.splice(i485Index, 0, filingWaitStage);
+      stagesInserted++;
+      currentI485Index = i485Index + stagesInserted;
 
-      // Update I-485 to start after the wait and NOT be concurrent
-      const newI485Index = i485Index + 1;
-      const i485NewStart = waitStartYear + waitYears;
-      stages[newI485Index].startYear = i485NewStart;
-      stages[newI485Index].isConcurrent = false;
-      stages[newI485Index].note = "After priority date is current for filing";
-
-      // Update any stages after I-485 (e.g., the gc marker)
-      const i485EndYear = i485NewStart + stages[newI485Index].durationYears.max;
-      for (let i = newI485Index + 1; i < stages.length; i++) {
-        if (stages[i].track === "gc") {
-          stages[i].startYear = i485EndYear;
-        }
-      }
-
-      // Update GC tracking variables
-      gcMaxEndYear = i485EndYear;
-      gcSequentialYear = gcMaxEndYear;
-    } else if (canFileConcurrently && priorityWaitMonths > 0) {
-      // CAN file concurrently, but will wait for approval
-      // I-485 stays concurrent, but add note about pending wait
-      stages[i485Index].note = `Concurrent filing OK. ~${formatPriorityWait(priorityWaitMonths)} wait for approval`;
+      // Update I-485 position and status
+      const filingWaitMaxDuration = filingWaitStage.durationYears.max;
+      stages[currentI485Index].startYear = filingWaitStart + filingWaitMaxDuration;
+      stages[currentI485Index].isConcurrent = false;
     }
-    // If canFileConcurrently && priorityWaitMonths === 0: Fully current, no changes needed
+
+    // STEP 2: Handle approval wait and update I-485 duration
+    // The I-485 pending time = max(USCIS processing time, approval wait after filing)
+    // Both happen in parallel, so whichever is longer is the bottleneck
+    const additionalApprovalWait = approvalWaitMonths - filingWaitMonths;
+    const additionalApprovalWaitYears = additionalApprovalWait / 12;
+    
+    const i485BaseMinMonths = Math.round(i485Stage.durationYears.min * 12);  // ~10 months
+    const i485BaseMaxMonths = Math.round(i485Stage.durationYears.max * 12);  // ~18 months
+    
+    if (additionalApprovalWait > 0) {
+      // There's approval wait after filing
+      // I-485 pending time = max(processing, approval wait)
+      // The actual time is whichever completes LAST
+      const effectiveMinMonths = Math.max(i485BaseMinMonths, Math.round(additionalApprovalWait));
+      const effectiveMaxMonths = Math.max(i485BaseMaxMonths, Math.round(additionalApprovalWait));
+      
+      const effectiveMin = effectiveMinMonths / 12;
+      const effectiveMax = effectiveMaxMonths / 12;
+      
+      // Determine what's shown based on how approval wait affects timeline
+      let display: string;
+      let note: string;
+      
+      if (additionalApprovalWait > i485BaseMaxMonths) {
+        // Approval wait is the bottleneck - exceeds max processing time
+        // Timeline is determined entirely by approval wait
+        display = formatPriorityWait(effectiveMaxMonths);
+        note = `I-485 pending ${display}: EAD + AP valid, AC21 portability after 180 days. Waiting for Final Action date (${approvalDateStr}).`;
+        stages[currentI485Index].velocityInfo = approvalVelocityInfo;
+      } else if (additionalApprovalWait > i485BaseMinMonths) {
+        // Approval wait raises the minimum but max is still processing time
+        // Shows the approval wait is affecting the timeline
+        display = `${effectiveMinMonths}-${effectiveMaxMonths} mo`;
+        note = `I-485 pending: EAD + AP valid, AC21 portability after 180 days. Min ${Math.round(additionalApprovalWait)} mo for visa availability.`;
+      } else {
+        // Approval wait is shorter than processing - doesn't affect timeline
+        // Processing time is the bottleneck
+        display = `${i485BaseMinMonths}-${i485BaseMaxMonths} mo`;
+        note = `I-485 pending: EAD + AP valid, AC21 portability after 180 days.`;
+      }
+      
+      stages[currentI485Index].durationYears = {
+        min: effectiveMin,
+        max: effectiveMax,
+        display,
+      };
+      stages[currentI485Index].note = note;
+      
+      // Update GC marker position based on new I-485 duration
+      const i485NewEndYear = stages[currentI485Index].startYear + effectiveMax;
+      gcMaxEndYear = Math.max(gcMaxEndYear, i485NewEndYear);
+    } else if (filingWaitMonths > 0) {
+      stages[currentI485Index].note = "After Dates for Filing is current";
+    } else {
+      // No filing wait and no approval wait - both charts current
+      stages[currentI485Index].note = "Concurrent filing available - no visa backlog";
+    }
+
+    // Update GC marker position to match end of I-485
+    const finalI485Stage = stages[currentI485Index];
+    const i485EndYear = finalI485Stage.startYear + finalI485Stage.durationYears.max;
+    
+    for (let i = currentI485Index + 1; i < stages.length; i++) {
+      if (stages[i].nodeId === "gc") {
+        stages[i].startYear = i485EndYear;
+        gcMaxEndYear = Math.max(gcMaxEndYear, i485EndYear);
+        break;
+      }
+    }
   }
 
   // Calculate total duration - use the actual max end time
@@ -822,7 +955,7 @@ function composePath(
       const dynamicDur = getDynamicDuration(s.nodeId);
       return sum + (dynamicDur?.min ?? s.duration.min);
     }, 0) +
-    (priorityWaitMonths / 12); // Add priority date wait to minimum
+    (approvalWaitMonths / 12); // Add priority date wait to minimum (total wait until approval)
   const totalMin = Math.max(minStatusYear, minGCYear);
 
   // Build path name
