@@ -16,10 +16,10 @@ const PROGRESS_STORAGE_KEY = "stateside_progress_v2";
 // Stage tracking data with dates and receipt numbers
 export interface StageProgress {
   status: "not_started" | "filed" | "approved";
-  filedDate?: string; // ISO date string
-  approvedDate?: string; // ISO date string
+  filedDate?: string; // YYYY-MM-DD date string
+  approvedDate?: string; // YYYY-MM-DD date string
   receiptNumber?: string; // e.g., "EAC2490012345"
-  priorityDate?: string; // ISO date string - for I-140 stage
+  priorityDate?: string; // YYYY-MM-DD date string - for I-140 stage
   notes?: string;
 }
 
@@ -27,6 +27,8 @@ export interface TrackedPathProgress {
   pathId: string;
   pathName: string;
   stages: Record<string, StageProgress>; // keyed by nodeId
+  portedPriorityDate?: string | null; // YYYY-MM-DD - from a previous case
+  portedPriorityDateCategory?: string | null; // eb1, eb2, eb3
   startedAt: string;
   updatedAt: string;
 }
@@ -64,6 +66,7 @@ export default function Home() {
   // Path tracking state
   const [trackedPath, setTrackedPath] = useState<TrackedPathProgress | null>(null);
   const [selectedPath, setSelectedPath] = useState<ComposedPath | null>(null);
+  const [expandedStageId, setExpandedStageId] = useState<string | null>(null);
 
   // Load stored profile and progress on mount
   useEffect(() => {
@@ -157,10 +160,37 @@ export default function Home() {
     });
   };
 
+  // Handle updating ported priority date
+  const handleUpdatePortedPD = (date: string | null, category: string | null) => {
+    if (!trackedPath) return;
+    
+    setTrackedPath(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        portedPriorityDate: date,
+        portedPriorityDateCategory: category,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  };
+
   // Handle stopping tracking
   const handleStopTracking = () => {
     setTrackedPath(null);
     setSelectedPath(null);
+    setExpandedStageId(null);
+  };
+
+  // Handle clicking a stage in the timeline (when tracking, open in panel)
+  const handleTimelineStageClick = (nodeId: string) => {
+    if (trackedPath && selectedPath) {
+      // If tracking, expand this stage in the panel
+      setExpandedStageId(nodeId);
+    } else {
+      // Otherwise, show the info panel
+      setSelectedNode(nodeId);
+    }
   };
 
   // Calculate progress summary
@@ -266,7 +296,7 @@ export default function Home() {
         {/* Timeline area */}
         <div className={`flex-1 relative overflow-hidden transition-all ${trackedPath ? "mr-0" : ""}`}>
           <TimelineChart
-            onStageClick={setSelectedNode}
+            onStageClick={handleTimelineStageClick}
             filters={filters}
             onMatchingCountChange={handleMatchingCountChange}
             onSelectPath={handleSelectPath}
@@ -281,12 +311,15 @@ export default function Home() {
             path={selectedPath}
             progress={trackedPath}
             onUpdateStage={handleUpdateStage}
+            onUpdatePortedPD={handleUpdatePortedPD}
             onClose={() => setSelectedPath(null)}
+            expandedStageId={expandedStageId}
+            onExpandStage={setExpandedStageId}
           />
         )}
 
-        {/* Slide-out detail panel for stage info */}
-        {selectedNode && (
+        {/* Slide-out detail panel for stage info (only when not tracking) */}
+        {selectedNode && !trackedPath && (
           <>
             <div
               className="fixed inset-0 bg-black/20 z-40"

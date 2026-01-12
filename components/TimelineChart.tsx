@@ -36,6 +36,37 @@ const trackLabels: Record<string, string> = {
   gc: "GC Process",
 };
 
+// Format YYYY-MM-DD date string for display
+function formatDateForDisplay(dateStr?: string): string {
+  if (!dateStr) return "";
+  try {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+// Format date short (for inline display)
+function formatDateShort(dateStr?: string): string {
+  if (!dateStr) return "";
+  try {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      year: "2-digit",
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
 
 export default function TimelineChart({
   onStageClick,
@@ -158,7 +189,7 @@ export default function TimelineChart({
               <path d="M12 16v-4M12 8h.01" />
             </svg>
             <span>
-              Use the panel on the right to track your progress with dates and receipt numbers.
+              Click any stage to edit details in the panel →
             </span>
           </div>
         )}
@@ -551,9 +582,9 @@ export default function TimelineChart({
                               </div>
                               <div className="text-[9px] opacity-90 leading-tight truncate">
                                 {isApproved && stageProgress?.approvedDate 
-                                  ? `Done ${new Date(stageProgress.approvedDate).toLocaleDateString("en-US", { month: "short", year: "2-digit" })}`
+                                  ? `Done ${formatDateShort(stageProgress.approvedDate)}`
                                   : isFiled && stageProgress?.filedDate
-                                  ? `Filed ${new Date(stageProgress.filedDate).toLocaleDateString("en-US", { month: "short", year: "2-digit" })}`
+                                  ? `Filed ${formatDateShort(stageProgress.filedDate)}`
                                   : stage.durationYears.display
                                 }
                               </div>
@@ -572,12 +603,12 @@ export default function TimelineChart({
                                 </div>
                                 {stageProgress?.filedDate && (
                                   <div className="text-gray-400 text-[10px]">
-                                    Filed: {new Date(stageProgress.filedDate).toLocaleDateString()}
+                                    Filed: {formatDateForDisplay(stageProgress.filedDate)}
                                   </div>
                                 )}
                                 {stageProgress?.approvedDate && (
                                   <div className="text-gray-400 text-[10px]">
-                                    Approved: {new Date(stageProgress.approvedDate).toLocaleDateString()}
+                                    Approved: {formatDateForDisplay(stageProgress.approvedDate)}
                                   </div>
                                 )}
                                 {stageProgress?.receiptNumber && (
@@ -585,11 +616,21 @@ export default function TimelineChart({
                                     {stageProgress.receiptNumber}
                                   </div>
                                 )}
+                                {isTracked && (
+                                  <div className="text-brand-400 text-[10px] mt-1 border-t border-gray-700 pt-1">
+                                    Click to edit →
+                                  </div>
+                                )}
                               </>
                             ) : (
                               <>
                                 <div className="text-gray-300">{stage.durationYears.display}</div>
                                 {stage.note && <div className="text-gray-400 text-[10px] mt-0.5">{stage.note}</div>}
+                                {isTracked && (
+                                  <div className="text-brand-400 text-[10px] mt-1 border-t border-gray-700 pt-1">
+                                    Click to add details →
+                                  </div>
+                                )}
                               </>
                             )}
                           </div>
