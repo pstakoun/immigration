@@ -377,20 +377,31 @@ function calculateHistoricalAdvancementRate(
   // Sort rates from slowest to fastest
   yearOverYearRates.sort((a, b) => a - b);
   
-  // For immigration planning, use CONSERVATIVE estimates
-  // Take the slower of: minimum rate or 25th percentile
-  // This accounts for years when movement slows down
-  const minRate = yearOverYearRates[0];
-  const percentileIndex = Math.floor(yearOverYearRates.length * 0.25);
-  const percentile25 = yearOverYearRates[Math.max(0, percentileIndex)];
+  // Use TRIMMED AVERAGE to exclude outliers (like COVID year)
+  // Remove lowest and highest values if we have enough data points
+  let ratesForAverage = yearOverYearRates;
+  if (yearOverYearRates.length >= 4) {
+    // Remove outliers (min and max)
+    ratesForAverage = yearOverYearRates.slice(1, -1);
+  }
   
-  // Use the slower rate, but blend with percentile to avoid extreme outliers
-  // 60% min + 40% 25th percentile
-  const conservativeRate = minRate * 0.6 + percentile25 * 0.4;
+  // Calculate trimmed average
+  const trimmedAvg = ratesForAverage.reduce((a, b) => a + b, 0) / ratesForAverage.length;
   
-  // Clamp to reasonable bounds (1-18 months per year)
-  // Cap at 18 to ensure we don't show unrealistically fast movement
-  return Math.max(1, Math.min(18, conservativeRate));
+  // Also calculate median for comparison
+  const medianIndex = Math.floor(yearOverYearRates.length / 2);
+  const median = yearOverYearRates[medianIndex];
+  
+  // Use the SLOWER of trimmed average or median (slightly conservative)
+  // This gives realistic estimates while still being somewhat cautious
+  const baseRate = Math.min(trimmedAvg, median);
+  
+  // Apply a small conservatism factor (90% of the calculated rate)
+  // This accounts for uncertainty without being overly pessimistic
+  const conservativeRate = baseRate * 0.9;
+  
+  // Clamp to reasonable bounds (2-18 months per year)
+  return Math.max(2, Math.min(18, conservativeRate));
 }
 
 /**
