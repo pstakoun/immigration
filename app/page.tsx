@@ -7,7 +7,7 @@ import ProfileSummary from "@/components/ProfileSummary";
 import OnboardingQuiz from "@/components/OnboardingQuiz";
 import CaseTrackerModal from "@/components/CaseTrackerModal";
 import { FilterState, defaultFilters } from "@/lib/filter-paths";
-import { getStoredProfile, getStoredCaseProfile, saveUserProfile } from "@/lib/storage";
+import { getStoredProfile, getStoredCaseProfile, saveUserProfile, upsertTrackedCase } from "@/lib/storage";
 import { CaseProfile } from "@/lib/case-types";
 import { applyTrackedCaseToFilters } from "@/lib/apply-tracked-case-to-filters";
 
@@ -121,6 +121,10 @@ export default function Home() {
           filters={effectiveFilters}
           onMatchingCountChange={handleMatchingCountChange}
           trackedCase={selectedTrackedCase}
+          onTrackedCaseUpdate={(nextCase) => {
+            const updated = upsertTrackedCase(nextCase);
+            setCaseProfile(updated);
+          }}
         />
 
         {/* Slide-out detail panel */}

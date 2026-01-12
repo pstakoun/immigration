@@ -21,6 +21,7 @@ interface TimelineChartProps {
   filters: FilterState;
   onMatchingCountChange: (count: number) => void;
   trackedCase?: TrackedCase | null;
+  onTrackedCaseUpdate?: (nextCase: TrackedCase) => void;
 }
 
 const categoryColors: Record<string, { bg: string; border: string; text: string }> = {
@@ -41,6 +42,7 @@ export default function TimelineChart({
   filters,
   onMatchingCountChange,
   trackedCase,
+  onTrackedCaseUpdate,
 }: TimelineChartProps) {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [hoveredStage, setHoveredStage] = useState<string | null>(null);
@@ -101,6 +103,60 @@ export default function TimelineChart({
       return null;
     }
   }, [trackedCase, processingTimes, priorityDates, datesForFiling]);
+
+  const plannedPathId = trackedCase?.plannedPathId ?? null;
+
+  // If a plan is set, auto-select it for clarity.
+  useEffect(() => {
+    if (plannedPathId) setSelectedPath(plannedPathId);
+  }, [plannedPathId]);
+
+  const plannedPath = useMemo(() => {
+    if (!plannedPathId) return null;
+    return paths.find((p) => p.id === plannedPathId) ?? null;
+  }, [plannedPathId, paths]);
+
+  const getNextStepLabel = useCallback((): string | null => {
+    if (!trackedCase) return null;
+    if (trackedCase.i485ApprovedDate) return "Done (green card approved)";
+    if (!trackedCase.i485FiledDate) {
+      if (!trackedCase.i140FiledDate) {
+        if (trackedCase.route === "perm") {
+          if (!trackedCase.permFiledDate) return "Start/finish PERM prep (PWD + recruitment → file PERM)";
+          if (!trackedCase.permApprovedDate) return "Wait for PERM decision";
+          return "File I-140";
+        }
+        return "File I-140";
+      }
+      if (!trackedCase.i140ApprovedDate) return "Wait for I-140 decision";
+      return "File I-485 when Dates for Filing is current";
+    }
+    return "Wait for I-485 approval (and Final Action date, if backlogged)";
+  }, [trackedCase]);
+
+  function getStageProgress(nodeId: string): "done" | "in_progress" | null {
+    if (!trackedCase) return null;
+    const isDone = (done?: string) => !!done;
+    const isStarted = (start?: string) => !!start;
+
+    switch (nodeId) {
+      case "pwd":
+        return isDone(trackedCase.pwdIssuedDate) ? "done" : isStarted(trackedCase.pwdFiledDate) ? "in_progress" : null;
+      case "recruit":
+        // Consider "done" when PERM filed, "in progress" when recruitment started.
+        return isDone(trackedCase.permFiledDate) ? "done" : isStarted(trackedCase.recruitmentStartDate) ? "in_progress" : null;
+      case "perm":
+        return isDone(trackedCase.permApprovedDate) ? "done" : isStarted(trackedCase.permFiledDate) ? "in_progress" : null;
+      case "i140":
+      case "eb1":
+      case "eb2niw":
+        return isDone(trackedCase.i140ApprovedDate) ? "done" : isStarted(trackedCase.i140FiledDate) ? "in_progress" : null;
+      case "i485":
+        return isDone(trackedCase.i485ApprovedDate) ? "done" : isStarted(trackedCase.i485FiledDate) ? "in_progress" : null;
+      default:
+        return null;
+    }
+  }
 
   // Track paths generated for analytics (debounced to avoid duplicate events)
   const lastTrackedFilters = useRef<string>("");
@@ -177,12 +233,28 @@ export default function TimelineChart({
           <div className="relative py-4">
             {trackedPath && (
               <div className="mb-6">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
                   <div className="text-sm font-semibold text-gray-900">
                     Your case: {trackedPath.name}
                   </div>
                   <div className="text-xs text-gray-500">
                     Estimated remaining: {trackedPath.totalYears.display}
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="text-xs text-gray-600">
+                    {plannedPath ? (
+                      <span>
+                        My plan: <span className="font-semibold text-gray-900">{plannedPath.name}</span>
+                      </span>
+                    ) : (
+                      <span>
+                        Pick a path below and pin it as <span className="font-semibold text-gray-900">My plan</span> for clearer “what’s next”.
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    Next: <span className="font-semibold text-gray-900">{getNextStepLabel() ?? "—"}</span>
                   </div>
                 </div>
               </div>
@@ -195,11 +267,20 @@ export default function TimelineChart({
                 </p>
               </div>
             )}
-            {[...(trackedPath ? [trackedPath] : []), ...paths].map((path) => {
+            {(() => {
+              const base = [...paths];
+              if (plannedPathId) {
+                base.sort((a, b) => (a.id === plannedPathId ? -1 : b.id === plannedPathId ? 1 : 0));
+              }
+              const all = [...(trackedPath ? [trackedPath] : []), ...base];
+              return all;
+            })().map((path) => {
               const isSelected = selectedPath === path.id;
               const isDimmed = selectedPath !== null && !isSelected;
               const multiTrack = hasMultipleTracks(path.stages);
               const hasConcurrent = hasConcurrentStages(path.stages);
+              const isPlanned = plannedPathId !== null && path.id === plannedPathId;
+              const canPin = !!trackedCase && path.id !== trackedPath?.id;
               // Add extra height if we have concurrent stages that need offset
               const pathHeight = multiTrack
                 ? TRACK_HEIGHT * 2 + TRACK_GAP + (hasConcurrent ? CONCURRENT_OFFSET : 0)
@@ -231,6 +312,25 @@ export default function TimelineChart({
                       <span className="text-[10px] text-brand-600 font-medium">
                         {path.gcCategory}
                       </span>
+                      {canPin && onTrackedCaseUpdate && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onTrackedCaseUpdate({
+                              ...trackedCase!,
+                              plannedPathId: isPlanned ? null : path.id,
+                            });
+                          }}
+                          className={`text-[9px] px-1 rounded border ${
+                            isPlanned
+                              ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                              : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          {isPlanned ? "my plan" : "set plan"}
+                        </button>
+                      )}
                       {path.hasLottery && (
                         <span className="text-[9px] bg-amber-100 text-amber-700 px-1 rounded">
                           lottery
@@ -408,6 +508,7 @@ export default function TimelineChart({
                     const isHovered = hoveredStage === `${path.id}-${idx}`;
                     const isCurrentStatus = stage.nodeId === currentNodeId;
                     const isFinalGC = stage.nodeId === "gc";
+                    const progress = plannedPathId !== null && path.id === plannedPathId ? getStageProgress(stage.nodeId) : null;
 
                     // Short name for compact stages - use shortName if available, otherwise truncate
                     const shortName = ("shortName" in node && node.shortName)
@@ -455,6 +556,8 @@ export default function TimelineChart({
                           ${colors.bg} ${colors.border} ${colors.text}
                           ${isHovered ? "ring-2 ring-offset-1 ring-brand-400 scale-105 z-30" : "z-10"}
                           ${isCurrentStatus ? "ring-2 ring-offset-1 ring-red-500" : ""}
+                          ${progress === "done" ? "opacity-80" : ""}
+                          ${progress === "in_progress" ? "ring-2 ring-offset-1 ring-emerald-400" : ""}
                         `}
                         style={{
                           left: `${left}px`,
@@ -467,6 +570,11 @@ export default function TimelineChart({
                         onMouseLeave={() => setHoveredStage(null)}
                       >
                         <div className="h-full px-1 flex flex-col justify-center overflow-hidden relative">
+                          {progress === "done" && (
+                            <div className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-emerald-600 border-2 border-white flex items-center justify-center text-[9px] leading-none">
+                              ✓
+                            </div>
+                          )}
                           {isCurrentStatus && (
                             <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap">
                               YOU ARE HERE

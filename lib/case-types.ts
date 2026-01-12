@@ -23,6 +23,10 @@ export interface TrackedCase {
   countryOfBirth: CountryOfBirth;
   ebCategory: EBCategory; // eb1/eb2/eb3 (for EB-1 routes this should be eb1)
 
+  // Which Stateside "path" the user considers their plan (optional).
+  // This is used for UX guidance (what's next) and visual progress overlays.
+  plannedPathId?: string | null;
+
   // Key milestone dates (ISO YYYY-MM-DD). Optional to support partial data.
   pwdFiledDate?: string;
   pwdIssuedDate?: string;
@@ -63,6 +67,7 @@ export function newTrackedCase(partial?: Partial<TrackedCase>): TrackedCase {
     route: partial?.route ?? "perm",
     countryOfBirth: partial?.countryOfBirth ?? "other",
     ebCategory: partial?.ebCategory ?? "eb2",
+    plannedPathId: partial?.plannedPathId ?? null,
     receipts: partial?.receipts ?? [],
     i140Premium: partial?.i140Premium ?? true,
     permLikelyAudited: partial?.permLikelyAudited ?? false,

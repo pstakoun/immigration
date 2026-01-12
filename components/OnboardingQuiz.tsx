@@ -406,7 +406,7 @@ export default function OnboardingQuiz({
                   )}
                 </div>
                 <div className="px-4 py-3 text-xs text-gray-500">
-                  You can also do this later via the <span className="font-medium text-gray-700">Track case</span> button in the top bar.
+                  You can also do this later via <span className="font-medium text-gray-700">Track case</span> in the top bar. After that, pin a path as <span className="font-medium text-gray-700">my plan</span> in the timeline for clear next steps.
                 </div>
               </div>
             )}
