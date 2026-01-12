@@ -7,13 +7,12 @@ import {
   Experience,
   CurrentStatus,
   CountryOfBirth,
-  EBCategory,
   defaultFilters,
 } from "@/lib/filter-paths";
 import { trackOnboardingComplete } from "@/lib/analytics";
 
 interface OnboardingQuizProps {
-  onComplete: (filters: FilterState) => void;
+  onComplete: (filters: FilterState, wantsToTrackCase?: boolean) => void;
   initialFilters?: FilterState;
 }
 
@@ -47,21 +46,6 @@ const countryOptions: { value: CountryOfBirth; label: string; description: strin
   { value: "other", label: "Other", description: "No major backlogs" },
 ];
 
-const ebCategoryOptions: { value: EBCategory; label: string; description: string }[] = [
-  { value: "eb1", label: "EB-1", description: "Priority workers" },
-  { value: "eb2", label: "EB-2", description: "Advanced degree / NIW" },
-  { value: "eb3", label: "EB-3", description: "Skilled workers" },
-];
-
-const months = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
-];
-
-// Generate years from 2000 to current year
-const currentYear = new Date().getFullYear();
-const years = Array.from({ length: currentYear - 1999 }, (_, i) => currentYear - i);
-
 function hasAnySpecialCircumstance(filters: FilterState): boolean {
   return (
     filters.hasExtraordinaryAbility ||
@@ -75,6 +59,7 @@ function hasAnySpecialCircumstance(filters: FilterState): boolean {
 export default function OnboardingQuiz({ onComplete, initialFilters }: OnboardingQuizProps) {
   const [filters, setFilters] = useState<FilterState>(initialFilters || defaultFilters);
   const [showSpecial, setShowSpecial] = useState(() => hasAnySpecialCircumstance(initialFilters || defaultFilters));
+  const [step, setStep] = useState<"profile" | "case_prompt">("profile");
 
   const updateFilter = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
     setFilters((prev) => {
@@ -87,10 +72,15 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Move to case prompt step
+    setStep("case_prompt");
+  };
+
+  const handleFinish = (wantsToTrackCase: boolean) => {
     trackOnboardingComplete(filters);
-    onComplete(filters);
+    onComplete(filters, wantsToTrackCase);
   };
 
   const specialCount = [
