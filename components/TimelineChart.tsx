@@ -7,6 +7,7 @@ import { generatePaths, ComposedStage, ComposedPath, setProcessingTimes } from "
 import { adaptDynamicData } from "@/lib/processing-times";
 import { DynamicData } from "@/lib/dynamic-data";
 import { trackStageClick, trackPathsGenerated } from "@/lib/analytics";
+import { TrackedPathProgress, StageProgress } from "@/app/page";
 
 const PIXELS_PER_YEAR = 160;
 const MAX_YEARS = 8;
@@ -20,8 +21,7 @@ interface TimelineChartProps {
   onMatchingCountChange: (count: number) => void;
   onSelectPath?: (path: ComposedPath) => void;
   selectedPathId?: string | null;
-  completedStages?: Set<string>;
-  onToggleStageComplete?: (pathId: string, stageNodeId: string) => void;
+  trackedProgress?: TrackedPathProgress | null;
 }
 
 const categoryColors: Record<string, { bg: string; border: string; text: string }> = {
@@ -43,14 +43,21 @@ export default function TimelineChart({
   onMatchingCountChange,
   onSelectPath,
   selectedPathId,
-  completedStages,
-  onToggleStageComplete,
+  trackedProgress,
 }: TimelineChartProps) {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [hoveredStage, setHoveredStage] = useState<string | null>(null);
   const [processingTimesLoaded, setProcessingTimesLoaded] = useState(false);
   const [priorityDates, setPriorityDates] = useState<DynamicData["priorityDates"] | undefined>(undefined);
   const [datesForFiling, setDatesForFiling] = useState<DynamicData["datesForFiling"] | undefined>(undefined);
+
+  // Helper to get stage progress
+  const getStageProgress = (pathId: string, nodeId: string): StageProgress | null => {
+    if (trackedProgress?.pathId === pathId) {
+      return trackedProgress.stages[nodeId] || null;
+    }
+    return null;
+  };
 
   // Fetch processing times on mount
   useEffect(() => {
@@ -88,6 +95,17 @@ export default function TimelineChart({
     onMatchingCountChange(generatedPaths.length);
     return generatedPaths;
   }, [filters, onMatchingCountChange, processingTimesLoaded, priorityDates, datesForFiling]);
+
+  // Sort paths with tracked path at top
+  const sortedPaths = useMemo(() => {
+    if (!selectedPathId) return paths;
+    
+    return [...paths].sort((a, b) => {
+      if (a.id === selectedPathId) return -1;
+      if (b.id === selectedPathId) return 1;
+      return 0;
+    });
+  }, [paths, selectedPathId]);
 
   // Track paths generated for analytics (debounced to avoid duplicate events)
   const lastTrackedFilters = useRef<string>("");
@@ -133,14 +151,14 @@ export default function TimelineChart({
     <div className="w-full h-full overflow-x-auto overflow-y-auto bg-gray-50">
       <div className="min-w-[1200px] p-6">
         {/* Tracking instruction banner */}
-        {selectedPathId && (
+        {selectedPathId && trackedProgress && (
           <div className="mb-4 flex items-center justify-center gap-2 text-sm text-brand-700 bg-brand-50 border border-brand-200 rounded-lg px-4 py-2" style={{ marginLeft: "220px" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10" />
               <path d="M12 16v-4M12 8h.01" />
             </svg>
             <span>
-              Click on stages to mark them as complete. Your progress is saved automatically.
+              Use the panel on the right to track your progress with dates and receipt numbers.
             </span>
           </div>
         )}
@@ -175,7 +193,7 @@ export default function TimelineChart({
 
           {/* Path lanes */}
           <div className="relative py-4">
-            {paths.length === 0 && (
+            {sortedPaths.length === 0 && (
               <div className="py-12 text-center text-gray-500">
                 <p className="text-lg font-medium">No matching paths</p>
                 <p className="text-sm mt-1">
@@ -183,9 +201,10 @@ export default function TimelineChart({
                 </p>
               </div>
             )}
-            {paths.map((path) => {
+            {sortedPaths.map((path, pathIndex) => {
               const isSelected = selectedPath === path.id;
               const isDimmed = selectedPath !== null && !isSelected;
+              const isTracked = selectedPathId === path.id;
               const multiTrack = hasMultipleTracks(path.stages);
               const hasConcurrent = hasConcurrentStages(path.stages);
               // Add extra height if we have concurrent stages that need offset
@@ -196,34 +215,42 @@ export default function TimelineChart({
               return (
                 <div
                   key={path.id}
-                  className={`relative transition-opacity duration-200 mb-6 group ${
+                  className={`relative transition-all duration-200 group ${
                     isDimmed ? "opacity-40" : "opacity-100"
-                  }`}
+                  } ${isTracked ? "mb-8" : "mb-6"}`}
                   style={{ height: pathHeight + 24 }}
                 >
+                  {/* Tracked path highlight background */}
+                  {isTracked && (
+                    <div 
+                      className="absolute -inset-x-4 -inset-y-2 bg-brand-50/50 border border-brand-200 rounded-lg -z-10"
+                      style={{ left: "-224px" }}
+                    />
+                  )}
+                  
                   {/* Path header - positioned to the left */}
                   <div className="absolute right-full mr-4 top-0 w-[200px]">
                     {/* Main path info - clickable to select */}
                     <div 
                       className={`group/pathheader text-right p-2 -m-2 rounded-lg cursor-pointer transition-all ${
-                        selectedPathId === path.id 
-                          ? "bg-brand-50 ring-2 ring-brand-300" 
+                        isTracked 
+                          ? "bg-brand-100 ring-2 ring-brand-400" 
                           : "hover:bg-gray-100"
                       }`}
                       onClick={() => onSelectPath?.(path)}
                     >
                       <div className="flex items-center justify-end gap-2">
-                        {selectedPathId === path.id ? (
-                          <span className="flex items-center gap-1 text-[10px] text-brand-700 bg-brand-100 px-1.5 py-0.5 rounded">
-                            <span className="w-1.5 h-1.5 bg-brand-500 rounded-full" />
-                            My path
+                        {isTracked ? (
+                          <span className="flex items-center gap-1 text-[10px] text-brand-700 bg-brand-200 px-1.5 py-0.5 rounded font-medium">
+                            <span className="w-1.5 h-1.5 bg-brand-600 rounded-full animate-pulse" />
+                            Tracking
                           </span>
                         ) : onSelectPath && (
                           <span className="flex items-center gap-1 text-[10px] text-gray-400 px-1.5 py-0.5 rounded opacity-0 group-hover/pathheader:opacity-100 transition-opacity">
                             Click to track →
                           </span>
                         )}
-                        <div className="font-semibold text-gray-900 text-sm">
+                        <div className={`font-semibold text-sm ${isTracked ? "text-brand-900" : "text-gray-900"}`}>
                           {path.name}
                         </div>
                       </div>
@@ -273,9 +300,10 @@ export default function TimelineChart({
 
                   {/* Stages */}
                   {path.stages.map((stage, idx) => {
-                    const isThisPathSelected = selectedPathId === path.id;
-                    const stageKey = `${path.id}:${stage.nodeId}`;
-                    const isCompleted = completedStages?.has(stageKey) || false;
+                    const stageProgress = getStageProgress(path.id, stage.nodeId);
+                    const isApproved = stageProgress?.status === "approved";
+                    const isFiled = stageProgress?.status === "filed";
+                    const hasProgress = isApproved || isFiled;
                     
                     // Special rendering for priority date wait stages
                     if (stage.isPriorityWait) {
@@ -289,20 +317,11 @@ export default function TimelineChart({
                       // Calculate top position (GC track)
                       let top = multiTrack ? TRACK_HEIGHT + TRACK_GAP : 0;
 
-                      // Handle click - toggle complete if tracking this path
-                      const handlePDWaitClick = () => {
-                        if (isThisPathSelected && onToggleStageComplete) {
-                          onToggleStageComplete(path.id, stage.nodeId);
-                        } else {
-                          handleStageClick(stage.nodeId);
-                        }
-                      };
-
                       // Color based on wait length (or gray if completed)
                       const waitYears = duration;
-                      let bgColor = isCompleted ? "bg-gray-400" : "bg-orange-500";
-                      let borderColor = isCompleted ? "border-gray-500" : "border-orange-600";
-                      if (!isCompleted) {
+                      let bgColor = isApproved ? "bg-gray-400" : "bg-orange-500";
+                      let borderColor = isApproved ? "border-gray-500" : "border-orange-600";
+                      if (!isApproved) {
                         if (waitYears >= 10) {
                           bgColor = "bg-red-600";
                           borderColor = "border-red-700";
@@ -325,20 +344,20 @@ export default function TimelineChart({
                             height: TRACK_HEIGHT,
                             top: `${top}px`,
                           }}
-                          onClick={handlePDWaitClick}
+                          onClick={() => handleStageClick(stage.nodeId)}
                           onMouseEnter={() => setHoveredStage(`${path.id}-${idx}`)}
                           onMouseLeave={() => setHoveredStage(null)}
                         >
                           <div className="h-full px-1.5 flex flex-col justify-center overflow-hidden relative">
-                            {isCompleted && (
+                            {isApproved && (
                               <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-green-600 font-bold text-sm">
                                 ✓
                               </div>
                             )}
-                            <div className={`font-semibold text-[10px] leading-tight truncate ${isCompleted ? "line-through opacity-70" : ""}`}>
+                            <div className={`font-semibold text-[10px] leading-tight truncate ${isApproved ? "line-through opacity-70" : ""}`}>
                               PD Wait
                             </div>
-                            <div className={`text-[9px] opacity-90 leading-tight truncate ${isCompleted ? "line-through" : ""}`}>
+                            <div className={`text-[9px] opacity-90 leading-tight truncate ${isApproved ? "line-through" : ""}`}>
                               {stage.durationYears.display}
                             </div>
                           </div>
@@ -399,11 +418,6 @@ export default function TimelineChart({
                                   ✓ EAD (work permit) • ✓ Advance Parole (travel) • ✓ AC21 portability
                                 </div>
                               )}
-                              {isThisPathSelected && (
-                                <div className="text-brand-400 text-[10px] mt-1 border-t border-gray-700 pt-1">
-                                  Click to mark as {isCompleted ? "incomplete" : "complete"}
-                                </div>
-                              )}
                             </div>
                           )}
                         </div>
@@ -443,14 +457,13 @@ export default function TimelineChart({
                       ? (node.shortName as string)
                       : (node.name.length > 8 ? node.name.substring(0, 6) + "…" : node.name);
 
-                    // Handle stage click - either toggle complete (if tracking) or show info
-                    const handleClick = () => {
-                      if (isThisPathSelected && onToggleStageComplete) {
-                        onToggleStageComplete(path.id, stage.nodeId);
-                      } else {
-                        handleStageClick(stage.nodeId);
-                      }
-                    };
+                    // Determine stage visual style based on progress
+                    let stageColorClass = `${colors.bg} ${colors.border} ${colors.text}`;
+                    if (isApproved) {
+                      stageColorClass = "bg-green-600 border-green-700 text-white";
+                    } else if (isFiled) {
+                      stageColorClass = "bg-blue-500 border-blue-600 text-white";
+                    }
 
                     // Special rendering for the final Green Card destination
                     if (isFinalGC) {
@@ -464,19 +477,19 @@ export default function TimelineChart({
                             left: `${left}px`,
                             top: `${top}px`,
                           }}
-                          onClick={handleClick}
+                          onClick={() => handleStageClick(stage.nodeId)}
                           onMouseEnter={() => setHoveredStage(`${path.id}-${idx}`)}
                           onMouseLeave={() => setHoveredStage(null)}
                         >
                           {/* Clean finish marker */}
                           <div
                             className={`h-8 px-3 rounded-full border-2 text-white font-semibold text-xs flex items-center justify-center shadow-sm ${
-                              isCompleted 
+                              isApproved 
                                 ? "bg-green-700 border-green-800" 
                                 : "bg-green-600 border-green-700"
                             }`}
                           >
-                            {isCompleted && <span className="mr-1">✓</span>}
+                            {isApproved && <span className="mr-1">✓</span>}
                             Green Card
                           </div>
 
@@ -485,11 +498,6 @@ export default function TimelineChart({
                             <div className="absolute top-full left-0 mt-2 bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg whitespace-nowrap z-40">
                               <div className="font-semibold">Permanent Resident</div>
                               <div className="text-gray-400 text-[10px]">No expiration</div>
-                              {isThisPathSelected && (
-                                <div className="text-brand-400 text-[10px] mt-1 border-t border-gray-700 pt-1">
-                                  Click to mark as {isCompleted ? "incomplete" : "complete"}
-                                </div>
-                              )}
                             </div>
                           )}
                         </div>
@@ -500,12 +508,9 @@ export default function TimelineChart({
                       <div
                         key={`${stage.nodeId}-${idx}`}
                         className={`absolute rounded cursor-pointer transition-all duration-150 border
-                          ${isCompleted 
-                            ? "bg-gray-400 border-gray-500 text-white" 
-                            : `${colors.bg} ${colors.border} ${colors.text}`
-                          }
+                          ${stageColorClass}
                           ${isHovered ? "ring-2 ring-offset-1 ring-brand-400 scale-105 z-30" : "z-10"}
-                          ${isCurrentStatus && !isCompleted ? "ring-2 ring-offset-1 ring-red-500" : ""}
+                          ${isCurrentStatus && !hasProgress ? "ring-2 ring-offset-1 ring-red-500" : ""}
                         `}
                         style={{
                           left: `${left}px`,
@@ -513,34 +518,44 @@ export default function TimelineChart({
                           height: TRACK_HEIGHT,
                           top: `${top}px`,
                         }}
-                        onClick={handleClick}
+                        onClick={() => handleStageClick(stage.nodeId)}
                         onMouseEnter={() => setHoveredStage(`${path.id}-${idx}`)}
                         onMouseLeave={() => setHoveredStage(null)}
                       >
                         <div className="h-full px-1 flex flex-col justify-center overflow-hidden relative">
-                          {isCurrentStatus && !isCompleted && (
+                          {isCurrentStatus && !hasProgress && (
                             <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap">
                               YOU ARE HERE
                             </div>
                           )}
-                          {isCompleted && (
-                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-green-600 font-bold text-sm">
+                          {isApproved && (
+                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-green-700 font-bold text-sm">
                               ✓
+                            </div>
+                          )}
+                          {isFiled && !isApproved && (
+                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-blue-600 font-bold text-[10px]">
+                              FILED
                             </div>
                           )}
                           {isCompact ? (
                             // Compact: just show abbreviated name
-                            <div className={`font-semibold text-[9px] leading-none text-center truncate ${isCompleted ? "line-through opacity-70" : ""}`}>
+                            <div className="font-semibold text-[9px] leading-none text-center truncate">
                               {shortName}
                             </div>
                           ) : (
                             // Full: show name and duration
                             <>
-                              <div className={`font-semibold text-[10px] leading-tight truncate ${isCompleted ? "line-through opacity-70" : ""}`}>
+                              <div className="font-semibold text-[10px] leading-tight truncate">
                                 {node.name}
                               </div>
-                              <div className={`text-[9px] opacity-90 leading-tight truncate ${isCompleted ? "line-through" : ""}`}>
-                                {stage.durationYears.display}
+                              <div className="text-[9px] opacity-90 leading-tight truncate">
+                                {isApproved && stageProgress?.approvedDate 
+                                  ? `Done ${new Date(stageProgress.approvedDate).toLocaleDateString("en-US", { month: "short", year: "2-digit" })}`
+                                  : isFiled && stageProgress?.filedDate
+                                  ? `Filed ${new Date(stageProgress.filedDate).toLocaleDateString("en-US", { month: "short", year: "2-digit" })}`
+                                  : stage.durationYears.display
+                                }
                               </div>
                             </>
                           )}
@@ -548,14 +563,34 @@ export default function TimelineChart({
 
                         {/* Tooltip on hover */}
                         {isHovered && (
-                          <div className="absolute top-full left-0 mt-1 bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg whitespace-nowrap z-40">
+                          <div className="absolute top-full left-0 mt-1 bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg z-40 min-w-[180px]">
                             <div className="font-semibold">{node.name}</div>
-                            <div className="text-gray-300">{stage.durationYears.display}</div>
-                            {stage.note && <div className="text-gray-400 text-[10px] mt-0.5">{stage.note}</div>}
-                            {isThisPathSelected && (
-                              <div className="text-brand-400 text-[10px] mt-1 border-t border-gray-700 pt-1">
-                                Click to mark as {isCompleted ? "incomplete" : "complete"}
-                              </div>
+                            {hasProgress ? (
+                              <>
+                                <div className={`text-xs mt-1 ${isApproved ? "text-green-400" : "text-blue-400"}`}>
+                                  {isApproved ? "✓ Approved" : "⏳ Filed - Pending"}
+                                </div>
+                                {stageProgress?.filedDate && (
+                                  <div className="text-gray-400 text-[10px]">
+                                    Filed: {new Date(stageProgress.filedDate).toLocaleDateString()}
+                                  </div>
+                                )}
+                                {stageProgress?.approvedDate && (
+                                  <div className="text-gray-400 text-[10px]">
+                                    Approved: {new Date(stageProgress.approvedDate).toLocaleDateString()}
+                                  </div>
+                                )}
+                                {stageProgress?.receiptNumber && (
+                                  <div className="text-gray-400 text-[10px] font-mono">
+                                    {stageProgress.receiptNumber}
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <div className="text-gray-300">{stage.durationYears.display}</div>
+                                {stage.note && <div className="text-gray-400 text-[10px] mt-0.5">{stage.note}</div>}
+                              </>
                             )}
                           </div>
                         )}
@@ -579,16 +614,16 @@ export default function TimelineChart({
             <span className="text-sm text-gray-600">GC Process</span>
           </div>
           <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-blue-500" />
+            <span className="text-sm text-gray-600">Filed</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded bg-green-600" />
+            <span className="text-sm text-gray-600">Approved</span>
+          </div>
+          <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-orange-500" />
-            <span className="text-sm text-gray-600">Priority Date Wait</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded bg-brand-600" />
-            <span className="text-sm text-gray-600">Entry Visa</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-green-600" />
-            <span className="text-sm text-gray-600">Green Card</span>
+            <span className="text-sm text-gray-600">PD Wait</span>
           </div>
         </div>
 

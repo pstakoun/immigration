@@ -5,19 +5,33 @@ import TimelineChart from "@/components/TimelineChart";
 import PathDetail from "@/components/PathDetail";
 import ProfileSummary from "@/components/ProfileSummary";
 import OnboardingQuiz from "@/components/OnboardingQuiz";
+import TrackerPanel from "@/components/TrackerPanel";
 import { FilterState, defaultFilters } from "@/lib/filter-paths";
 import { ComposedPath } from "@/lib/path-composer";
 import { getStoredProfile, saveUserProfile } from "@/lib/storage";
 
 // Key for storing progress in localStorage
-const PROGRESS_STORAGE_KEY = "stateside_progress";
+const PROGRESS_STORAGE_KEY = "stateside_progress_v2";
 
-interface StoredProgress {
-  selectedPathId: string | null;
-  completedStages: string[]; // Array of "pathId:nodeId" strings
+// Stage tracking data with dates and receipt numbers
+export interface StageProgress {
+  status: "not_started" | "filed" | "approved";
+  filedDate?: string; // ISO date string
+  approvedDate?: string; // ISO date string
+  receiptNumber?: string; // e.g., "EAC2490012345"
+  priorityDate?: string; // ISO date string - for I-140 stage
+  notes?: string;
 }
 
-function loadProgress(): StoredProgress | null {
+export interface TrackedPathProgress {
+  pathId: string;
+  pathName: string;
+  stages: Record<string, StageProgress>; // keyed by nodeId
+  startedAt: string;
+  updatedAt: string;
+}
+
+function loadProgress(): TrackedPathProgress | null {
   if (typeof window === "undefined") return null;
   try {
     const stored = localStorage.getItem(PROGRESS_STORAGE_KEY);
@@ -27,10 +41,14 @@ function loadProgress(): StoredProgress | null {
   }
 }
 
-function saveProgress(progress: StoredProgress) {
+function saveProgressToStorage(progress: TrackedPathProgress | null) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
+    if (progress) {
+      localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
+    } else {
+      localStorage.removeItem(PROGRESS_STORAGE_KEY);
+    }
   } catch {
     // Ignore storage errors
   }
@@ -43,9 +61,9 @@ export default function Home() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   
-  // Path tracking state - simplified
-  const [selectedPathId, setSelectedPathId] = useState<string | null>(null);
-  const [completedStages, setCompletedStages] = useState<Set<string>>(new Set());
+  // Path tracking state
+  const [trackedPath, setTrackedPath] = useState<TrackedPathProgress | null>(null);
+  const [selectedPath, setSelectedPath] = useState<ComposedPath | null>(null);
 
   // Load stored profile and progress on mount
   useEffect(() => {
@@ -60,8 +78,7 @@ export default function Home() {
     }
     
     if (storedProgress) {
-      setSelectedPathId(storedProgress.selectedPathId);
-      setCompletedStages(new Set(storedProgress.completedStages));
+      setTrackedPath(storedProgress);
     }
     
     setIsLoaded(true);
@@ -70,12 +87,9 @@ export default function Home() {
   // Save progress whenever it changes
   useEffect(() => {
     if (isLoaded) {
-      saveProgress({
-        selectedPathId,
-        completedStages: Array.from(completedStages),
-      });
+      saveProgressToStorage(trackedPath);
     }
-  }, [selectedPathId, completedStages, isLoaded]);
+  }, [trackedPath, isLoaded]);
 
   const handleMatchingCountChange = useCallback((count: number) => {
     setMatchingCount(count);
@@ -93,42 +107,72 @@ export default function Home() {
 
   // Handle selecting a path to track
   const handleSelectPath = (path: ComposedPath) => {
-    if (selectedPathId === path.id) {
-      // Clicking selected path again deselects it
-      setSelectedPathId(null);
-    } else {
-      setSelectedPathId(path.id);
+    setSelectedPath(path);
+    
+    if (trackedPath?.pathId === path.id) {
+      // Already tracking this path - just open panel
+      return;
     }
+    
+    // Start tracking a new path
+    const now = new Date().toISOString();
+    const newProgress: TrackedPathProgress = {
+      pathId: path.id,
+      pathName: path.name,
+      stages: {},
+      startedAt: now,
+      updatedAt: now,
+    };
+    
+    // Initialize all stages as not_started
+    path.stages.forEach(stage => {
+      newProgress.stages[stage.nodeId] = {
+        status: "not_started",
+      };
+    });
+    
+    setTrackedPath(newProgress);
   };
 
-  // Handle toggling a stage as complete
-  const handleToggleStageComplete = (pathId: string, stageNodeId: string) => {
-    const key = `${pathId}:${stageNodeId}`;
-    setCompletedStages(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
+  // Handle updating a stage's progress
+  const handleUpdateStage = (nodeId: string, update: Partial<StageProgress>) => {
+    if (!trackedPath) return;
+    
+    setTrackedPath(prev => {
+      if (!prev) return prev;
+      
+      const currentStage = prev.stages[nodeId] || { status: "not_started" };
+      
+      return {
+        ...prev,
+        stages: {
+          ...prev.stages,
+          [nodeId]: {
+            ...currentStage,
+            ...update,
+          },
+        },
+        updatedAt: new Date().toISOString(),
+      };
     });
   };
 
-  // Calculate progress for selected path
+  // Handle stopping tracking
+  const handleStopTracking = () => {
+    setTrackedPath(null);
+    setSelectedPath(null);
+  };
+
+  // Calculate progress summary
   const getProgressSummary = () => {
-    if (!selectedPathId) return null;
+    if (!trackedPath) return null;
     
-    // Count completed stages for this path
-    let total = 0;
-    let completed = 0;
-    completedStages.forEach(key => {
-      if (key.startsWith(`${selectedPathId}:`)) {
-        completed++;
-      }
-    });
+    const stages = Object.values(trackedPath.stages);
+    const total = stages.length;
+    const filed = stages.filter(s => s.status === "filed").length;
+    const approved = stages.filter(s => s.status === "approved").length;
     
-    return { completed, total };
+    return { total, filed, approved, completed: approved };
   };
 
   const progressSummary = getProgressSummary();
@@ -183,16 +227,25 @@ export default function Home() {
           </div>
 
           {/* Progress indicator - only show when tracking */}
-          {selectedPathId && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span className="w-2 h-2 bg-brand-500 rounded-full animate-pulse" />
-              <span>Tracking progress</span>
+          {trackedPath && (
+            <div className="flex items-center gap-3 text-sm">
+              <div className="flex items-center gap-2 text-brand-700 bg-brand-50 px-3 py-1.5 rounded-lg">
+                <span className="w-2 h-2 bg-brand-500 rounded-full animate-pulse" />
+                <span className="font-medium">{trackedPath.pathName}</span>
+                {progressSummary && (
+                  <span className="text-brand-600">
+                    • {progressSummary.approved}/{progressSummary.total} complete
+                  </span>
+                )}
+              </div>
               <button
-                onClick={() => setSelectedPathId(null)}
-                className="text-gray-400 hover:text-gray-600 ml-1"
+                onClick={handleStopTracking}
+                className="text-gray-400 hover:text-gray-600 p-1"
                 title="Stop tracking"
               >
-                ×
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
               </button>
             </div>
           )}
@@ -204,23 +257,35 @@ export default function Home() {
         filters={filters}
         matchingCount={matchingCount}
         onEdit={handleEditProfile}
-        selectedPathId={selectedPathId}
-        completedStagesCount={progressSummary?.completed || 0}
+        selectedPathId={trackedPath?.pathId || null}
+        completedStagesCount={progressSummary?.approved || 0}
       />
 
-      {/* Timeline area */}
-      <div className="flex-1 relative overflow-hidden">
-        <TimelineChart
-          onStageClick={setSelectedNode}
-          filters={filters}
-          onMatchingCountChange={handleMatchingCountChange}
-          onSelectPath={handleSelectPath}
-          selectedPathId={selectedPathId}
-          completedStages={completedStages}
-          onToggleStageComplete={handleToggleStageComplete}
-        />
+      {/* Main content area with timeline and tracker panel */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Timeline area */}
+        <div className={`flex-1 relative overflow-hidden transition-all ${trackedPath ? "mr-0" : ""}`}>
+          <TimelineChart
+            onStageClick={setSelectedNode}
+            filters={filters}
+            onMatchingCountChange={handleMatchingCountChange}
+            onSelectPath={handleSelectPath}
+            selectedPathId={trackedPath?.pathId || null}
+            trackedProgress={trackedPath}
+          />
+        </div>
 
-        {/* Slide-out detail panel */}
+        {/* Tracker Panel - shows when tracking a path */}
+        {trackedPath && selectedPath && (
+          <TrackerPanel
+            path={selectedPath}
+            progress={trackedPath}
+            onUpdateStage={handleUpdateStage}
+            onClose={() => setSelectedPath(null)}
+          />
+        )}
+
+        {/* Slide-out detail panel for stage info */}
         {selectedNode && (
           <>
             <div
