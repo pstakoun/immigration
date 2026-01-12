@@ -14,12 +14,16 @@ interface ProfileSummaryProps {
   filters: FilterState;
   matchingCount: number;
   onEdit: () => void;
+  onTrackCase: () => void;
+  isCaseTrackingEnabled?: boolean;
 }
 
 export default function ProfileSummary({
   filters,
   matchingCount,
   onEdit,
+  onTrackCase,
+  isCaseTrackingEnabled,
 }: ProfileSummaryProps) {
   const tags: string[] = [
     statusLabels[filters.currentStatus],
@@ -44,8 +48,8 @@ export default function ProfileSummary({
   if (filters.isMarriedToUSCitizen) tags.push("Married to US citizen");
   if (filters.hasInvestmentCapital) tags.push("EB-5 investor");
 
-  // Show existing priority date
-  if (filters.hasApprovedI140 && filters.existingPriorityDate) {
+  // Show priority date (even if I-140 isn't approved yet)
+  if (filters.existingPriorityDate) {
     const pdStr = formatPriorityDateShort(filters.existingPriorityDate);
     const category = filters.existingPriorityDateCategory
       ? ebCategoryLabels[filters.existingPriorityDateCategory]
@@ -66,13 +70,26 @@ export default function ProfileSummary({
                 {tag}
               </span>
             ))}
+            {isCaseTrackingEnabled && (
+              <span className="px-2.5 py-1 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-full whitespace-nowrap">
+                Case tracking on
+              </span>
+            )}
           </div>
-          <button
-            onClick={onEdit}
-            className="text-sm text-brand-600 hover:text-brand-700 font-medium whitespace-nowrap"
-          >
-            Edit
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onEdit}
+              className="text-sm text-brand-600 hover:text-brand-700 font-medium whitespace-nowrap"
+            >
+              Edit
+            </button>
+            <button
+              onClick={onTrackCase}
+              className="text-sm text-gray-600 hover:text-gray-800 font-medium whitespace-nowrap"
+            >
+              Track case
+            </button>
+          </div>
         </div>
 
         <div className="text-sm text-gray-600 whitespace-nowrap">

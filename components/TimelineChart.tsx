@@ -6,6 +6,7 @@ import { FilterState, statusToNodeId } from "@/lib/filter-paths";
 import { generatePaths, ComposedStage, setProcessingTimes } from "@/lib/path-composer";
 import { adaptDynamicData } from "@/lib/processing-times";
 import { DynamicData } from "@/lib/dynamic-data";
+import { CaseTrackerState } from "@/lib/case-tracker";
 import { trackStageClick, trackPathsGenerated } from "@/lib/analytics";
 
 const PIXELS_PER_YEAR = 160;
@@ -18,6 +19,7 @@ interface TimelineChartProps {
   onStageClick: (nodeId: string) => void;
   filters: FilterState;
   onMatchingCountChange: (count: number) => void;
+  caseTrackerState?: CaseTrackerState;
 }
 
 const categoryColors: Record<string, { bg: string; border: string; text: string }> = {
@@ -37,6 +39,7 @@ export default function TimelineChart({
   onStageClick,
   filters,
   onMatchingCountChange,
+  caseTrackerState,
 }: TimelineChartProps) {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [hoveredStage, setHoveredStage] = useState<string | null>(null);
@@ -76,10 +79,10 @@ export default function TimelineChart({
   // Generate paths dynamically using the composer
   // Re-generate when processing times or priority dates are updated
   const paths = useMemo(() => {
-    const generatedPaths = generatePaths(filters, priorityDates, datesForFiling);
+    const generatedPaths = generatePaths(filters, priorityDates, datesForFiling, caseTrackerState);
     onMatchingCountChange(generatedPaths.length);
     return generatedPaths;
-  }, [filters, onMatchingCountChange, processingTimesLoaded, priorityDates, datesForFiling]);
+  }, [filters, onMatchingCountChange, priorityDates, datesForFiling, caseTrackerState]);
 
   // Track paths generated for analytics (debounced to avoid duplicate events)
   const lastTrackedFilters = useRef<string>("");

@@ -1,8 +1,9 @@
-import { FilterState, CurrentStatus, Education, Experience, isTNEligible, priorityDateToString } from "./filter-paths";
+import { FilterState, CurrentStatus, Education, Experience, isTNEligible } from "./filter-paths";
 import visaData from "@/data/visa-paths.json";
 import { ProcessingTimes, DEFAULT_PROCESSING_TIMES, formatMonths, calculatePriorityDateWait, getPriorityDateForPath, formatPriorityWait, calculateWaitForExistingPD, calculateWaitForExistingPDWithVelocity, WaitCalculationResult, getVelocityForCategory, calculateNewFilerWait } from "./processing-times";
 import { EBCategory } from "./filter-paths";
 import { DynamicData } from "./dynamic-data";
+import { CaseTrackerState, getActiveEmploymentCase, MilestoneStatus } from "./case-tracker";
 
 // Current processing times (can be updated dynamically)
 let currentProcessingTimes: ProcessingTimes = DEFAULT_PROCESSING_TIMES;
@@ -81,6 +82,39 @@ function getDynamicDuration(nodeId: string): Duration | null {
   }
 
   return null;
+}
+
+function monthsSinceDate(dateStr?: string): number {
+  if (!dateStr) return 0;
+  const parsed = new Date(dateStr);
+  if (Number.isNaN(parsed.getTime())) return 0;
+
+  const now = new Date();
+  const diffMonths =
+    (now.getFullYear() - parsed.getFullYear()) * 12 + (now.getMonth() - parsed.getMonth());
+  return Math.max(0, diffMonths);
+}
+
+function statusIsDone(status: MilestoneStatus | undefined): boolean {
+  return status === "approved" || status === "denied";
+}
+
+function remainingDurationFromFiledDate(duration: Duration, filedDate?: string): Duration {
+  const elapsedMonths = monthsSinceDate(filedDate);
+  const maxMonths = Math.round(duration.max * 12);
+  const minMonths = Math.round(duration.min * 12);
+
+  const remainingMaxMonths = Math.max(0, maxMonths - elapsedMonths);
+  const remainingMinMonths = Math.max(0, Math.min(remainingMaxMonths, minMonths - elapsedMonths));
+
+  return {
+    min: remainingMinMonths / 12,
+    max: remainingMaxMonths / 12,
+    display:
+      remainingMaxMonths === 0
+        ? "Done"
+        : formatMonths(Math.max(0.5, remainingMinMonths), Math.max(1, remainingMaxMonths)),
+  };
 }
 
 // Duration range in years
@@ -607,6 +641,14 @@ export function computeGCCategory(
     return gcMethod.fixedCategory;
   }
 
+  // If the user provided a known category for an existing priority date,
+  // treat it as authoritative for visa bulletin calculations and in-progress cases.
+  // This prevents showing an EB-3 backlog estimate for someone who is actually EB-2 (etc).
+  if (filters.existingPriorityDate && filters.existingPriorityDateCategory) {
+    const label = filters.existingPriorityDateCategory.toUpperCase().replace("EB", "EB-");
+    return label;
+  }
+
   // For student paths, use the education the path grants
   let effectiveEducation = filters.education;
   if (statusPath.grantsEducation) {
@@ -632,8 +674,10 @@ function composePath(
   gcCategory: string,
   filters: FilterState,
   priorityDates?: DynamicData["priorityDates"],
-  datesForFiling?: DynamicData["datesForFiling"]
+  datesForFiling?: DynamicData["datesForFiling"],
+  caseTracker?: CaseTrackerState
 ): ComposedPath {
+  const activeCase = getActiveEmploymentCase(caseTracker);
   const stages: ComposedStage[] = [];
   let statusEndYear = 0;
 
@@ -682,7 +726,54 @@ function composePath(
 
     // Get dynamic duration if available, otherwise use default
     const dynamicDuration = getDynamicDuration(stage.nodeId);
-    const duration = dynamicDuration ?? stage.duration;
+    let duration = dynamicDuration ?? stage.duration;
+    let note = stage.note;
+
+    // ===== Case tracker overrides (skip completed steps / show remaining) =====
+    if (activeCase && activeCase.type === "employment") {
+      const permStatus = activeCase.milestones.perm.status;
+      const i140Status = activeCase.milestones.i140.status;
+      const i485Status = activeCase.milestones.i485.status;
+
+      // PERM route: PWD + recruitment are assumed completed once PERM is filed.
+      if (stage.nodeId === "pwd" || stage.nodeId === "recruit") {
+        if (permStatus === "filed" || statusIsDone(permStatus) || permStatus === "in_progress") {
+          duration = { min: 0, max: 0, display: "Done" };
+          note = "Completed (from your tracker)";
+        }
+      }
+
+      if (stage.nodeId === "perm") {
+        if (statusIsDone(permStatus)) {
+          duration = { min: 0, max: 0, display: "Done" };
+          note = permStatus === "approved" ? "PERM approved" : "PERM completed (denied)";
+        } else if (permStatus === "filed" || permStatus === "in_progress") {
+          duration = remainingDurationFromFiledDate(duration, activeCase.milestones.perm.filedDate);
+          note = "In progress (from your tracker)";
+        }
+      }
+
+      // I-140 stage can be represented as i140 / eb1 / eb2niw in the graph
+      if (stage.nodeId === "i140" || stage.nodeId === "eb1" || stage.nodeId === "eb2niw") {
+        if (statusIsDone(i140Status)) {
+          duration = { min: 0, max: 0, display: "Done" };
+          note = i140Status === "approved" ? "I-140 approved" : "I-140 completed (denied)";
+        } else if (i140Status === "filed" || i140Status === "in_progress") {
+          duration = remainingDurationFromFiledDate(duration, activeCase.milestones.i140.filedDate);
+          note = "In progress (from your tracker)";
+        }
+      }
+
+      if (stage.nodeId === "i485") {
+        if (statusIsDone(i485Status)) {
+          duration = { min: 0, max: 0, display: "Done" };
+          note = i485Status === "approved" ? "I-485 approved" : "I-485 completed (denied)";
+        } else if (i485Status === "filed" || i485Status === "in_progress") {
+          duration = remainingDurationFromFiledDate(duration, activeCase.milestones.i485.filedDate);
+          note = "Pending (from your tracker)";
+        }
+      }
+    }
 
     // For concurrent stages, start at same time as previous stage
     // For sequential stages, start after the latest end time
@@ -701,7 +792,7 @@ function composePath(
       },
       track: "gc",
       startYear: stageStartYear,
-      note: stage.note,
+      note,
       isConcurrent,
     });
 
@@ -740,10 +831,8 @@ function composePath(
     // Convert gcCategory to EBCategory for velocity calculations
     const ebCategory = gcCategoryToEBCategory(gcCategory);
 
-    if (filters.hasApprovedI140 && filters.existingPriorityDate) {
-      // User has existing I-140 with priority date
-      const userPDStr = priorityDateToString(filters.existingPriorityDate);
-
+    if (filters.existingPriorityDate) {
+      // User has a known priority date (portable or already established)
       // Calculate FILING wait (Dates for Filing chart)
       if (filingDatesChart) {
         filingDateStr = getPriorityDateForPath(filingDatesChart, gcCategory, filters.countryOfBirth);
@@ -838,22 +927,49 @@ function composePath(
   if (i140Index >= 0 && i485Index >= 0) {
     const i140Stage = stages[i140Index];
     const i485Stage = stages[i485Index];
-    const i485ProcessingTime = i485Stage.durationYears.max; // Normal USCIS processing time
+    const monthsUntilI140Filed = Math.round(i140Stage.startYear * 12);
     
     let currentI485Index = i485Index;
     let stagesInserted = 0;
 
+    // If the user already has a priority date, it "ticks" while PERM/I-140 is processing.
+    // Model this by reducing the additional wait AFTER I-140 is filed by the time spent getting to I-140 filing.
+    let effectiveFilingWaitMonths = filingWaitMonths;
+    let effectiveApprovalWaitMonths = approvalWaitMonths;
+    if (filters.existingPriorityDate && monthsUntilI140Filed > 0) {
+      effectiveFilingWaitMonths = Math.max(0, filingWaitMonths - monthsUntilI140Filed);
+      effectiveApprovalWaitMonths = Math.max(0, approvalWaitMonths - monthsUntilI140Filed);
+    }
+
+    // If the user already filed I-485 (from case tracker), there's no "filing wait" to show.
+    // Any remaining backlog is handled as approval wait while I-485 is pending.
+    if (activeCase?.milestones.i485.status === "filed" || activeCase?.milestones.i485.status === "in_progress") {
+      effectiveFilingWaitMonths = 0;
+    }
+
     // STEP 1: Add Filing Wait if needed (Dates for Filing not current)
-    if (filingWaitMonths > 0) {
-      const filingWaitYears = filingWaitMonths / 12;
-      const filingWaitStart = i140Stage.startYear + i140Stage.durationYears.max;
+    if (effectiveFilingWaitMonths > 0) {
+      const filingWaitYears = effectiveFilingWaitMonths / 12;
+      const filingWaitStart = i140Stage.startYear; // can file I-485 once visa is available after I-140 is filed
       
       const filingWaitStage: ComposedStage = {
         nodeId: "priority_wait",
         durationYears: {
-          min: filingVelocityInfo?.rangeMin ? filingVelocityInfo.rangeMin / 12 : filingWaitYears,
-          max: filingVelocityInfo?.rangeMax ? filingVelocityInfo.rangeMax / 12 : filingWaitYears,
-          display: formatPriorityWait(filingWaitMonths),
+          min: filingVelocityInfo?.rangeMin
+            ? Math.max(
+                0,
+                ((filters.existingPriorityDate ? filingVelocityInfo.rangeMin - monthsUntilI140Filed : filingVelocityInfo.rangeMin) /
+                  12)
+              )
+            : filingWaitYears,
+          max: filingVelocityInfo?.rangeMax
+            ? Math.max(
+                0,
+                ((filters.existingPriorityDate ? filingVelocityInfo.rangeMax - monthsUntilI140Filed : filingVelocityInfo.rangeMax) /
+                  12)
+              )
+            : filingWaitYears,
+          display: formatPriorityWait(effectiveFilingWaitMonths),
         },
         track: "gc",
         startYear: filingWaitStart,
@@ -877,9 +993,7 @@ function composePath(
     // STEP 2: Handle approval wait and update I-485 duration
     // The I-485 pending time = max(USCIS processing time, approval wait after filing)
     // Both happen in parallel, so whichever is longer is the bottleneck
-    const additionalApprovalWait = approvalWaitMonths - filingWaitMonths;
-    const additionalApprovalWaitYears = additionalApprovalWait / 12;
-    
+    const additionalApprovalWait = effectiveApprovalWaitMonths - effectiveFilingWaitMonths;
     const i485BaseMinMonths = Math.round(i485Stage.durationYears.min * 12);  // ~10 months
     const i485BaseMaxMonths = Math.round(i485Stage.durationYears.max * 12);  // ~18 months
     
@@ -925,7 +1039,7 @@ function composePath(
       // Update GC marker position based on new I-485 duration
       const i485NewEndYear = stages[currentI485Index].startYear + effectiveMax;
       gcMaxEndYear = Math.max(gcMaxEndYear, i485NewEndYear);
-    } else if (filingWaitMonths > 0) {
+    } else if (effectiveFilingWaitMonths > 0) {
       stages[currentI485Index].note = "After Dates for Filing is current";
     } else {
       // No filing wait and no approval wait - both charts current
@@ -1020,7 +1134,8 @@ function composePath(
 export function generatePaths(
   filters: FilterState,
   priorityDates?: DynamicData["priorityDates"],
-  datesForFiling?: DynamicData["datesForFiling"]
+  datesForFiling?: DynamicData["datesForFiling"],
+  caseTracker?: CaseTrackerState
 ): ComposedPath[] {
   const paths: ComposedPath[] = [];
 
@@ -1036,7 +1151,7 @@ export function generatePaths(
       const gcCategory = computeGCCategory(filters, gcMethod, statusPath);
 
       // Compose and add the path
-      const path = composePath(statusPath, gcMethod, gcCategory, filters, priorityDates, datesForFiling);
+      const path = composePath(statusPath, gcMethod, gcCategory, filters, priorityDates, datesForFiling, caseTracker);
       paths.push(path);
     }
   }

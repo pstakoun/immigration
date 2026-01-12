@@ -5,8 +5,10 @@ import TimelineChart from "@/components/TimelineChart";
 import PathDetail from "@/components/PathDetail";
 import ProfileSummary from "@/components/ProfileSummary";
 import OnboardingQuiz from "@/components/OnboardingQuiz";
+import CaseTrackerModal from "@/components/CaseTrackerModal";
 import { FilterState, defaultFilters } from "@/lib/filter-paths";
-import { getStoredProfile, saveUserProfile } from "@/lib/storage";
+import { getStoredProfile, saveUserProfile, saveCaseTrackerState } from "@/lib/storage";
+import { CaseTrackerState, defaultCaseTrackerState, applyActiveCaseToFilters } from "@/lib/case-tracker";
 
 export default function Home() {
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
@@ -14,12 +16,16 @@ export default function Home() {
   const [matchingCount, setMatchingCount] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [showCaseTracker, setShowCaseTracker] = useState(false);
+  const [caseTrackerState, setCaseTrackerState] = useState<CaseTrackerState>(defaultCaseTrackerState);
 
   // Load stored profile on mount
   useEffect(() => {
     const profile = getStoredProfile();
     if (profile) {
-      setFilters(profile.filters);
+      const tracker = profile.caseTracker ?? defaultCaseTrackerState;
+      setCaseTrackerState(tracker);
+      setFilters(applyActiveCaseToFilters(profile.filters, tracker));
       setShowOnboarding(false);
     } else {
       setShowOnboarding(true);
@@ -32,7 +38,7 @@ export default function Home() {
   }, []);
 
   const handleOnboardingComplete = (newFilters: FilterState) => {
-    setFilters(newFilters);
+    setFilters(applyActiveCaseToFilters(newFilters, caseTrackerState));
     saveUserProfile(newFilters);
     setShowOnboarding(false);
   };
@@ -57,6 +63,21 @@ export default function Home() {
         <OnboardingQuiz
           onComplete={handleOnboardingComplete}
           initialFilters={filters}
+        />
+      )}
+
+      {/* Case Tracker Modal */}
+      {showCaseTracker && (
+        <CaseTrackerModal
+          isOpen={showCaseTracker}
+          onClose={() => setShowCaseTracker(false)}
+          filters={filters}
+          initialState={caseTrackerState}
+          onSave={(next) => {
+            setCaseTrackerState(next);
+            saveCaseTrackerState(next);
+            setFilters((prev) => applyActiveCaseToFilters(prev, next));
+          }}
         />
       )}
 
@@ -95,6 +116,8 @@ export default function Home() {
         filters={filters}
         matchingCount={matchingCount}
         onEdit={handleEditProfile}
+        onTrackCase={() => setShowCaseTracker(true)}
+        isCaseTrackingEnabled={caseTrackerState.enabled}
       />
 
       {/* Timeline area */}
@@ -103,6 +126,7 @@ export default function Home() {
           onStageClick={setSelectedNode}
           filters={filters}
           onMatchingCountChange={handleMatchingCountChange}
+          caseTrackerState={caseTrackerState}
         />
 
         {/* Slide-out detail panel */}
