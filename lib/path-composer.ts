@@ -1,4 +1,4 @@
-import { FilterState, CurrentStatus, Education, Experience, isTNEligible, priorityDateToString } from "./filter-paths";
+import { FilterState, CurrentStatus, Education, Experience, isTNEligible, priorityDateToString, needsPerm } from "./filter-paths";
 import visaData from "@/data/visa-paths.json";
 import { ProcessingTimes, DEFAULT_PROCESSING_TIMES, formatMonths, calculatePriorityDateWait, getPriorityDateForPath, formatPriorityWait, calculateWaitForExistingPD, calculateWaitForExistingPDWithVelocity, WaitCalculationResult, getVelocityForCategory, calculateNewFilerWait } from "./processing-times";
 import { EBCategory } from "./filter-paths";
@@ -366,6 +366,20 @@ export const STATUS_PATHS: StatusPath[] = [
 // ============== GC METHODS ==============
 
 export const GC_METHODS: GCMethod[] = [
+  // Direct I-485 filing for users with approved I-140 (no new PERM needed)
+  {
+    id: "direct_i485",
+    name: "Direct I-485",
+    requiresPerm: false,
+    stages: [
+      { nodeId: "i485", duration: { min: 0.88, max: 1.5, display: "10-18 mo" }, note: "Using existing approved I-140" },
+      { nodeId: "gc", duration: { min: 0, max: 0, display: "" } },
+    ],
+    requirements: {
+      // No special requirements - this is for users who already have approved I-140
+    },
+    fixedCategory: undefined, // Will use existing I-140 category
+  },
   {
     id: "perm_route",
     name: "PERM",
@@ -563,6 +577,16 @@ function isStatusPathValidForUser(statusPath: StatusPath, filters: FilterState):
  * Check if a GC method can be used with a status path
  */
 function isCompatible(statusPath: StatusPath, gcMethod: GCMethod, filters: FilterState): boolean {
+  // Special case: if user has approved I-140 and is NOT switching employers,
+  // they don't need PERM again - they can go directly to I-485
+  const userNeedsPerm = needsPerm(filters);
+  
+  // If PERM method but user doesn't need PERM, suggest direct filing path
+  if (gcMethod.requiresPerm && !userNeedsPerm && statusPath.id !== "none") {
+    // They can skip PERM, so prefer the "none"/direct filing path
+    return false;
+  }
+  
   // PERM route requires a status path that supports it
   if (gcMethod.requiresPerm && statusPath.permStartOffset === null) {
     return false;
@@ -574,7 +598,8 @@ function isCompatible(statusPath: StatusPath, gcMethod: GCMethod, filters: Filte
   }
 
   // PERM route requires actual work status (not "none"/direct filing)
-  if (gcMethod.requiresPerm && statusPath.id === "none") {
+  // UNLESS user has approved I-140 and doesn't need new PERM
+  if (gcMethod.requiresPerm && statusPath.id === "none" && userNeedsPerm) {
     return false;
   }
 
@@ -605,6 +630,16 @@ export function computeGCCategory(
   // If method has a fixed category, use it
   if (gcMethod.fixedCategory) {
     return gcMethod.fixedCategory;
+  }
+
+  // For direct I-485 filing (user has approved I-140), use their existing category
+  if (gcMethod.id === "direct_i485" && filters.existingPriorityDateCategory) {
+    const categoryMap: Record<string, string> = {
+      eb1: "EB-1",
+      eb2: "EB-2",
+      eb3: "EB-3",
+    };
+    return categoryMap[filters.existingPriorityDateCategory] || "EB-2";
   }
 
   // For student paths, use the education the path grants
@@ -960,7 +995,9 @@ function composePath(
 
   // Build path name
   let pathName: string;
-  if (statusPath.id === "none") {
+  if (gcMethod.id === "direct_i485") {
+    pathName = `Direct I-485 (${gcCategory})`;
+  } else if (statusPath.id === "none") {
     pathName = `${gcMethod.name} (Direct)`;
   } else if (gcMethod.requiresPerm) {
     pathName = `${statusPath.name} → ${gcCategory}`;
@@ -969,14 +1006,22 @@ function composePath(
   }
 
   // Build description
-  let description = statusPath.description;
-  if (gcMethod.requiresPerm) {
-    const permTiming = statusPath.permStartOffset === 0
-      ? "immediately"
-      : statusPath.permStartOffset === 0.5
-      ? "after 6 months"
-      : `at year ${statusPath.permStartOffset}`;
-    description += `. Start PERM ${permTiming}.`;
+  let description: string;
+  if (gcMethod.id === "direct_i485" && filters.hasApprovedI140) {
+    const pdStr = filters.existingPriorityDate 
+      ? priorityDateToString(filters.existingPriorityDate)
+      : "your existing priority date";
+    description = `File I-485 directly using your approved I-140 (PD: ${pdStr}). No new PERM required since staying with same employer.`;
+  } else {
+    description = statusPath.description;
+    if (gcMethod.requiresPerm) {
+      const permTiming = statusPath.permStartOffset === 0
+        ? "immediately"
+        : statusPath.permStartOffset === 0.5
+        ? "after 6 months"
+        : `at year ${statusPath.permStartOffset}`;
+      description += `. Start PERM ${permTiming}.`;
+    }
   }
 
   // Calculate estimated cost from filing fees
@@ -1023,12 +1068,31 @@ export function generatePaths(
   datesForFiling?: DynamicData["datesForFiling"]
 ): ComposedPath[] {
   const paths: ComposedPath[] = [];
+  const userNeedsPerm = needsPerm(filters);
 
   for (const statusPath of STATUS_PATHS) {
     // Skip if user can't start this status path
     if (!isStatusPathValidForUser(statusPath, filters)) continue;
 
     for (const gcMethod of GC_METHODS) {
+      // Special handling for direct_i485 method
+      if (gcMethod.id === "direct_i485") {
+        // Only show direct I-485 path if user has approved I-140 AND doesn't need new PERM
+        if (!filters.hasApprovedI140 || userNeedsPerm) {
+          continue;
+        }
+        // Direct I-485 works with the "none" status path (direct filing)
+        if (statusPath.id !== "none") {
+          continue;
+        }
+      }
+      
+      // Skip PERM routes if user has approved I-140 and doesn't need new PERM
+      // (unless they explicitly want to do new PERM for employer switch)
+      if (gcMethod.requiresPerm && !userNeedsPerm) {
+        continue;
+      }
+
       // Skip if status path and GC method aren't compatible
       if (!isCompatible(statusPath, gcMethod, filters)) continue;
 

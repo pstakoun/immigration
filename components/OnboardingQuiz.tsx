@@ -405,6 +405,7 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
                     if (!e.target.checked) {
                       updateFilter("existingPriorityDate", null);
                       updateFilter("existingPriorityDateCategory", null);
+                      updateFilter("needsNewPerm", undefined);
                     }
                   }}
                   className="w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
@@ -482,11 +483,74 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
                     </div>
                   </div>
 
+                  {/* Employer switch question */}
+                  <div className="mt-4 p-3 bg-amber-50 rounded-lg">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={filters.needsNewPerm === true}
+                        onChange={(e) => {
+                          updateFilter("needsNewPerm", e.target.checked ? true : undefined);
+                        }}
+                        className="mt-0.5 w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-amber-900">
+                          I&apos;m switching to a new employer
+                        </span>
+                        <p className="text-xs text-amber-700 mt-0.5">
+                          If you&apos;re staying with the same employer, you don&apos;t need to do PERM again.
+                          Your priority date can be used directly for a new I-485.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <p className="text-xs text-green-800">
+                      ✓ <strong>You don&apos;t need PERM again</strong> unless switching employers.
+                      Your priority date ({filters.existingPriorityDate ? `${months[filters.existingPriorityDate.month - 1]} ${filters.existingPriorityDate.year}` : "..."}) 
+                      can be used for any new petition and continues to &quot;age&quot; toward being current.
+                    </p>
+                  </div>
+
                   <p className="text-xs text-gray-500 bg-blue-50 p-2 rounded-lg">
-                    💡 With an approved I-140, your priority date can be used for any new I-140 petition, even with a different employer.
+                    💡 <strong>Priority Date Portability:</strong> Your PD can be used for any new I-140 petition, 
+                    even with a different employer or category. It keeps moving closer to &quot;current&quot; while you wait.
                   </p>
                 </div>
               )}
+            </div>
+
+            {/* In-Progress Case Section */}
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <div className="px-4 py-3 bg-gray-50">
+                <div className="flex items-center gap-2">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
+                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    <path d="M9 12l2 2 4-4" />
+                  </svg>
+                  <div>
+                    <span className="text-sm font-medium text-gray-900">
+                      Track your in-progress case
+                    </span>
+                    <p className="text-xs text-gray-500">Add receipt numbers, dates, and track status</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 border-t border-gray-200">
+                <p className="text-xs text-gray-600 mb-3">
+                  After saving your profile, use the <strong>&quot;Track My Case&quot;</strong> button to add detailed case information 
+                  including USCIS receipt numbers, filing dates, and current status.
+                </p>
+                <div className="flex items-center gap-2 text-xs text-brand-600">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 16v-4M12 8h.01" />
+                  </svg>
+                  <span>This helps calculate accurate timelines based on where you are in the process</span>
+                </div>
+              </div>
             </div>
           </div>
 

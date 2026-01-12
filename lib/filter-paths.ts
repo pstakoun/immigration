@@ -9,6 +9,29 @@ export interface PriorityDate {
   year: number;  // e.g., 2019
 }
 
+// In-progress case step status
+export type CaseStepStatus = "not_started" | "pending" | "approved";
+
+// Detailed case progress tracking
+export interface InProgressCase {
+  // PERM process
+  pwdStatus: CaseStepStatus;
+  pwdFiledDate?: string; // ISO date
+  recruitmentStatus: CaseStepStatus;
+  permStatus: CaseStepStatus;
+  permFiledDate?: string; // ISO date
+  
+  // I-140
+  i140Status: CaseStepStatus;
+  i140FiledDate?: string; // ISO date
+  i140ReceiptNumber?: string;
+  
+  // I-485
+  i485Status: CaseStepStatus;
+  i485FiledDate?: string; // ISO date
+  i485ReceiptNumber?: string;
+}
+
 export interface FilterState {
   education: Education;
   experience: Experience;
@@ -25,6 +48,10 @@ export interface FilterState {
   hasApprovedI140: boolean;
   existingPriorityDate: PriorityDate | null;
   existingPriorityDateCategory: EBCategory | null;
+  // Detailed in-progress case tracking
+  inProgressCase?: InProgressCase;
+  // Employer switch tracking - affects whether PERM is needed
+  needsNewPerm?: boolean; // true if switching employers with approved I-140
 }
 
 export interface PathEligibility {
@@ -53,7 +80,55 @@ export const defaultFilters: FilterState = {
   hasApprovedI140: false,
   existingPriorityDate: null,
   existingPriorityDateCategory: null,
+  inProgressCase: undefined,
+  needsNewPerm: undefined,
 };
+
+// Check if user needs to do PERM based on their case status
+export function needsPerm(filters: FilterState): boolean {
+  // If they have approved I-140 and NOT switching employers, no new PERM needed
+  if (filters.hasApprovedI140 && !filters.needsNewPerm) {
+    return false;
+  }
+  // If explicitly set that new PERM is needed
+  if (filters.needsNewPerm) {
+    return true;
+  }
+  // Default: needs PERM if no approved I-140
+  return !filters.hasApprovedI140;
+}
+
+// Calculate how many months remain in a pending step based on when it was filed
+export function calculateRemainingMonths(
+  filedDate: string | undefined,
+  typicalDurationMonths: number
+): number {
+  if (!filedDate) return typicalDurationMonths;
+  
+  const filed = new Date(filedDate);
+  const now = new Date();
+  const monthsElapsed = (now.getFullYear() - filed.getFullYear()) * 12 +
+    (now.getMonth() - filed.getMonth());
+  
+  // At least 1 month remaining to account for uncertainty
+  return Math.max(1, typicalDurationMonths - monthsElapsed);
+}
+
+// Calculate how much the priority date has "aged" (moved closer to current)
+// since a specific date, given the velocity of the bulletin
+export function calculatePDAgingSince(
+  sinceDate: string,
+  velocityMonthsPerYear: number
+): number {
+  const since = new Date(sinceDate);
+  const now = new Date();
+  const monthsElapsed = (now.getFullYear() - since.getFullYear()) * 12 +
+    (now.getMonth() - since.getMonth());
+  
+  // The bulletin advances at velocityMonthsPerYear rate
+  // So in X months, it advances X * (velocity/12) months
+  return Math.round(monthsElapsed * (velocityMonthsPerYear / 12));
+}
 
 // Helper to format priority date as "Mon YYYY" string
 export function formatPriorityDateShort(pd: PriorityDate): string {

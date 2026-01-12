@@ -5,25 +5,42 @@ import TimelineChart from "@/components/TimelineChart";
 import PathDetail from "@/components/PathDetail";
 import ProfileSummary from "@/components/ProfileSummary";
 import OnboardingQuiz from "@/components/OnboardingQuiz";
+import CaseTracker from "@/components/CaseTracker";
+import ProgressDashboard from "@/components/ProgressDashboard";
 import { FilterState, defaultFilters } from "@/lib/filter-paths";
-import { getStoredProfile, saveUserProfile } from "@/lib/storage";
+import { CaseProgress } from "@/lib/case-progress";
+import { getStoredProfile, saveUserProfile, getStoredCaseProgress, saveCaseProgress, getCaseProgressOrCreate } from "@/lib/storage";
 
 export default function Home() {
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
   const [matchingCount, setMatchingCount] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showCaseTracker, setShowCaseTracker] = useState(false);
+  const [caseProgress, setCaseProgress] = useState<CaseProgress | null>(null);
+  const [showProgressPanel, setShowProgressPanel] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load stored profile on mount
+  // Load stored profile and case progress on mount
   useEffect(() => {
     const profile = getStoredProfile();
+    const storedCaseProgress = getStoredCaseProgress();
+    
     if (profile) {
       setFilters(profile.filters);
       setShowOnboarding(false);
     } else {
       setShowOnboarding(true);
     }
+    
+    if (storedCaseProgress) {
+      setCaseProgress(storedCaseProgress);
+      // Auto-show progress panel if they have case data
+      if (storedCaseProgress.gcProcess.pathType && storedCaseProgress.gcProcess.pathType !== "none") {
+        setShowProgressPanel(true);
+      }
+    }
+    
     setIsLoaded(true);
   }, []);
 
@@ -39,6 +56,34 @@ export default function Home() {
 
   const handleEditProfile = () => {
     setShowOnboarding(true);
+  };
+
+  const handleCaseProgressUpdate = (progress: CaseProgress) => {
+    setCaseProgress(progress);
+    saveCaseProgress(progress);
+    
+    // Update filters based on case progress
+    if (progress.effectivePriorityDate && progress.effectiveEBCategory) {
+      const updatedFilters: FilterState = {
+        ...filters,
+        hasApprovedI140: true,
+        existingPriorityDate: progress.effectivePriorityDate,
+        existingPriorityDateCategory: progress.effectiveEBCategory,
+        // If they have approved I-140 with same employer, no new PERM needed
+        needsNewPerm: false,
+      };
+      setFilters(updatedFilters);
+      saveUserProfile(updatedFilters);
+    }
+    
+    // Show progress panel if they have real case data
+    if (progress.gcProcess.pathType && progress.gcProcess.pathType !== "none") {
+      setShowProgressPanel(true);
+    }
+  };
+
+  const handleOpenCaseTracker = () => {
+    setShowCaseTracker(true);
   };
 
   // Don't render until we've checked localStorage (prevents flash)
@@ -60,33 +105,56 @@ export default function Home() {
         />
       )}
 
+      {/* Case Tracker Modal */}
+      {showCaseTracker && (
+        <CaseTracker
+          onClose={() => setShowCaseTracker(false)}
+          onUpdate={handleCaseProgressUpdate}
+          initialProgress={caseProgress || undefined}
+        />
+      )}
+
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-3 flex-shrink-0">
-        <div className="max-w-7xl mx-auto flex items-center gap-2.5">
-          {/* Logo */}
-          <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M5 12h14M12 5l7 7-7 7"
-                stroke="white"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            {/* Logo */}
+            <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5 12h14M12 5l7 7-7 7"
+                  stroke="white"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <span className="text-xl font-semibold text-gray-900 tracking-tight">
+              Stateside
+            </span>
+            <span className="text-sm text-gray-400 hidden sm:inline">
+              US immigration paths
+            </span>
           </div>
-          <span className="text-xl font-semibold text-gray-900 tracking-tight">
-            Stateside
-          </span>
-          <span className="text-sm text-gray-400 hidden sm:inline">
-            US immigration paths
-          </span>
+
+          {/* Track My Case Button */}
+          <button
+            onClick={handleOpenCaseTracker}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-brand-600 hover:text-brand-700 border border-brand-200 rounded-lg hover:bg-brand-50 transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              <path d="M9 12l2 2 4-4" />
+            </svg>
+            <span className="hidden sm:inline">Track My Case</span>
+          </button>
         </div>
       </header>
 
@@ -95,26 +163,67 @@ export default function Home() {
         filters={filters}
         matchingCount={matchingCount}
         onEdit={handleEditProfile}
+        caseProgress={caseProgress}
+        onEditCase={handleOpenCaseTracker}
       />
 
-      {/* Timeline area */}
-      <div className="flex-1 relative overflow-hidden">
-        <TimelineChart
-          onStageClick={setSelectedNode}
-          filters={filters}
-          onMatchingCountChange={handleMatchingCountChange}
-        />
-
-        {/* Slide-out detail panel */}
-        {selectedNode && (
-          <>
-            <div
-              className="fixed inset-0 bg-black/20 z-40"
-              onClick={() => setSelectedNode(null)}
+      {/* Timeline area with optional progress panel */}
+      <div className="flex-1 relative overflow-hidden flex">
+        {/* Progress Panel (left side) */}
+        {showProgressPanel && caseProgress && (
+          <div className="w-80 flex-shrink-0 border-r border-gray-200 bg-gray-50 overflow-y-auto p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">Your Progress</h3>
+              <button
+                onClick={() => setShowProgressPanel(false)}
+                className="p-1 hover:bg-gray-200 rounded transition-colors"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <ProgressDashboard
+              caseProgress={caseProgress}
+              filters={filters}
+              onEditCase={handleOpenCaseTracker}
             />
-            <PathDetail nodeId={selectedNode} onClose={() => setSelectedNode(null)} />
-          </>
+          </div>
         )}
+        
+        {/* Toggle button for progress panel */}
+        {caseProgress?.gcProcess?.pathType && caseProgress.gcProcess.pathType !== "none" && !showProgressPanel && (
+          <button
+            onClick={() => setShowProgressPanel(true)}
+            className="absolute left-4 top-4 z-20 flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              <path d="M9 12l2 2 4-4" />
+            </svg>
+            <span className="text-sm font-medium text-gray-700">Show Progress</span>
+          </button>
+        )}
+
+        {/* Timeline Chart */}
+        <div className="flex-1 relative overflow-hidden">
+          <TimelineChart
+            onStageClick={setSelectedNode}
+            filters={filters}
+            onMatchingCountChange={handleMatchingCountChange}
+          />
+
+          {/* Slide-out detail panel */}
+          {selectedNode && (
+            <>
+              <div
+                className="fixed inset-0 bg-black/20 z-40"
+                onClick={() => setSelectedNode(null)}
+              />
+              <PathDetail nodeId={selectedNode} onClose={() => setSelectedNode(null)} />
+            </>
+          )}
+        </div>
       </div>
 
       {/* Footer with SEO content */}
