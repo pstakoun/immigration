@@ -215,6 +215,14 @@ export function estimateAnnualDemand(
 // Historical visa bulletin data for calculating actual advancement rates
 // This should ideally be fetched from State Dept archives, but we store
 // recent history to calculate velocity dynamically
+//
+// HOW TO UPDATE THIS DATA:
+// 1. Visit travel.state.gov and check the January visa bulletin for each year
+// 2. Add a new entry with the bulletin month and Final Action date
+// 3. The algorithm will automatically recalculate velocity rates
+//
+// Data source: https://travel.state.gov/content/travel/en/legal/visa-law0/visa-bulletin.html
+
 export interface HistoricalBulletinEntry {
   bulletinMonth: string;  // e.g., "January 2025"
   finalActionDate: string; // e.g., "Jul 2013" or "Current"
