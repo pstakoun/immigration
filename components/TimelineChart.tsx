@@ -329,12 +329,21 @@ export default function TimelineChart({
                     </>
                   )}
 
-                  {/* Stages */}
-                  {path.stages.map((stage, idx) => {
+                  {/* Find current stage index (first non-approved stage) for tracked path */}
+                  {(() => {
+                    // Calculate current stage for this path if it's being tracked
+                    const currentStageIdx = isTracked ? path.stages.findIndex(s => {
+                      if (s.isPriorityWait || s.nodeId === "gc") return false;
+                      const sp = getStageProgress(path.id, s.nodeId);
+                      return !sp || sp.status !== "approved";
+                    }) : -1;
+                    
+                    return path.stages.map((stage, idx) => {
                     const stageProgress = getStageProgress(path.id, stage.nodeId);
                     const isApproved = stageProgress?.status === "approved";
                     const isFiled = stageProgress?.status === "filed";
                     const hasProgress = isApproved || isFiled;
+                    const isNextStep = isTracked && idx === currentStageIdx && !hasProgress;
                     
                     // Special rendering for priority date wait stages
                     if (stage.isPriorityWait) {
@@ -541,7 +550,8 @@ export default function TimelineChart({
                         className={`absolute rounded cursor-pointer transition-all duration-150 border
                           ${stageColorClass}
                           ${isHovered ? "ring-2 ring-offset-1 ring-brand-400 scale-105 z-30" : "z-10"}
-                          ${isCurrentStatus && !hasProgress ? "ring-2 ring-offset-1 ring-red-500" : ""}
+                          ${isCurrentStatus && !hasProgress && !isNextStep ? "ring-2 ring-offset-1 ring-red-500" : ""}
+                          ${isNextStep ? "ring-2 ring-offset-1 ring-brand-500" : ""}
                         `}
                         style={{
                           left: `${left}px`,
@@ -554,9 +564,16 @@ export default function TimelineChart({
                         onMouseLeave={() => setHoveredStage(null)}
                       >
                         <div className="h-full px-1 flex flex-col justify-center overflow-hidden relative">
-                          {isCurrentStatus && !hasProgress && (
+                          {/* Current status indicator (from profile) */}
+                          {isCurrentStatus && !hasProgress && !isNextStep && (
                             <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap">
                               YOU ARE HERE
+                            </div>
+                          )}
+                          {/* Next step indicator (when tracking) */}
+                          {isNextStep && (
+                            <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-brand-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap animate-pulse">
+                              → NEXT
                             </div>
                           )}
                           {isApproved && (
@@ -637,7 +654,8 @@ export default function TimelineChart({
                         )}
                       </div>
                     );
-                  })}
+                  });
+                  })()}
                 </div>
               );
             })}
