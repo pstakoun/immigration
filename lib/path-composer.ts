@@ -889,28 +889,35 @@ function composePath(
       const effectiveMin = Math.max(i485BaseMin, additionalApprovalWaitYears * 0.8);
       const effectiveMax = Math.max(i485BaseMax, additionalApprovalWaitYears);
       
-      // Update I-485 duration to reflect total pending time
-      stages[currentI485Index].durationYears = {
-        min: effectiveMin,
-        max: effectiveMax,
-        display: effectiveMax > i485BaseMax
-          ? formatPriorityWait(Math.round(effectiveMax * 12))  // Show as "~X years" if extended
-          : formatMonths(effectiveMin * 12, effectiveMax * 12), // Keep normal format if not extended
-      };
+      // Format the approval wait for display
+      const approvalWaitStr = additionalApprovalWait <= 6 
+        ? `${Math.round(additionalApprovalWait)} mo`
+        : additionalApprovalWait <= 18 
+          ? `${Math.round(additionalApprovalWait)} mo`
+          : `${(additionalApprovalWait / 12).toFixed(1)} yr`;
       
-      // Update note based on whether wait is significant
-      if (additionalApprovalWait > i485BaseMax * 12) {
-        // Approval wait extends beyond normal processing - show extended duration
+      // Update I-485 duration to reflect total pending time
+      // ALWAYS show the approval wait in the display so users know it's considered
+      if (effectiveMax > i485BaseMax) {
+        // Approval wait extends beyond normal processing
+        stages[currentI485Index].durationYears = {
+          min: effectiveMin,
+          max: effectiveMax,
+          display: formatPriorityWait(Math.round(effectiveMax * 12)),
+        };
         stages[currentI485Index].note = `I-485 pending ${formatPriorityWait(Math.round(additionalApprovalWait))}: EAD + AP valid, AC21 portability after 180 days. Waiting for Final Action date (${approvalDateStr}).`;
         stages[currentI485Index].velocityInfo = approvalVelocityInfo;
       } else {
-        // Approval wait fits within processing - still mention it (without extra ~)
-        const approvalWaitDisplay = additionalApprovalWait <= 6 
-          ? `${Math.round(additionalApprovalWait)} mo`
-          : additionalApprovalWait <= 18 
-            ? "~1 year" 
-            : `~${Math.round(additionalApprovalWait / 12)} years`;
-        stages[currentI485Index].note = `I-485 pending: EAD + AP valid, AC21 portability after 180 days. ${approvalWaitDisplay} approval wait.`;
+        // Approval wait fits within normal processing time
+        // But STILL show it in the display to be transparent
+        const minMo = Math.round(effectiveMin * 12);
+        const maxMo = Math.round(effectiveMax * 12);
+        stages[currentI485Index].durationYears = {
+          min: effectiveMin,
+          max: effectiveMax,
+          display: `${minMo}-${maxMo} mo (${approvalWaitStr} wait)`,
+        };
+        stages[currentI485Index].note = `I-485 pending: EAD + AP valid, AC21 portability after 180 days. Final Action: ${approvalDateStr}.`;
       }
       
       // Update GC marker position based on new I-485 duration
@@ -918,6 +925,9 @@ function composePath(
       gcMaxEndYear = Math.max(gcMaxEndYear, i485NewEndYear);
     } else if (filingWaitMonths > 0) {
       stages[currentI485Index].note = "After Dates for Filing is current";
+    } else {
+      // No filing wait and no approval wait - both charts current
+      stages[currentI485Index].note = "Concurrent filing available - no visa backlog";
     }
 
     // Update GC marker position to match end of I-485
