@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import visaData from "@/data/visa-paths.json";
 import { FilterState, statusToNodeId } from "@/lib/filter-paths";
-import { generatePaths, ComposedStage, setProcessingTimes } from "@/lib/path-composer";
+import { generatePaths, ComposedStage, ComposedPath, setProcessingTimes } from "@/lib/path-composer";
 import { adaptDynamicData } from "@/lib/processing-times";
 import { DynamicData } from "@/lib/dynamic-data";
 import { trackStageClick, trackPathsGenerated } from "@/lib/analytics";
@@ -18,6 +18,8 @@ interface TimelineChartProps {
   onStageClick: (nodeId: string) => void;
   filters: FilterState;
   onMatchingCountChange: (count: number) => void;
+  onTrackPath?: (path: ComposedPath) => void;
+  trackedPathId?: string | null;
 }
 
 const categoryColors: Record<string, { bg: string; border: string; text: string }> = {
@@ -37,6 +39,8 @@ export default function TimelineChart({
   onStageClick,
   filters,
   onMatchingCountChange,
+  onTrackPath,
+  trackedPathId,
 }: TimelineChartProps) {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [hoveredStage, setHoveredStage] = useState<string | null>(null);
@@ -182,32 +186,57 @@ export default function TimelineChart({
                 >
                   {/* Path header - positioned to the left */}
                   <div
-                    className="absolute right-full mr-4 top-0 w-[200px] text-right cursor-pointer"
-                    onClick={() =>
-                      setSelectedPath(selectedPath === path.id ? null : path.id)
-                    }
+                    className="absolute right-full mr-4 top-0 w-[200px] text-right"
                   >
-                    <div className="font-semibold text-gray-900 text-sm">
-                      {path.name}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {path.totalYears.display} · ${path.estimatedCost.toLocaleString()}
-                    </div>
-                    <div className="flex items-center justify-end gap-1.5 mt-0.5">
-                      <span className="text-[10px] text-brand-600 font-medium">
-                        {path.gcCategory}
-                      </span>
-                      {path.hasLottery && (
-                        <span className="text-[9px] bg-amber-100 text-amber-700 px-1 rounded">
-                          lottery
+                    <div 
+                      className="cursor-pointer"
+                      onClick={() =>
+                        setSelectedPath(selectedPath === path.id ? null : path.id)
+                      }
+                    >
+                      <div className="font-semibold text-gray-900 text-sm">
+                        {path.name}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {path.totalYears.display} · ${path.estimatedCost.toLocaleString()}
+                      </div>
+                      <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                        <span className="text-[10px] text-brand-600 font-medium">
+                          {path.gcCategory}
                         </span>
-                      )}
-                      {path.isSelfPetition && (
-                        <span className="text-[9px] bg-green-100 text-green-700 px-1 rounded">
-                          self-file
-                        </span>
-                      )}
+                        {path.hasLottery && (
+                          <span className="text-[9px] bg-amber-100 text-amber-700 px-1 rounded">
+                            lottery
+                          </span>
+                        )}
+                        {path.isSelfPetition && (
+                          <span className="text-[9px] bg-green-100 text-green-700 px-1 rounded">
+                            self-file
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    {/* Track button or indicator */}
+                    {onTrackPath && (
+                      <div className="mt-1.5">
+                        {trackedPathId === path.id ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                            Tracking
+                          </span>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onTrackPath(path);
+                            }}
+                            className="text-[10px] text-brand-600 hover:text-brand-700 hover:bg-brand-50 px-2 py-0.5 rounded transition-colors"
+                          >
+                            Track this path →
+                          </button>
+                        )}
+                      </div>
+                    )}
                     {multiTrack && (
                       <div className="mt-1 text-[10px] text-gray-400 space-y-0.5">
                         <div>{trackLabels.status}</div>

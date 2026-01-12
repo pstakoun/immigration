@@ -12,7 +12,7 @@ import {
 import { trackOnboardingComplete } from "@/lib/analytics";
 
 interface OnboardingQuizProps {
-  onComplete: (filters: FilterState, wantsToTrackCase?: boolean) => void;
+  onComplete: (filters: FilterState) => void;
   initialFilters?: FilterState;
 }
 
@@ -59,7 +59,6 @@ function hasAnySpecialCircumstance(filters: FilterState): boolean {
 export default function OnboardingQuiz({ onComplete, initialFilters }: OnboardingQuizProps) {
   const [filters, setFilters] = useState<FilterState>(initialFilters || defaultFilters);
   const [showSpecial, setShowSpecial] = useState(() => hasAnySpecialCircumstance(initialFilters || defaultFilters));
-  const [step, setStep] = useState<"profile" | "case_prompt">("profile");
 
   const updateFilter = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
     setFilters((prev) => {
@@ -72,14 +71,10 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
     });
   };
 
-  const handleProfileSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setStep("case_prompt");
-  };
-
-  const handleFinish = (wantsToTrackCase: boolean) => {
     trackOnboardingComplete(filters);
-    onComplete(filters, wantsToTrackCase);
+    onComplete(filters);
   };
 
   const specialCount = [
@@ -89,87 +84,6 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
     filters.isMarriedToUSCitizen,
     filters.hasInvestmentCapital,
   ].filter(Boolean).length;
-
-  // Case prompt step - shown after profile is complete
-  if (step === "case_prompt") {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
-          {/* Header */}
-          <div className="px-6 py-5 border-b border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                  <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  <path d="M9 12l2 2 4-4" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">One more thing...</h1>
-                <p className="text-sm text-gray-500">Do you have any immigration cases already in progress?</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="px-6 py-6 space-y-4">
-            <p className="text-sm text-gray-600">
-              If you&apos;ve already filed for PERM, I-140, I-485, or have an approved petition with a priority date, 
-              tracking your case will give you more accurate timelines.
-            </p>
-
-            <div className="grid grid-cols-1 gap-3">
-              {/* Yes, I have cases */}
-              <button
-                onClick={() => handleFinish(true)}
-                className="p-4 rounded-xl border-2 border-brand-200 bg-brand-50 hover:bg-brand-100 text-left transition-all group"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-brand-500 flex items-center justify-center flex-shrink-0">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                      <path d="M5 12l5 5L20 7" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="font-semibold text-brand-900">Yes, track my cases</div>
-                    <div className="text-sm text-brand-700 mt-0.5">
-                      I have filed applications or have an approved I-140
-                    </div>
-                  </div>
-                </div>
-              </button>
-
-              {/* No, skip for now */}
-              <button
-                onClick={() => handleFinish(false)}
-                className="p-4 rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-left transition-all"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-500">
-                      <path d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900">Skip for now</div>
-                    <div className="text-sm text-gray-500 mt-0.5">
-                      I&apos;m just exploring options or haven&apos;t started yet
-                    </div>
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            <p className="text-xs text-gray-400 text-center pt-2">
-              You can always add your cases later using &quot;Track My Case&quot; in the header
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Profile step - main onboarding form
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -194,7 +108,7 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
           </div>
         </div>
 
-        <form onSubmit={handleProfileSubmit}>
+        <form onSubmit={handleSubmit}>
           <div className="px-6 py-5 space-y-6">
             {/* Current Status */}
             <div>
@@ -470,10 +384,10 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
               type="submit"
               className="w-full py-3 px-4 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-xl transition-colors"
             >
-              Continue
+              Show my immigration paths
             </button>
             <p className="text-xs text-gray-500 text-center mt-3">
-              You can update these preferences anytime
+              You can track your progress on any path after exploring
             </p>
           </div>
         </form>

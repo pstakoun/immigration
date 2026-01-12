@@ -8,6 +8,7 @@ import OnboardingQuiz from "@/components/OnboardingQuiz";
 import CaseTracker from "@/components/CaseTracker";
 import { FilterState, defaultFilters } from "@/lib/filter-paths";
 import { CaseProgress } from "@/lib/case-progress";
+import { ComposedPath } from "@/lib/path-composer";
 import { getStoredProfile, saveUserProfile, getStoredCaseProgress, saveCaseProgress } from "@/lib/storage";
 
 export default function Home() {
@@ -16,6 +17,8 @@ export default function Home() {
   const [matchingCount, setMatchingCount] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showCaseTracker, setShowCaseTracker] = useState(false);
+  const [selectedPathForTracking, setSelectedPathForTracking] = useState<ComposedPath | null>(null);
+  const [trackedPathId, setTrackedPathId] = useState<string | null>(null);
   const [caseProgress, setCaseProgress] = useState<CaseProgress | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -42,15 +45,10 @@ export default function Home() {
     setMatchingCount(count);
   }, []);
 
-  const handleOnboardingComplete = (newFilters: FilterState, wantsToTrackCase?: boolean) => {
+  const handleOnboardingComplete = (newFilters: FilterState) => {
     setFilters(newFilters);
     saveUserProfile(newFilters);
     setShowOnboarding(false);
-    
-    // If user wants to track their case, open the case tracker
-    if (wantsToTrackCase) {
-      setShowCaseTracker(true);
-    }
   };
 
   const handleEditProfile = () => {
@@ -60,6 +58,11 @@ export default function Home() {
   const handleCaseProgressUpdate = (progress: CaseProgress) => {
     setCaseProgress(progress);
     saveCaseProgress(progress);
+    
+    // Track which path is being tracked
+    if (selectedPathForTracking) {
+      setTrackedPathId(selectedPathForTracking.id);
+    }
     
     // Update filters based on case progress
     if (progress.effectivePriorityDate && progress.effectiveEBCategory) {
@@ -76,7 +79,13 @@ export default function Home() {
     }
   };
 
+  const handleTrackPath = (path: ComposedPath) => {
+    setSelectedPathForTracking(path);
+    setShowCaseTracker(true);
+  };
+
   const handleOpenCaseTracker = () => {
+    // If already tracking a path, use that; otherwise open without a selected path
     setShowCaseTracker(true);
   };
 
@@ -102,9 +111,13 @@ export default function Home() {
       {/* Case Tracker Modal */}
       {showCaseTracker && (
         <CaseTracker
-          onClose={() => setShowCaseTracker(false)}
+          onClose={() => {
+            setShowCaseTracker(false);
+            setSelectedPathForTracking(null);
+          }}
           onUpdate={handleCaseProgressUpdate}
           initialProgress={caseProgress || undefined}
+          selectedPath={selectedPathForTracking}
         />
       )}
 
@@ -167,6 +180,8 @@ export default function Home() {
           onStageClick={setSelectedNode}
           filters={filters}
           onMatchingCountChange={handleMatchingCountChange}
+          onTrackPath={handleTrackPath}
+          trackedPathId={trackedPathId}
         />
 
         {/* Slide-out detail panel */}
