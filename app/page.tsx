@@ -84,13 +84,15 @@ export default function Home() {
     if (storedProgress) {
       setTrackedPath(storedProgress);
       
-      // Sync any ported PD to filters
+      // Sync any ported PD to filters for PD wait calculation
+      // NOTE: This does NOT set hasApprovedI140 - ported PD is from previous employer
+      // User still needs new PERM with new employer
       if (storedProgress.portedPriorityDate) {
         const [year, month] = storedProgress.portedPriorityDate.split("-").map(Number);
         const category = storedProgress.portedPriorityDateCategory;
         loadedFilters = {
           ...loadedFilters,
-          hasApprovedI140: true,
+          // DO NOT set hasApprovedI140: true - that would skip PERM
           existingPriorityDate: { year, month },
           existingPriorityDateCategory: category === "eb1" ? "eb1" : 
                                         category === "eb2" ? "eb2" : 
@@ -153,10 +155,9 @@ export default function Home() {
     setTrackedPath(newProgress);
   };
 
-  // Stages that establish priority dates
-  const PRIORITY_DATE_STAGES = ["i140", "perm", "eb2niw", "eb1a", "eb1b", "eb1c"];
-  
   // Handle updating a stage's progress
+  // NOTE: Stage progress is for tracking only - it doesn't affect filter/timeline calculations
+  // Only the "ported PD" section affects the PD wait calculation
   const handleUpdateStage = (nodeId: string, update: Partial<StageProgress>) => {
     if (!trackedPath) return;
     
@@ -165,33 +166,6 @@ export default function Home() {
       
       const currentStage = prev.stages[nodeId] || { status: "not_started" };
       const newStage = { ...currentStage, ...update };
-      
-      // Check if this is a PD-establishing stage being approved with a priority date
-      if (PRIORITY_DATE_STAGES.includes(nodeId) && 
-          newStage.status === "approved" && 
-          newStage.priorityDate) {
-        // Determine category based on path or stage
-        let category: string | null = null;
-        if (nodeId === "eb1a" || nodeId === "eb1b" || nodeId === "eb1c") {
-          category = "eb1";
-        } else if (nodeId === "eb2niw") {
-          category = "eb2";
-        } else {
-          // For I-140/PERM, infer from path name or use tracked category
-          if (prev.pathName?.toLowerCase().includes("eb-2") || prev.pathName?.toLowerCase().includes("eb2")) {
-            category = "eb2";
-          } else if (prev.pathName?.toLowerCase().includes("eb-3") || prev.pathName?.toLowerCase().includes("eb3")) {
-            category = "eb3";
-          } else if (prev.pathName?.toLowerCase().includes("eb-1") || prev.pathName?.toLowerCase().includes("eb1")) {
-            category = "eb1";
-          }
-        }
-        
-        // Only sync if we don't have a ported PD (ported takes precedence)
-        if (!prev.portedPriorityDate) {
-          syncPriorityDateToFilters(newStage.priorityDate, category);
-        }
-      }
       
       return {
         ...prev,
@@ -204,7 +178,7 @@ export default function Home() {
     });
   };
 
-  // Handle updating ported priority date
+  // Handle updating ported priority date (from previous employer's I-140)
   const handleUpdatePortedPD = (date: string | null, category: string | null) => {
     if (!trackedPath) return;
     
@@ -218,17 +192,18 @@ export default function Home() {
       };
     });
     
-    // Sync to filters to update timeline calculation
-    syncPriorityDateToFilters(date, category);
+    // Sync to filters for PD wait calculation (but NOT hasApprovedI140)
+    syncPortedPDToFilters(date, category);
   };
   
   // Sync priority date to filters for timeline recalculation
-  const syncPriorityDateToFilters = (dateStr: string | null, category: string | null) => {
+  // IMPORTANT: Ported PD only affects the wait calculation, NOT whether PERM is needed
+  // hasApprovedI140 should only be true if user has I-140 with CURRENT employer
+  const syncPortedPDToFilters = (dateStr: string | null, category: string | null) => {
     if (!dateStr) {
-      // Clear existing PD from filters
+      // Clear existing PD from filters (but don't change hasApprovedI140)
       const newFilters = {
         ...filters,
-        hasApprovedI140: false,
         existingPriorityDate: null,
         existingPriorityDateCategory: null,
       };
@@ -246,11 +221,13 @@ export default function Home() {
                        category === "eb2" ? "eb2" : 
                        category === "eb3" ? "eb3" : null;
     
+    // NOTE: We set existingPriorityDate but NOT hasApprovedI140
+    // This means: "I have a PD to use for wait calculation, but I still need new PERM"
     const newFilters = {
       ...filters,
-      hasApprovedI140: true,
       existingPriorityDate: priorityDate,
       existingPriorityDateCategory: ebCategory as "eb1" | "eb2" | "eb3" | null,
+      // hasApprovedI140 stays unchanged - only set true if current employer I-140
     };
     setFilters(newFilters);
     saveUserProfile(newFilters);

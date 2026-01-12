@@ -592,11 +592,11 @@ export default function TrackerPanel({
         {/* Ported PD input */}
         <details className="mt-2">
           <summary className="text-xs text-brand-600 cursor-pointer hover:text-brand-700">
-            {progress.portedPriorityDate ? "Edit ported PD" : "Have a PD from a previous case?"}
+            {progress.portedPriorityDate ? "Edit ported PD" : "Have a PD from a previous employer?"}
           </summary>
           <div className="mt-2 p-3 bg-white rounded-lg border border-gray-200 space-y-2">
             <p className="text-[10px] text-gray-500">
-              If you have an approved I-140 from a previous employer, you can port that priority date.
+              If you have an approved I-140 from a <strong>previous employer</strong>, you can port that priority date to your new case. You'll still need to complete PERM with your new employer, but your old PD will be used for the visa queue.
             </p>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Priority Date</label>

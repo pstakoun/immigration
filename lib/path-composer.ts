@@ -775,8 +775,9 @@ function composePath(
     // Convert gcCategory to EBCategory for velocity calculations
     const ebCategory = gcCategoryToEBCategory(gcCategory);
 
-    if (filters.hasApprovedI140 && filters.existingPriorityDate) {
-      // User has existing I-140 with priority date
+    if (filters.existingPriorityDate) {
+      // User has an existing priority date (either from current employer I-140 or ported from previous)
+      // Use this for wait calculation regardless of whether they need new PERM
       const userPDStr = priorityDateToString(filters.existingPriorityDate);
 
       // Calculate FILING wait (Dates for Filing chart)
