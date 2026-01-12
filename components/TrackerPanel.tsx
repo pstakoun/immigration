@@ -406,39 +406,50 @@ export default function TrackerPanel({
     return currentPathPD;
   }, [progress.portedPriorityDate, currentPathPD]);
 
-  // Calculate estimated completion date using path's actual totalYears
+  // Calculate estimated completion date based on GC track stages only
+  // Work visa stages (status track) run in PARALLEL, so don't count them
   const estimatedCompletion = useMemo(() => {
     const now = new Date();
     
-    // Start with path's total time (already includes PD wait calculated from ported PD)
-    const pathTotalMonths = (path.totalYears?.max || 0) * 12;
+    // Only count GC track stages (green card process) - not work visa stages
+    // Work visas (TN, H-1B, etc.) run in parallel and don't affect GC timeline
+    const gcStages = path.stages.filter(s => s.track === "gc" && s.nodeId !== "gc");
     
-    // Calculate time already elapsed/completed
-    let completedMonths = 0;
+    let remainingMonths = 0;
     let hasUncertainty = false;
 
-    for (const stage of path.stages) {
-      if (stage.nodeId === "gc" || stage.isPriorityWait) continue;
-      
+    for (const stage of gcStages) {
       const sp = progress.stages[stage.nodeId] || { status: "not_started" };
       const stageDurationMonths = (stage.durationYears?.max || 0) * 12;
       
+      if (stage.isPriorityWait) {
+        // PD wait - check if it's been "completed" (date is current)
+        if (sp.status !== "approved") {
+          remainingMonths += stageDurationMonths;
+          hasUncertainty = true;
+        }
+        continue;
+      }
+      
       if (sp.status === "approved") {
-        // Fully completed
-        completedMonths += stageDurationMonths;
+        // Fully completed - add nothing
+        continue;
       } else if (sp.status === "filed" && sp.filedDate) {
-        // Partially completed - calculate elapsed time
+        // In progress - calculate remaining time
         const filedDate = parseDate(sp.filedDate);
         if (filedDate) {
           const elapsed = monthsBetween(filedDate, now);
-          completedMonths += Math.min(elapsed, stageDurationMonths);
+          const remaining = Math.max(0, stageDurationMonths - elapsed);
+          remainingMonths += remaining;
+        } else {
+          // No filed date, assume full duration
+          remainingMonths += stageDurationMonths;
         }
+      } else {
+        // Not started - add full duration
+        remainingMonths += stageDurationMonths;
       }
     }
-
-    // Remaining = total - completed
-    const remainingMonths = Math.max(0, pathTotalMonths - completedMonths);
-    hasUncertainty = path.stages.some(s => s.isPriorityWait);
 
     // Calculate estimated date
     const estimatedDate = new Date(now);
@@ -449,7 +460,7 @@ export default function TrackerPanel({
       months: remainingMonths,
       hasUncertainty,
     };
-  }, [path.totalYears, path.stages, progress.stages]);
+  }, [path.stages, progress.stages]);
 
   // Priority date aging benefit
   const pdAgingBenefit = useMemo(() => {
