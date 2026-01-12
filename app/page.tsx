@@ -9,6 +9,7 @@ import CaseTrackerModal from "@/components/CaseTrackerModal";
 import { FilterState, defaultFilters } from "@/lib/filter-paths";
 import { getStoredProfile, getStoredCaseProfile, saveUserProfile } from "@/lib/storage";
 import { CaseProfile } from "@/lib/case-types";
+import { applyTrackedCaseToFilters } from "@/lib/apply-tracked-case-to-filters";
 
 export default function Home() {
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
@@ -51,6 +52,8 @@ export default function Home() {
     ? caseProfile.cases.find((c) => c.id === caseProfile.selectedCaseId) ?? null
     : null;
 
+  const effectiveFilters = applyTrackedCaseToFilters(filters, selectedTrackedCase);
+
   // Don't render until we've checked localStorage (prevents flash)
   if (!isLoaded) {
     return (
@@ -67,6 +70,8 @@ export default function Home() {
         <OnboardingQuiz
           onComplete={handleOnboardingComplete}
           initialFilters={filters}
+          onTrackCase={() => setShowCaseTracker(true)}
+          hasTrackedCase={!!selectedTrackedCase}
         />
       )}
 
@@ -102,7 +107,7 @@ export default function Home() {
 
       {/* Profile Summary Bar */}
       <ProfileSummary
-        filters={filters}
+        filters={effectiveFilters}
         matchingCount={matchingCount}
         onEdit={handleEditProfile}
         onTrackCase={() => setShowCaseTracker(true)}
@@ -113,7 +118,7 @@ export default function Home() {
       <div className="flex-1 relative overflow-hidden">
         <TimelineChart
           onStageClick={setSelectedNode}
-          filters={filters}
+          filters={effectiveFilters}
           onMatchingCountChange={handleMatchingCountChange}
           trackedCase={selectedTrackedCase}
         />
