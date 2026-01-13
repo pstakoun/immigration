@@ -292,16 +292,19 @@ function adjustStagesForProgress(
       }
     } else {
       // NOT STARTED: position based on when previous stage ends
+      // CRITICAL: Not-started stages can NEVER start before today (time 0)
+      // They haven't been filed yet, so they can't be in the past
       if (stage.isConcurrent) {
         // Concurrent stages start at the SAME time as the previous stage
-        // Find the previous stage on this track to get its start time
+        // But NOT before today since this stage hasn't been filed yet
         const prevStagesOnTrack = adjustedStages.filter(s => s.track === track);
         if (prevStagesOnTrack.length > 0) {
           const prevStage = prevStagesOnTrack[prevStagesOnTrack.length - 1];
-          adjustedStart = prevStage.startYear;
+          // Use max(prevStage.startYear, 0) - can't start before today
+          adjustedStart = Math.max(0, prevStage.startYear);
         }
       } else {
-        // Sequential stage: starts after current track end
+        // Sequential stage: starts after current track end, but not before today
         adjustedStart = Math.max(0, trackEndYears[track]);
       }
       
