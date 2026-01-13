@@ -406,23 +406,12 @@ export default function TrackerPanel({
     return currentPathPD;
   }, [progress.portedPriorityDate, currentPathPD]);
 
-  // Calculate estimated completion using the path's pre-calculated totalYears
-  // The path-composer already handles concurrent stages and PD wait correctly
+  // Calculate estimated completion - USE MAX to match visual timeline exactly
   const estimatedCompletion = useMemo(() => {
     const now = new Date();
     
-    // Check if path has PD wait (uncertain timeline)
-    const hasUncertainty = path.stages.some(s => s.isPriorityWait);
-    
-    // Use the path's total timeline
-    const pathMinMonths = (path.totalYears?.min || 0) * 12;
+    // Use path's MAX timeline - this is what the visual timeline shows
     const pathMaxMonths = (path.totalYears?.max || 0) * 12;
-    
-    // For paths with PD wait, use a more conservative estimate (closer to max)
-    // For paths without PD wait, use average (50%)
-    // This better matches what users see on the visual timeline
-    const estimateFactor = hasUncertainty ? 0.7 : 0.5;
-    const pathEstimatedMonths = pathMinMonths + (pathMaxMonths - pathMinMonths) * estimateFactor;
     
     // Calculate time already completed based on progress
     let completedMonths = 0;
@@ -432,29 +421,30 @@ export default function TrackerPanel({
     
     for (const stage of gcStages) {
       const sp = progress.stages[stage.nodeId] || { status: "not_started" };
-      const stageMinMonths = (stage.durationYears?.min || 0) * 12;
       const stageMaxMonths = (stage.durationYears?.max || 0) * 12;
-      const stageEstMonths = stageMinMonths + (stageMaxMonths - stageMinMonths) * estimateFactor;
       
       if (sp.status === "approved") {
         // Fully completed - but for concurrent stages, don't double count
         if (!stage.isConcurrent) {
-          completedMonths += stageEstMonths;
+          completedMonths += stageMaxMonths;
         }
       } else if (sp.status === "filed" && sp.filedDate) {
-        // Partially completed
+        // Partially completed - calculate elapsed time
         const filedDate = parseDate(sp.filedDate);
         if (filedDate) {
           const elapsedMonths = monthsBetween(filedDate, now);
           if (!stage.isConcurrent) {
-            completedMonths += Math.min(elapsedMonths, stageEstMonths);
+            completedMonths += Math.min(elapsedMonths, stageMaxMonths);
           }
         }
       }
     }
     
-    // Remaining = total - completed
-    const remainingMonths = Math.max(0, pathEstimatedMonths - completedMonths);
+    // Remaining = total max - completed
+    const remainingMonths = Math.max(0, pathMaxMonths - completedMonths);
+    
+    // Check for uncertainty (PD wait stages exist)
+    const hasUncertainty = path.stages.some(s => s.isPriorityWait);
 
     // Calculate estimated date
     const estimatedDate = new Date(now);
