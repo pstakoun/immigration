@@ -1,4 +1,4 @@
-import { FilterState, CurrentStatus, Education, Experience, isTNEligible, priorityDateToString } from "./filter-paths";
+import { FilterState, CurrentStatus, Education, Experience, isTNEligible, priorityDateToString, needsPerm } from "./filter-paths";
 import visaData from "@/data/visa-paths.json";
 import { ProcessingTimes, DEFAULT_PROCESSING_TIMES, formatMonths, calculatePriorityDateWait, getPriorityDateForPath, formatPriorityWait, calculateWaitForExistingPD, calculateWaitForExistingPDWithVelocity, WaitCalculationResult, getVelocityForCategory, calculateNewFilerWait } from "./processing-times";
 import { EBCategory } from "./filter-paths";
@@ -366,6 +366,20 @@ export const STATUS_PATHS: StatusPath[] = [
 // ============== GC METHODS ==============
 
 export const GC_METHODS: GCMethod[] = [
+  // Direct I-485 filing for users with approved I-140 (no new PERM needed)
+  {
+    id: "direct_i485",
+    name: "Direct I-485",
+    requiresPerm: false,
+    stages: [
+      { nodeId: "i485", duration: { min: 0.88, max: 1.5, display: "10-18 mo" }, note: "Using existing approved I-140" },
+      { nodeId: "gc", duration: { min: 0, max: 0, display: "" } },
+    ],
+    requirements: {
+      // No special requirements - this is for users who already have approved I-140
+    },
+    fixedCategory: undefined, // Will use existing I-140 category
+  },
   {
     id: "perm_route",
     name: "PERM",
@@ -563,6 +577,16 @@ function isStatusPathValidForUser(statusPath: StatusPath, filters: FilterState):
  * Check if a GC method can be used with a status path
  */
 function isCompatible(statusPath: StatusPath, gcMethod: GCMethod, filters: FilterState): boolean {
+  // Special case: if user has approved I-140 and is NOT switching employers,
+  // they don't need PERM again - they can go directly to I-485
+  const userNeedsPerm = needsPerm(filters);
+  
+  // If PERM method but user doesn't need PERM, suggest direct filing path
+  if (gcMethod.requiresPerm && !userNeedsPerm && statusPath.id !== "none") {
+    // They can skip PERM, so prefer the "none"/direct filing path
+    return false;
+  }
+  
   // PERM route requires a status path that supports it
   if (gcMethod.requiresPerm && statusPath.permStartOffset === null) {
     return false;
@@ -574,7 +598,8 @@ function isCompatible(statusPath: StatusPath, gcMethod: GCMethod, filters: Filte
   }
 
   // PERM route requires actual work status (not "none"/direct filing)
-  if (gcMethod.requiresPerm && statusPath.id === "none") {
+  // UNLESS user has approved I-140 and doesn't need new PERM
+  if (gcMethod.requiresPerm && statusPath.id === "none" && userNeedsPerm) {
     return false;
   }
 
@@ -605,6 +630,16 @@ export function computeGCCategory(
   // If method has a fixed category, use it
   if (gcMethod.fixedCategory) {
     return gcMethod.fixedCategory;
+  }
+
+  // For direct I-485 filing (user has approved I-140), use their existing category
+  if (gcMethod.id === "direct_i485" && filters.existingPriorityDateCategory) {
+    const categoryMap: Record<string, string> = {
+      eb1: "EB-1",
+      eb2: "EB-2",
+      eb3: "EB-3",
+    };
+    return categoryMap[filters.existingPriorityDateCategory] || "EB-2";
   }
 
   // For student paths, use the education the path grants
@@ -669,7 +704,34 @@ function composePath(
   }
 
   // Calculate when GC process starts
-  const gcStartYear = statusPath.permStartOffset ?? 0;
+  // For PERM-based paths: can start PERM while working (permStartOffset)
+  // For self-petition paths (NIW, EB-1A, EB-1B): need the degree FIRST
+  //   - If student path grants a degree, GC filing starts AFTER degree is obtained
+  //   - The degree is obtained after F-1 completes (before OPT)
+  let gcStartYear: number;
+  
+  if (gcMethod.requiresPerm) {
+    // PERM can start while working, even before degree complete in some cases
+    gcStartYear = statusPath.permStartOffset ?? 0;
+  } else if (statusPath.grantsEducation) {
+    // Self-petition (NIW, EB-1A, EB-1B) with student path:
+    // MUST have the degree first to qualify, so start after F-1 completes
+    const f1Stage = statusPath.stages.find(s => s.nodeId === "f1");
+    if (f1Stage) {
+      // Find when F-1 ends (sum of durations up to and including F-1)
+      const f1Index = statusPath.stages.indexOf(f1Stage);
+      gcStartYear = statusPath.stages
+        .slice(0, f1Index + 1)
+        .reduce((sum, s) => sum + s.duration.max, 0);
+    } else {
+      // No F-1 stage, start after all status stages
+      gcStartYear = statusEndYear;
+    }
+  } else {
+    // Self-petition without student path (already have degree):
+    // Can file immediately
+    gcStartYear = statusPath.permStartOffset ?? 0;
+  }
 
   // Add GC stages (green card track)
   // Track both the sequential position AND the actual end time of all stages
@@ -740,8 +802,9 @@ function composePath(
     // Convert gcCategory to EBCategory for velocity calculations
     const ebCategory = gcCategoryToEBCategory(gcCategory);
 
-    if (filters.hasApprovedI140 && filters.existingPriorityDate) {
-      // User has existing I-140 with priority date
+    if (filters.existingPriorityDate) {
+      // User has an existing priority date (either from current employer I-140 or ported from previous)
+      // Use this for wait calculation regardless of whether they need new PERM
       const userPDStr = priorityDateToString(filters.existingPriorityDate);
 
       // Calculate FILING wait (Dates for Filing chart)
@@ -960,7 +1023,9 @@ function composePath(
 
   // Build path name
   let pathName: string;
-  if (statusPath.id === "none") {
+  if (gcMethod.id === "direct_i485") {
+    pathName = `Direct I-485 (${gcCategory})`;
+  } else if (statusPath.id === "none") {
     pathName = `${gcMethod.name} (Direct)`;
   } else if (gcMethod.requiresPerm) {
     pathName = `${statusPath.name} → ${gcCategory}`;
@@ -969,14 +1034,22 @@ function composePath(
   }
 
   // Build description
-  let description = statusPath.description;
-  if (gcMethod.requiresPerm) {
-    const permTiming = statusPath.permStartOffset === 0
-      ? "immediately"
-      : statusPath.permStartOffset === 0.5
-      ? "after 6 months"
-      : `at year ${statusPath.permStartOffset}`;
-    description += `. Start PERM ${permTiming}.`;
+  let description: string;
+  if (gcMethod.id === "direct_i485" && filters.hasApprovedI140) {
+    const pdStr = filters.existingPriorityDate 
+      ? priorityDateToString(filters.existingPriorityDate)
+      : "your existing priority date";
+    description = `File I-485 directly using your approved I-140 (PD: ${pdStr}). No new PERM required since staying with same employer.`;
+  } else {
+    description = statusPath.description;
+    if (gcMethod.requiresPerm) {
+      const permTiming = statusPath.permStartOffset === 0
+        ? "immediately"
+        : statusPath.permStartOffset === 0.5
+        ? "after 6 months"
+        : `at year ${statusPath.permStartOffset}`;
+      description += `. Start PERM ${permTiming}.`;
+    }
   }
 
   // Calculate estimated cost from filing fees
@@ -1023,12 +1096,31 @@ export function generatePaths(
   datesForFiling?: DynamicData["datesForFiling"]
 ): ComposedPath[] {
   const paths: ComposedPath[] = [];
+  const userNeedsPerm = needsPerm(filters);
 
   for (const statusPath of STATUS_PATHS) {
     // Skip if user can't start this status path
     if (!isStatusPathValidForUser(statusPath, filters)) continue;
 
     for (const gcMethod of GC_METHODS) {
+      // Special handling for direct_i485 method
+      if (gcMethod.id === "direct_i485") {
+        // Only show direct I-485 path if user has approved I-140 AND doesn't need new PERM
+        if (!filters.hasApprovedI140 || userNeedsPerm) {
+          continue;
+        }
+        // Direct I-485 works with the "none" status path (direct filing)
+        if (statusPath.id !== "none") {
+          continue;
+        }
+      }
+      
+      // Skip PERM routes if user has approved I-140 and doesn't need new PERM
+      // (unless they explicitly want to do new PERM for employer switch)
+      if (gcMethod.requiresPerm && !userNeedsPerm) {
+        continue;
+      }
+
       // Skip if status path and GC method aren't compatible
       if (!isCompatible(statusPath, gcMethod, filters)) continue;
 
@@ -1041,8 +1133,62 @@ export function generatePaths(
     }
   }
 
-  // Sort by total duration (fastest first)
-  paths.sort((a, b) => a.totalYears.min - b.totalYears.min);
+  // Risk scores - lower = safer/higher approval rate
+  // Regular employer-sponsored PERM is safest, self-petition/extraordinary ability is riskier
+  const getRiskScore = (path: ComposedPath): number => {
+    const category = path.gcCategory.toLowerCase();
+    const hasLottery = path.hasLottery;
+    const isSelfPetition = path.isSelfPetition;
+    
+    // Marriage-based: very high approval if legitimate
+    if (category.includes("marriage")) return 1;
+    
+    // Regular PERM-based EB-2/EB-3: well-established, predictable
+    if (!isSelfPetition && (category.includes("eb-2") || category.includes("eb-3"))) {
+      return hasLottery ? 3 : 2; // H-1B lottery adds uncertainty
+    }
+    
+    // EB-1C (multinational executive): employer-sponsored but specific requirements
+    if (category.includes("eb-1c")) return 4;
+    
+    // EB-1B (outstanding researcher): employer-sponsored but higher bar
+    if (category.includes("eb-1b")) return 5;
+    
+    // EB-2 NIW: self-petition, must prove national interest
+    if (category.includes("niw")) return 6;
+    
+    // EB-1A: self-petition, highest bar (extraordinary ability)
+    if (category.includes("eb-1a")) return 7;
+    
+    // EB-5: requires significant investment, different risk profile
+    if (category.includes("eb-5")) return 8;
+    
+    return 5; // Default middle risk
+  };
+
+  // Sort by: 1) fastest GC, 2) lowest risk, 3) fewest steps
+  paths.sort((a, b) => {
+    // Get GC end time (when Green Card is obtained)
+    const aGcEnd = a.stages.find(s => s.nodeId === "gc")?.startYear || a.totalYears.max;
+    const bGcEnd = b.stages.find(s => s.nodeId === "gc")?.startYear || b.totalYears.max;
+    
+    // Primary: shortest time to GC
+    if (Math.abs(aGcEnd - bGcEnd) > 0.5) { // Allow 6-month tolerance for "ties"
+      return aGcEnd - bGcEnd;
+    }
+    
+    // Secondary: lowest risk / highest approval rate
+    const aRisk = getRiskScore(a);
+    const bRisk = getRiskScore(b);
+    if (aRisk !== bRisk) {
+      return aRisk - bRisk;
+    }
+    
+    // Tertiary: fewest steps (simplicity)
+    const aSteps = a.stages.filter(s => s.nodeId !== "gc" && !s.isPriorityWait).length;
+    const bSteps = b.stages.filter(s => s.nodeId !== "gc" && !s.isPriorityWait).length;
+    return aSteps - bSteps;
+  });
 
   return paths;
 }

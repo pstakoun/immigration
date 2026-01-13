@@ -14,12 +14,16 @@ interface ProfileSummaryProps {
   filters: FilterState;
   matchingCount: number;
   onEdit: () => void;
+  selectedPathId?: string | null;
+  completedStagesCount?: number;
 }
 
 export default function ProfileSummary({
   filters,
   matchingCount,
   onEdit,
+  selectedPathId,
+  completedStagesCount = 0,
 }: ProfileSummaryProps) {
   const tags: string[] = [
     statusLabels[filters.currentStatus],
@@ -44,11 +48,14 @@ export default function ProfileSummary({
   if (filters.isMarriedToUSCitizen) tags.push("Married to US citizen");
   if (filters.hasInvestmentCapital) tags.push("EB-5 investor");
 
-  // Show existing priority date
-  if (filters.hasApprovedI140 && filters.existingPriorityDate) {
-    const pdStr = formatPriorityDateShort(filters.existingPriorityDate);
-    const category = filters.existingPriorityDateCategory
-      ? ebCategoryLabels[filters.existingPriorityDateCategory]
+  // Show existing priority date from filters
+  const priorityDate = filters.existingPriorityDate;
+  const priorityDateCategory = filters.existingPriorityDateCategory;
+  
+  if (priorityDate) {
+    const pdStr = formatPriorityDateShort(priorityDate);
+    const category = priorityDateCategory
+      ? ebCategoryLabels[priorityDateCategory]
       : "";
     tags.push(`PD: ${pdStr}${category ? ` (${category})` : ""}`);
   }
@@ -66,6 +73,16 @@ export default function ProfileSummary({
                 {tag}
               </span>
             ))}
+            
+            {/* Progress indicator when tracking a path */}
+            {selectedPathId && completedStagesCount > 0 && (
+              <span className="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full whitespace-nowrap flex items-center gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+                {completedStagesCount} completed
+              </span>
+            )}
           </div>
           <button
             onClick={onEdit}

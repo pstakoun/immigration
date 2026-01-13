@@ -56,6 +56,11 @@ export function getStoredProfile(): UserProfile | null {
     if (profile.filters.existingPriorityDateCategory === undefined) {
       profile.filters.existingPriorityDateCategory = null;
     }
+    
+    // Migration: add needsNewPerm field
+    if (profile.filters.needsNewPerm === undefined) {
+      profile.filters.needsNewPerm = undefined;
+    }
 
     return profile;
   } catch (e) {
