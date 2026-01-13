@@ -5,7 +5,6 @@ import { ComposedPath, ComposedStage } from "@/lib/path-composer";
 import { GlobalProgress, StageProgress } from "@/app/page";
 import visaData from "@/data/visa-paths.json";
 import { 
-  PROCESSING_STEP_TIMES, 
   canEstablishPriorityDate, 
   PRIORITY_DATE_STAGES,
   isStatusVisa,
@@ -87,8 +86,8 @@ function formatMonthsRemaining(months: number): string {
   return `~${years.toFixed(1)} years`;
 }
 
-// Use centralized constants from lib/constants.ts
-// PROCESSING_STEP_TIMES, canEstablishPriorityDate are imported above
+// Use centralized constants from lib/constants.ts for status visa handling
+// Stage durations come from path.stages.durationYears (from path-composer)
 
 // Stage item component
 function StageItem({
@@ -140,17 +139,16 @@ function StageItem({
       };
     }
     
-    // For processing steps, use centralized processing times
-    const typical = PROCESSING_STEP_TIMES[stage.nodeId];
-    if (!typical) return null;
+    // For processing steps, use the path's stage duration for consistency
+    const stageMaxMonths = (stage.durationYears?.max || 0) * 12;
+    if (stageMaxMonths === 0) return null;
     
-    const avgProcessing = typical.typical;
-    const remaining = Math.max(0, avgProcessing - monthsElapsed);
+    const remaining = Math.max(0, stageMaxMonths - monthsElapsed);
     
     return {
       elapsed: monthsElapsed,
       remaining,
-      typical: { min: typical.min, max: typical.max },
+      typical: { min: stageMaxMonths * 0.7, max: stageMaxMonths },
       isStatusVisa: false,
     };
   }, [stageProgress.status, stageProgress.filedDate, stage.nodeId]);
@@ -509,18 +507,19 @@ export default function TrackerPanel({
       if (stage.nodeId === "i485") break;
       
       const sp = progress.stages[stage.nodeId] || { status: "not_started" };
-      const typical = PROCESSING_STEP_TIMES[stage.nodeId];
+      // Use path's stage duration for consistency
+      const stageMaxMonths = (stage.durationYears?.max || 0) * 12;
       
       if (sp.status === "approved") continue;
       
       if (sp.status === "filed" && sp.filedDate) {
         const filedDate = parseDate(sp.filedDate);
-        if (filedDate && typical) {
+        if (filedDate && stageMaxMonths > 0) {
           const elapsed = monthsBetween(filedDate, now);
-          monthsUntilI485 += Math.max(0, typical.typical - elapsed);
+          monthsUntilI485 += Math.max(0, stageMaxMonths - elapsed);
         }
-      } else if (typical) {
-        monthsUntilI485 += typical.typical;
+      } else if (stageMaxMonths > 0) {
+        monthsUntilI485 += stageMaxMonths;
       }
     }
 
