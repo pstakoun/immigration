@@ -5,7 +5,7 @@ import visaData from "@/data/visa-paths.json";
 import { FilterState, statusToNodeId } from "@/lib/filter-paths";
 import { generatePaths, ComposedStage, ComposedPath, setProcessingTimes } from "@/lib/path-composer";
 import { adaptDynamicData } from "@/lib/processing-times";
-import { DynamicData } from "@/lib/dynamic-data";
+import { DynamicData, DEFAULT_PRIORITY_DATES, DEFAULT_DATES_FOR_FILING } from "@/lib/dynamic-data";
 import { trackStageClick, trackPathsGenerated } from "@/lib/analytics";
 import { GlobalProgress, StageProgress } from "@/app/page";
 import { 
@@ -393,8 +393,10 @@ export default function TimelineChart({
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [hoveredStage, setHoveredStage] = useState<string | null>(null);
   const [processingTimesLoaded, setProcessingTimesLoaded] = useState(false);
-  const [priorityDates, setPriorityDates] = useState<DynamicData["priorityDates"] | undefined>(undefined);
-  const [datesForFiling, setDatesForFiling] = useState<DynamicData["datesForFiling"] | undefined>(undefined);
+  // Initialize with defaults to prevent timeline flicker when API data loads
+  // The defaults match what the API would return, so PD Wait stages render correctly from the start
+  const [priorityDates, setPriorityDates] = useState<DynamicData["priorityDates"]>(DEFAULT_PRIORITY_DATES);
+  const [datesForFiling, setDatesForFiling] = useState<DynamicData["datesForFiling"]>(DEFAULT_DATES_FOR_FILING);
 
   // Helper to get stage progress (now global - same stage data for all paths)
   const getStageProgress = (pathId: string, nodeId: string): StageProgress | null => {

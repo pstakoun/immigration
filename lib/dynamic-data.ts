@@ -152,24 +152,30 @@ type VisaBulletinChart = {
   eb3: { allOther: string; china: string; india: string };
 };
 
+// Default priority dates based on Jan 2026 bulletin
+// These are exported so they can be used as initial state to prevent
+// timeline jumps/flicker when API data loads
+export const DEFAULT_PRIORITY_DATES: VisaBulletinChart = {
+  eb1: { allOther: "Current", china: "Feb 2023", india: "Feb 2023" },
+  eb2: { allOther: "Apr 2024", china: "Sep 2021", india: "Jul 2013" },
+  eb3: { allOther: "Apr 2023", china: "May 2021", india: "Nov 2013" },
+};
+
+// Dates for Filing are typically more current (further ahead)
+export const DEFAULT_DATES_FOR_FILING: VisaBulletinChart = {
+  eb1: { allOther: "Current", china: "Aug 2023", india: "Aug 2023" },
+  eb2: { allOther: "Oct 2024", china: "Jan 2022", india: "Dec 2013" },
+  eb3: { allOther: "Jul 2023", china: "Jan 2022", india: "Aug 2014" },
+};
+
 // Fetch Visa Bulletin - returns BOTH Final Action Dates and Dates for Filing
 async function fetchVisaBulletin(): Promise<{
   finalAction: VisaBulletinChart;
   datesForFiling: VisaBulletinChart;
 }> {
-  // Default values based on Jan 2026 bulletin
-  const defaultsFinalAction: VisaBulletinChart = {
-    eb1: { allOther: "Current", china: "Feb 2023", india: "Feb 2023" },
-    eb2: { allOther: "Apr 2024", china: "Sep 2021", india: "Jul 2013" },
-    eb3: { allOther: "Apr 2023", china: "May 2021", india: "Nov 2013" },
-  };
-
-  // Dates for Filing are typically more current (further ahead)
-  const defaultsDatesForFiling: VisaBulletinChart = {
-    eb1: { allOther: "Current", china: "Aug 2023", india: "Aug 2023" },
-    eb2: { allOther: "Oct 2024", china: "Jan 2022", india: "Dec 2013" },
-    eb3: { allOther: "Jul 2023", china: "Jan 2022", india: "Aug 2014" },
-  };
+  // Use exported defaults
+  const defaultsFinalAction = DEFAULT_PRIORITY_DATES;
+  const defaultsDatesForFiling = DEFAULT_DATES_FOR_FILING;
 
   try {
     // Get the current month's bulletin
