@@ -283,32 +283,33 @@ export default function TimelineChart({
                   } ${isTracked ? "mb-6 mt-2" : "mb-6"}`}
                   style={{ height: pathHeight + 24 }}
                 >
-                  {/* Clickable path row overlay - entire row is clickable */}
-                  <div 
-                    className={`absolute -inset-y-2 cursor-pointer transition-all duration-200 rounded-xl -z-10 ${
-                      isTracked 
-                        ? "bg-brand-50/80" 
-                        : "hover:bg-gray-50/50"
-                    }`}
-                    style={{ left: "-220px", right: "-16px" }}
-                    onClick={() => onSelectPath?.(path)}
-                  />
-                  
-                  {/* Path header - positioned to the left */}
-                  <div className="absolute right-full mr-4 top-0 w-[200px] pointer-events-none">
-                    {/* Main path info */}
+                  {/* Tracked path highlight background */}
+                  {isTracked && (
                     <div 
-                      className={`text-right p-2 -m-2 rounded-lg transition-all duration-200 ${
+                      className="absolute -inset-y-2 bg-brand-50 rounded-lg -z-10"
+                      style={{ left: "-220px", right: "-16px" }}
+                    />
+                  )}
+                  
+                  {/* Path header - positioned to the left, clickable */}
+                  <div className="absolute right-full mr-4 top-0 w-[200px]">
+                    <div 
+                      className={`text-right p-2 -m-2 rounded-lg cursor-pointer transition-colors ${
                         isTracked 
-                          ? "bg-brand-500 shadow-md" 
-                          : ""
+                          ? "bg-brand-500" 
+                          : "hover:bg-gray-100"
                       }`}
+                      onClick={() => onSelectPath?.(path)}
                     >
                       <div className="flex items-center justify-end gap-2 mb-0.5">
-                        {isTracked && (
-                          <span className="flex items-center gap-1.5 text-[10px] text-white/90 font-medium tracking-wide uppercase pointer-events-auto">
+                        {isTracked ? (
+                          <span className="flex items-center gap-1.5 text-[10px] text-white/90 font-medium">
                             <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                             Tracking
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-brand-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                            Click to track →
                           </span>
                         )}
                       </div>
