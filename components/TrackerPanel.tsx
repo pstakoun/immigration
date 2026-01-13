@@ -108,16 +108,12 @@ function StageItem({
   const node = getNode(stage.nodeId);
   const nodeName = node?.name || stage.nodeId;
   const canHavePriorityDateVal = canEstablishPriorityDate(stage.nodeId);
-  
-  // Skip the final green card stage - it's implied
-  if (stage.nodeId === "gc") return null;
-  
-  // Skip PD wait stages - they're informational
-  if (stage.isPriorityWait) return null;
+  const stageMaxMonths = (stage.durationYears?.max || 0) * 12;
 
   // Calculate remaining time for filed stages
   // For status visas, this is the processing time to get approved
   // For processing steps, this is the time until completion
+  // NOTE: This hook MUST be called before any early returns to satisfy React rules
   const remainingTime = useMemo(() => {
     if (stageProgress.status !== "filed" || !stageProgress.filedDate) return null;
     
@@ -140,7 +136,6 @@ function StageItem({
     }
     
     // For processing steps, use the path's stage duration for consistency
-    const stageMaxMonths = (stage.durationYears?.max || 0) * 12;
     if (stageMaxMonths === 0) return null;
     
     const remaining = Math.max(0, stageMaxMonths - monthsElapsed);
@@ -151,7 +146,13 @@ function StageItem({
       typical: { min: stageMaxMonths * 0.7, max: stageMaxMonths },
       isStatusVisa: false,
     };
-  }, [stageProgress.status, stageProgress.filedDate, stage.nodeId]);
+  }, [stageProgress.status, stageProgress.filedDate, stage.nodeId, stageMaxMonths]);
+  
+  // Skip the final green card stage - it's implied
+  if (stage.nodeId === "gc") return null;
+  
+  // Skip PD wait stages - they're informational
+  if (stage.isPriorityWait) return null;
 
   const statusColors = {
     not_started: "bg-gray-100 text-gray-600 border-gray-200",

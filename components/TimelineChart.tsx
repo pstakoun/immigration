@@ -437,6 +437,7 @@ export default function TimelineChart({
     const generatedPaths = generatePaths(filters, priorityDates, datesForFiling);
     onMatchingCountChange(generatedPaths.length);
     return generatedPaths;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, onMatchingCountChange, processingTimesLoaded, priorityDates, datesForFiling]);
 
   // Notify parent when paths are regenerated (for updating selected path)
