@@ -102,7 +102,6 @@ function StageItem({
   onUpdate,
   isExpanded,
   onToggleExpand,
-  stageRef,
   isCurrentStage,
 }: {
   stage: ComposedStage;
@@ -110,7 +109,6 @@ function StageItem({
   onUpdate: (update: Partial<StageProgress>) => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
-  stageRef: React.RefObject<HTMLDivElement>;
   isCurrentStage: boolean;
 }) {
   const node = getNode(stage.nodeId);
@@ -173,7 +171,6 @@ function StageItem({
 
   return (
     <div 
-      ref={stageRef}
       className={`border-b border-gray-100 last:border-0 ${isExpanded ? "bg-brand-50/30" : ""} ${isCurrentStage && stageProgress.status === "not_started" ? "ring-2 ring-inset ring-brand-300" : ""}`}
       id={`stage-${stage.nodeId}`}
     >
@@ -655,18 +652,21 @@ export default function TrackerPanel({
           const isCurrentStage = index === currentStageIndex;
           
           return (
-            <StageItem
-              key={stage.nodeId}
-              stage={stage}
-              stageProgress={stageProgress}
-              onUpdate={(update) => onUpdateStage(stage.nodeId, update)}
-              isExpanded={expandedStageId === stage.nodeId}
-              onToggleExpand={() => onExpandStage(
-                expandedStageId === stage.nodeId ? null : stage.nodeId
-              )}
-              stageRef={{ current: null } as React.RefObject<HTMLDivElement>}
-              isCurrentStage={isCurrentStage}
-            />
+            <div 
+              key={stage.nodeId} 
+              ref={(el) => { stageRefs.current[stage.nodeId] = el; }}
+            >
+              <StageItem
+                stage={stage}
+                stageProgress={stageProgress}
+                onUpdate={(update) => onUpdateStage(stage.nodeId, update)}
+                isExpanded={expandedStageId === stage.nodeId}
+                onToggleExpand={() => onExpandStage(
+                  expandedStageId === stage.nodeId ? null : stage.nodeId
+                )}
+                isCurrentStage={isCurrentStage}
+              />
+            </div>
           );
         })}
       </div>
