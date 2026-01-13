@@ -406,97 +406,51 @@ export default function TrackerPanel({
     return currentPathPD;
   }, [progress.portedPriorityDate, currentPathPD]);
 
-  // Calculate estimated completion by summing remaining time for each stage
-  // Handles concurrent stages by not double-counting overlapping time
+  // Calculate estimated completion using the path's pre-calculated totalYears
+  // The path-composer already handles concurrent stages and PD wait correctly
   const estimatedCompletion = useMemo(() => {
     const now = new Date();
     
-    // Get GC track stages (not work visas, not the final GC marker)
-    const gcStages = path.stages.filter(s => s.track === "gc" && s.nodeId !== "gc");
+    // Use the path's total timeline (average of min/max for realistic estimate)
+    const pathMinMonths = (path.totalYears?.min || 0) * 12;
+    const pathMaxMonths = (path.totalYears?.max || 0) * 12;
+    // Use 40% between min and max for a realistic but slightly optimistic estimate
+    const pathEstimatedMonths = pathMinMonths + (pathMaxMonths - pathMinMonths) * 0.4;
     
-    if (gcStages.length === 0) {
-      return { date: now, months: 0, hasUncertainty: false };
-    }
+    // Calculate time already completed based on progress
+    let completedMonths = 0;
     
-    // Calculate estimated duration (slightly optimistic: 40% between min and max)
-    const getEstimatedDuration = (stage: ComposedStage) => {
-      const min = stage.durationYears?.min || 0;
-      const max = stage.durationYears?.max || 0;
-      return min + (max - min) * 0.4;
-    };
+    // Only count GC track stages for progress (not status track like TN/H-1B)
+    const gcStages = path.stages.filter(s => s.track === "gc" && s.nodeId !== "gc" && !s.isPriorityWait);
     
-    // Sum up remaining months, but handle concurrent stages
-    let remainingMonths = 0;
-    let hasUncertainty = false;
-    let lastStageEnd = 0; // Track where the last non-concurrent stage ends
-    
-    for (let i = 0; i < gcStages.length; i++) {
-      const stage = gcStages[i];
+    for (const stage of gcStages) {
       const sp = progress.stages[stage.nodeId] || { status: "not_started" };
-      const estimatedDuration = getEstimatedDuration(stage);
-      const durationMonths = estimatedDuration * 12;
-      
-      // Handle PD wait stages
-      if (stage.isPriorityWait) {
-        if (sp.status !== "approved") {
-          remainingMonths += durationMonths;
-          hasUncertainty = true;
-        }
-        continue;
-      }
-      
-      // For concurrent stages, don't add to remaining unless longer than previous
-      const isConcurrent = stage.isConcurrent && i > 0;
+      const stageMinMonths = (stage.durationYears?.min || 0) * 12;
+      const stageMaxMonths = (stage.durationYears?.max || 0) * 12;
+      const stageEstMonths = stageMinMonths + (stageMaxMonths - stageMinMonths) * 0.4;
       
       if (sp.status === "approved") {
-        // Stage complete - update position
-        if (!isConcurrent) {
-          lastStageEnd += durationMonths;
-        } else {
-          lastStageEnd = Math.max(lastStageEnd, durationMonths);
+        // Fully completed - but for concurrent stages, don't double count
+        if (!stage.isConcurrent) {
+          completedMonths += stageEstMonths;
         }
-        continue;
-      }
-      
-      // Calculate remaining for this stage
-      let stageRemaining = durationMonths;
-      
-      if (sp.status === "filed" && sp.filedDate) {
+      } else if (sp.status === "filed" && sp.filedDate) {
+        // Partially completed
         const filedDate = parseDate(sp.filedDate);
         if (filedDate) {
           const elapsedMonths = monthsBetween(filedDate, now);
-          stageRemaining = Math.max(0, durationMonths - elapsedMonths);
-        }
-      }
-      
-      // Add to remaining (but for concurrent, only add the difference)
-      if (!isConcurrent) {
-        remainingMonths += stageRemaining;
-      } else {
-        // For concurrent stage, it overlaps with what we just added
-        // Only add extra time if this concurrent stage takes longer
-        const prevStage = gcStages[i - 1];
-        const prevRemaining = sp.status === "filed" ? stageRemaining : durationMonths;
-        const prevDuration = getEstimatedDuration(prevStage) * 12;
-        const prevSp = progress.stages[prevStage.nodeId] || { status: "not_started" };
-        
-        let prevStageRemaining = prevDuration;
-        if (prevSp.status === "approved") {
-          prevStageRemaining = 0;
-        } else if (prevSp.status === "filed" && prevSp.filedDate) {
-          const filedDate = parseDate(prevSp.filedDate);
-          if (filedDate) {
-            const elapsedMonths = monthsBetween(filedDate, now);
-            prevStageRemaining = Math.max(0, prevDuration - elapsedMonths);
+          if (!stage.isConcurrent) {
+            completedMonths += Math.min(elapsedMonths, stageEstMonths);
           }
-        }
-        
-        // Only add the extra time beyond the previous stage
-        if (stageRemaining > prevStageRemaining) {
-          remainingMonths += (stageRemaining - prevStageRemaining);
         }
       }
     }
+    
+    // Remaining = total - completed
+    const remainingMonths = Math.max(0, pathEstimatedMonths - completedMonths);
+    
+    // Check for uncertainty (PD wait stages exist)
+    const hasUncertainty = path.stages.some(s => s.isPriorityWait);
 
     // Calculate estimated date
     const estimatedDate = new Date(now);
@@ -507,7 +461,7 @@ export default function TrackerPanel({
       months: remainingMonths,
       hasUncertainty,
     };
-  }, [path.stages, progress.stages]);
+  }, [path.totalYears, path.stages, progress.stages]);
 
   // Priority date aging benefit
   const pdAgingBenefit = useMemo(() => {
