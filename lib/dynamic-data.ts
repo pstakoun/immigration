@@ -67,6 +67,8 @@ export interface DynamicData {
 }
 
 // Parse "Month Year" to months from now
+// Uses month arithmetic (not milliseconds) to match DEFAULT_PROCESSING_TIMES
+// and avoid jumps when live data is fetched
 function parseMonthsFromDate(dateStr: string): number {
   const months: Record<string, number> = {
     January: 0, February: 1, March: 2, April: 3,
@@ -83,12 +85,13 @@ function parseMonthsFromDate(dateStr: string): number {
 
   if (month === undefined || isNaN(year)) return 12;
 
-  const targetDate = new Date(year, month, 1);
+  // Use month arithmetic for consistency with calculateMonthsFromDate
+  // in processing-times.ts and DEFAULT_PROCESSING_TIMES values
   const today = new Date();
+  const diffMonths = (today.getFullYear() - year) * 12
+    + (today.getMonth() - month);
 
-  return Math.max(0, Math.round(
-    (today.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
-  ));
+  return Math.max(0, diffMonths);
 }
 
 // Fetch DOL FLAG processing times
