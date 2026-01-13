@@ -704,7 +704,34 @@ function composePath(
   }
 
   // Calculate when GC process starts
-  const gcStartYear = statusPath.permStartOffset ?? 0;
+  // For PERM-based paths: can start PERM while working (permStartOffset)
+  // For self-petition paths (NIW, EB-1A, EB-1B): need the degree FIRST
+  //   - If student path grants a degree, GC filing starts AFTER degree is obtained
+  //   - The degree is obtained after F-1 completes (before OPT)
+  let gcStartYear: number;
+  
+  if (gcMethod.requiresPerm) {
+    // PERM can start while working, even before degree complete in some cases
+    gcStartYear = statusPath.permStartOffset ?? 0;
+  } else if (statusPath.grantsEducation) {
+    // Self-petition (NIW, EB-1A, EB-1B) with student path:
+    // MUST have the degree first to qualify, so start after F-1 completes
+    const f1Stage = statusPath.stages.find(s => s.nodeId === "f1");
+    if (f1Stage) {
+      // Find when F-1 ends (sum of durations up to and including F-1)
+      const f1Index = statusPath.stages.indexOf(f1Stage);
+      gcStartYear = statusPath.stages
+        .slice(0, f1Index + 1)
+        .reduce((sum, s) => sum + s.duration.max, 0);
+    } else {
+      // No F-1 stage, start after all status stages
+      gcStartYear = statusEndYear;
+    }
+  } else {
+    // Self-petition without student path (already have degree):
+    // Can file immediately
+    gcStartYear = statusPath.permStartOffset ?? 0;
+  }
 
   // Add GC stages (green card track)
   // Track both the sequential position AND the actual end time of all stages
