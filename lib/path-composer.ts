@@ -1106,8 +1106,22 @@ export function generatePaths(
     }
   }
 
-  // Sort by total duration (fastest first)
-  paths.sort((a, b) => a.totalYears.min - b.totalYears.min);
+  // Sort by: 1) shortest time to GC, 2) fewest steps (simplicity)
+  paths.sort((a, b) => {
+    // Get GC end time (when Green Card is obtained, not overall path end)
+    const aGcEnd = a.stages.find(s => s.nodeId === "gc")?.startYear || a.totalYears.max;
+    const bGcEnd = b.stages.find(s => s.nodeId === "gc")?.startYear || b.totalYears.max;
+    
+    // Primary sort: shortest time to GC
+    if (aGcEnd !== bGcEnd) {
+      return aGcEnd - bGcEnd;
+    }
+    
+    // Secondary sort: fewest steps (simplicity)
+    const aSteps = a.stages.filter(s => s.nodeId !== "gc" && !s.isPriorityWait).length;
+    const bSteps = b.stages.filter(s => s.nodeId !== "gc" && !s.isPriorityWait).length;
+    return aSteps - bSteps;
+  });
 
   return paths;
 }
