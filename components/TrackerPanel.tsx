@@ -406,17 +406,20 @@ export default function TrackerPanel({
     return currentPathPD;
   }, [progress.portedPriorityDate, currentPathPD]);
 
-  // Calculate estimated completion - USE MAX to match visual timeline exactly
+  // Calculate estimated completion based on GREEN CARD date (not status track end)
   const estimatedCompletion = useMemo(() => {
     const now = new Date();
     
-    // Use path's MAX timeline - this is what the visual timeline shows
-    const pathMaxMonths = (path.totalYears?.max || 0) * 12;
+    // Find when the Green Card is obtained (GC marker position)
+    // This is the END of the GC track, not the overall path max (which includes status track)
+    const gcMarker = path.stages.find(s => s.nodeId === "gc");
+    const gcEndYears = gcMarker?.startYear || path.totalYears?.max || 0;
+    const gcEndMonths = gcEndYears * 12;
     
-    // Calculate time already completed based on progress
+    // Calculate time already elapsed on GC track stages
     let completedMonths = 0;
     
-    // Only count GC track stages for progress (not status track like TN/H-1B)
+    // Only count GC track stages (not status track like TN/H-1B)
     const gcStages = path.stages.filter(s => s.track === "gc" && s.nodeId !== "gc" && !s.isPriorityWait);
     
     for (const stage of gcStages) {
@@ -440,8 +443,8 @@ export default function TrackerPanel({
       }
     }
     
-    // Remaining = total max - completed
-    const remainingMonths = Math.max(0, pathMaxMonths - completedMonths);
+    // Remaining = GC end time - completed GC stages
+    const remainingMonths = Math.max(0, gcEndMonths - completedMonths);
     
     // Check for uncertainty (PD wait stages exist)
     const hasUncertainty = path.stages.some(s => s.isPriorityWait);
