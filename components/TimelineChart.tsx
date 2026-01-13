@@ -184,14 +184,21 @@ export default function TimelineChart({
   }, [paths.length, filters]);
 
   // Handle stage click with analytics tracking
+  // If clicking a stage on a non-tracked path, also select that path
   const handleStageClick = useCallback(
-    (nodeId: string) => {
+    (nodeId: string, path: ComposedPath) => {
       const node = getNode(nodeId);
       const nodeName = node?.name || nodeId;
       trackStageClick(nodeId, nodeName);
+      
+      // If this path isn't currently tracked, start tracking it
+      if (selectedPathId !== path.id && onSelectPath) {
+        onSelectPath(path);
+      }
+      
       onStageClick(nodeId);
     },
-    [onStageClick]
+    [onStageClick, selectedPathId, onSelectPath]
   );
 
   // Check if a path has multiple tracks
@@ -409,7 +416,7 @@ export default function TimelineChart({
                             height: TRACK_HEIGHT,
                             top: `${top}px`,
                           }}
-                          onClick={() => handleStageClick(stage.nodeId)}
+                          onClick={() => handleStageClick(stage.nodeId, path)}
                           onMouseEnter={() => setHoveredStage(`${path.id}-${idx}`)}
                           onMouseLeave={() => setHoveredStage(null)}
                         >
@@ -542,7 +549,7 @@ export default function TimelineChart({
                             left: `${left}px`,
                             top: `${top}px`,
                           }}
-                          onClick={() => handleStageClick(stage.nodeId)}
+                          onClick={() => handleStageClick(stage.nodeId, path)}
                           onMouseEnter={() => setHoveredStage(`${path.id}-${idx}`)}
                           onMouseLeave={() => setHoveredStage(null)}
                         >
@@ -590,7 +597,7 @@ export default function TimelineChart({
                               height: TRACK_HEIGHT,
                               top: `${top}px`,
                             }}
-                            onClick={() => handleStageClick(stage.nodeId)}
+                            onClick={() => handleStageClick(stage.nodeId, path)}
                             onMouseEnter={() => setHoveredStage(`${path.id}-${idx}`)}
                             onMouseLeave={() => setHoveredStage(null)}
                           >
