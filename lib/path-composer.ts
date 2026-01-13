@@ -1106,18 +1106,58 @@ export function generatePaths(
     }
   }
 
-  // Sort by: 1) shortest time to GC, 2) fewest steps (simplicity)
+  // Risk scores - lower = safer/higher approval rate
+  // Regular employer-sponsored PERM is safest, self-petition/extraordinary ability is riskier
+  const getRiskScore = (path: ComposedPath): number => {
+    const category = path.gcCategory.toLowerCase();
+    const hasLottery = path.hasLottery;
+    const isSelfPetition = path.isSelfPetition;
+    
+    // Marriage-based: very high approval if legitimate
+    if (category.includes("marriage")) return 1;
+    
+    // Regular PERM-based EB-2/EB-3: well-established, predictable
+    if (!isSelfPetition && (category.includes("eb-2") || category.includes("eb-3"))) {
+      return hasLottery ? 3 : 2; // H-1B lottery adds uncertainty
+    }
+    
+    // EB-1C (multinational executive): employer-sponsored but specific requirements
+    if (category.includes("eb-1c")) return 4;
+    
+    // EB-1B (outstanding researcher): employer-sponsored but higher bar
+    if (category.includes("eb-1b")) return 5;
+    
+    // EB-2 NIW: self-petition, must prove national interest
+    if (category.includes("niw")) return 6;
+    
+    // EB-1A: self-petition, highest bar (extraordinary ability)
+    if (category.includes("eb-1a")) return 7;
+    
+    // EB-5: requires significant investment, different risk profile
+    if (category.includes("eb-5")) return 8;
+    
+    return 5; // Default middle risk
+  };
+
+  // Sort by: 1) fastest GC, 2) lowest risk, 3) fewest steps
   paths.sort((a, b) => {
-    // Get GC end time (when Green Card is obtained, not overall path end)
+    // Get GC end time (when Green Card is obtained)
     const aGcEnd = a.stages.find(s => s.nodeId === "gc")?.startYear || a.totalYears.max;
     const bGcEnd = b.stages.find(s => s.nodeId === "gc")?.startYear || b.totalYears.max;
     
-    // Primary sort: shortest time to GC
-    if (aGcEnd !== bGcEnd) {
+    // Primary: shortest time to GC
+    if (Math.abs(aGcEnd - bGcEnd) > 0.5) { // Allow 6-month tolerance for "ties"
       return aGcEnd - bGcEnd;
     }
     
-    // Secondary sort: fewest steps (simplicity)
+    // Secondary: lowest risk / highest approval rate
+    const aRisk = getRiskScore(a);
+    const bRisk = getRiskScore(b);
+    if (aRisk !== bRisk) {
+      return aRisk - bRisk;
+    }
+    
+    // Tertiary: fewest steps (simplicity)
     const aSteps = a.stages.filter(s => s.nodeId !== "gc" && !s.isPriorityWait).length;
     const bSteps = b.stages.filter(s => s.nodeId !== "gc" && !s.isPriorityWait).length;
     return aSteps - bSteps;
