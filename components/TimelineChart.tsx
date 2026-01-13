@@ -120,43 +120,26 @@ function dateToYearsFromNow(date: Date): number {
   return diffMs / (1000 * 60 * 60 * 24 * 365.25);
 }
 
-// Calculate visible position for a stage (handles stages that start in the past)
-// Returns: { left, width, isFullyPast, visiblePortion }
-function getVisibleStagePosition(
-  startYear: number,
-  durationYears: number,
-  pixelsPerYear: number
-): { left: number; width: number; isFullyPast: boolean; visiblePortion: number } {
-  const endYear = startYear + durationYears;
-  
-  // Stage is fully in the past
-  if (endYear <= 0) {
-    return {
-      left: 0,
-      width: Math.max(24, durationYears * pixelsPerYear * 0.5), // Compressed width
-      isFullyPast: true,
-      visiblePortion: 0,
-    };
+// Calculate the timeline offset needed to shift everything so earliest stage starts at 0
+// Returns the "now" position in years from timeline start
+function calculateTimelineOffset(stages: ComposedStage[]): number {
+  let minStart = 0;
+  for (const stage of stages) {
+    if (stage.startYear < minStart) {
+      minStart = stage.startYear;
+    }
   }
-  
-  // Stage started in the past but extends into the future
-  if (startYear < 0) {
-    const visibleDuration = endYear; // Only the future portion
-    return {
-      left: 0,
-      width: Math.max(24, visibleDuration * pixelsPerYear - 2),
-      isFullyPast: false,
-      visiblePortion: visibleDuration / durationYears,
-    };
-  }
-  
-  // Stage is entirely in the future
-  return {
-    left: startYear * pixelsPerYear,
-    width: Math.max(24, durationYears * pixelsPerYear - 2),
-    isFullyPast: false,
-    visiblePortion: 1,
-  };
+  // The offset is negative minStart (how much to shift right)
+  // "Now" position is at this offset from the start
+  return -minStart;
+}
+
+// Apply offset to stage positions (shift timeline so it starts at 0)
+function shiftStagePositions(stages: ComposedStage[], offset: number): ComposedStage[] {
+  return stages.map(stage => ({
+    ...stage,
+    startYear: stage.startYear + offset,
+  }));
 }
 
 // Adjust stage positions based on actual progress data
@@ -443,6 +426,27 @@ export default function TimelineChart({
   const getNode = (nodeId: string) => {
     return visaData.nodes[nodeId as keyof typeof visaData.nodes];
   };
+  
+  // Calculate global timeline offset based on tracked path (or first path if none tracked)
+  // This ensures all paths are aligned and "NOW" is at a consistent position
+  const globalTimelineInfo = useMemo(() => {
+    // Find the reference path (tracked path or first path)
+    const referencePath = selectedPathId 
+      ? paths.find(p => p.id === selectedPathId) 
+      : paths[0];
+    
+    if (!referencePath || !globalProgress || Object.keys(globalProgress.stages).length === 0) {
+      return { nowPosition: 0, hasProgress: false };
+    }
+    
+    // Adjust the reference path's stages based on progress
+    const adjustedStages = adjustStagesForProgress(referencePath.stages, globalProgress);
+    
+    // Find the earliest stage start (most negative = furthest in past)
+    const nowPosition = calculateTimelineOffset(adjustedStages);
+    
+    return { nowPosition, hasProgress: true };
+  }, [paths, selectedPathId, globalProgress]);
 
   return (
     <div className="w-full h-full overflow-x-auto overflow-y-auto bg-gray-50">
@@ -468,7 +472,9 @@ export default function TimelineChart({
               className="text-xs text-gray-500 font-medium"
               style={{ width: PIXELS_PER_YEAR, flexShrink: 0 }}
             >
-              {year === 0 ? "Today" : `Year ${year}`}
+              {globalTimelineInfo.hasProgress 
+                ? (year === 0 ? "Start" : `+${year} yr`)
+                : (year === 0 ? "Today" : `Year ${year}`)}
             </div>
           ))}
         </div>
@@ -488,12 +494,12 @@ export default function TimelineChart({
             ))}
           </div>
           
-          {/* Today marker - vertical line at position 0 */}
-          {/* Show when any progress data exists (since all paths use actual dates) */}
-          {globalProgress && Object.keys(globalProgress.stages).length > 0 && (
+          {/* NOW marker - vertical line showing where "today" is on the timeline */}
+          {/* Position is based on the tracked path's offset */}
+          {globalTimelineInfo.hasProgress && globalTimelineInfo.nowPosition > 0 && (
             <div 
               className="absolute top-0 bottom-0 w-0.5 bg-brand-500 z-20 pointer-events-none"
-              style={{ left: 0 }}
+              style={{ left: `${globalTimelineInfo.nowPosition * PIXELS_PER_YEAR}px` }}
             >
               <div className="absolute -top-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-brand-500 text-white text-[9px] font-bold rounded whitespace-nowrap">
                 NOW
@@ -607,14 +613,18 @@ export default function TimelineChart({
                     // Since progress data is global, all paths should reflect actual dates
                     const adjustedStages = adjustStagesForProgress(path.stages, globalProgress);
                     
+                    // Use the global offset to shift all paths consistently
+                    // This ensures "NOW" appears at the same position across all paths
+                    const shiftedStages = shiftStagePositions(adjustedStages, globalTimelineInfo.nowPosition);
+                    
                     // Calculate current stage for this path if it's being tracked
-                    const currentStageIdx = isTracked ? adjustedStages.findIndex(s => {
+                    const currentStageIdx = isTracked ? shiftedStages.findIndex(s => {
                       if (s.isPriorityWait || s.nodeId === "gc") return false;
                       const sp = getStageProgress(path.id, s.nodeId);
                       return !sp || sp.status !== "approved";
                     }) : -1;
                     
-                    return adjustedStages.map((stage, idx) => {
+                    const stageElements = shiftedStages.map((stage, idx) => {
                     const stageProgress = getStageProgress(path.id, stage.nodeId);
                     const isApproved = stageProgress?.status === "approved";
                     const isFiled = stageProgress?.status === "filed";
@@ -625,9 +635,8 @@ export default function TimelineChart({
                     if (stage.isPriorityWait) {
                       const pdStartYear = stage.startYear;
                       const pdDuration = stage.durationYears.max || 0.5;
-                      const pdVisiblePos = getVisibleStagePosition(pdStartYear, pdDuration, PIXELS_PER_YEAR);
-                      const pdLeft = pdVisiblePos.left;
-                      const pdWidth = Math.max(pdVisiblePos.width, 60);
+                      const pdLeft = Math.max(0, pdStartYear * PIXELS_PER_YEAR);
+                      const pdWidth = Math.max(60, pdDuration * PIXELS_PER_YEAR - 2);
                       const isHovered = hoveredStage === `${path.id}-${idx}`;
 
                       // Calculate top position (GC track)
@@ -747,9 +756,9 @@ export default function TimelineChart({
                     const duration = stage.durationYears.max || 0.5;
                     const track = stage.track;
 
-                    // Calculate visible position (handles stages that started in the past)
-                    const visiblePos = getVisibleStagePosition(startYear, duration, PIXELS_PER_YEAR);
-                    const { left, width, isFullyPast } = visiblePos;
+                    // Calculate position directly (stages are already shifted to start at 0)
+                    const left = Math.max(0, startYear * PIXELS_PER_YEAR);
+                    const width = Math.max(24, duration * PIXELS_PER_YEAR - 2);
                     const isCompact = width < 50; // Compact mode for small stages
 
                     // Calculate vertical position based on track
@@ -955,6 +964,8 @@ export default function TimelineChart({
                       </div>
                     );
                   });
+                    
+                    return stageElements;
                   })()}
                 </div>
               );
