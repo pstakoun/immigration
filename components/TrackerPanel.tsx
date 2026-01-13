@@ -421,43 +421,60 @@ export default function TrackerPanel({
   }, [progress.portedPriorityDate, currentPathPD]);
 
   // Calculate estimated completion based on ACTUAL progress and remaining stages
-  // This aligns with the timeline visualization logic
+  // MUST use the same stage durations as the timeline (path.stages.durationYears.max)
   const estimatedCompletion = useMemo(() => {
     const now = new Date();
-    
-    // Calculate remaining months for each GC track stage
-    let remainingMonths = 0;
     
     // Only count GC track stages (not status track like TN/H-1B)
     const gcStages = path.stages.filter(s => s.track === "gc" && s.nodeId !== "gc" && !s.isPriorityWait);
     
-    for (const stage of gcStages) {
+    // Track time like path-composer does:
+    // - gcSequentialYear: when the next sequential stage starts
+    // - gcMaxEndYear: the latest end time across all stages
+    // Concurrent stages start at the SAME time as the PREVIOUS stage
+    let gcSequentialMonths = 0;
+    let gcMaxEndMonths = 0;
+    let prevStageStartMonths = 0;
+    
+    for (let i = 0; i < gcStages.length; i++) {
+      const stage = gcStages[i];
       const sp = progress.stages[stage.nodeId] || { status: "not_started" };
       
-      // Get typical processing time from centralized constants
-      const typical = PROCESSING_STEP_TIMES[stage.nodeId];
-      const stageTypicalMonths = typical?.typical || (stage.durationYears?.max || 0) * 12;
+      // Use the PATH's duration (matches timeline), not centralized constants
+      const stageMaxMonths = (stage.durationYears?.max || 0) * 12;
+      
+      let stageRemainingMonths = 0;
       
       if (sp.status === "approved") {
-        // Stage fully completed - no remaining time
-        continue;
+        // Stage fully completed - no remaining time for this stage
+        stageRemainingMonths = 0;
       } else if (sp.status === "filed" && sp.filedDate) {
         // Partially completed - calculate remaining time
         const filedDate = parseDate(sp.filedDate);
         if (filedDate) {
           const elapsedMonths = monthsBetween(filedDate, now);
-          const stageRemaining = Math.max(0, stageTypicalMonths - elapsedMonths);
-          if (!stage.isConcurrent) {
-            remainingMonths += stageRemaining;
-          }
+          stageRemainingMonths = Math.max(0, stageMaxMonths - elapsedMonths);
         }
       } else {
-        // Not started - add full typical duration
-        if (!stage.isConcurrent) {
-          remainingMonths += stageTypicalMonths;
-        }
+        // Not started - full duration
+        stageRemainingMonths = stageMaxMonths;
       }
+      
+      // Concurrent stages start at the SAME time as the previous stage
+      // (matching path-composer.ts logic at line 724-726)
+      const stageStartMonths = stage.isConcurrent 
+        ? prevStageStartMonths 
+        : gcSequentialMonths;
+      
+      const stageEndMonths = stageStartMonths + stageRemainingMonths;
+      
+      // Update for next iteration
+      prevStageStartMonths = stageStartMonths;
+      gcSequentialMonths = Math.max(gcSequentialMonths, stageEndMonths);
+      gcMaxEndMonths = Math.max(gcMaxEndMonths, stageEndMonths);
     }
+    
+    let remainingMonths = gcMaxEndMonths;
     
     // Add PD wait time if exists (from path composition)
     const pdWaitStage = path.stages.find(s => s.isPriorityWait);

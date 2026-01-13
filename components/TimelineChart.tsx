@@ -12,8 +12,6 @@ import {
   STATUS_VISA_NODES, 
   STATUS_VISA_VALIDITY_MONTHS, 
   STATUS_VISA_PROCESSING_MONTHS,
-  PROCESSING_STEP_TIMES,
-  getTypicalProcessingMonths,
   isStatusVisa,
 } from "@/lib/constants";
 
@@ -101,8 +99,8 @@ function getFiledProgress(filedDate: string | undefined, durationMonths: number)
   return Math.min(100, Math.max(0, (elapsed / durationMonths) * 100));
 }
 
-// Use centralized constants from lib/constants.ts
-// PROCESSING_STEP_TIMES, STATUS_VISA_* are imported above
+// Use centralized constants from lib/constants.ts for status visa handling
+// Stage durations come from path.stages.durationYears (from path-composer)
 
 // Convert a date to "years from today" (negative = past, positive = future)
 function dateToYearsFromNow(date: Date): number {
@@ -252,12 +250,13 @@ function adjustStagesForProgress(
         }
       }
     } else if (sp?.status === "approved" && sp.approvedDate) {
-      // PROCESSING STEP APPROVED but no filed date
+      // PROCESSING STEP APPROVED but no filed date - estimate backwards
       const approvedDate = parseDate(sp.approvedDate);
       if (approvedDate) {
         const endYear = dateToYearsFromNow(approvedDate);
-        const typicalMonths = getTypicalProcessingMonths(stage.nodeId);
-        adjustedStart = endYear - (typicalMonths / 12);
+        // Use path's duration for consistency
+        const stageMaxMonths = stage.durationYears.max * 12;
+        adjustedStart = endYear - (stageMaxMonths / 12);
         
         if (!stage.isConcurrent) {
           trackEndYears[track] = Math.max(trackEndYears[track], endYear);
@@ -265,14 +264,16 @@ function adjustStagesForProgress(
       }
     } else if (sp?.status === "filed" && sp.filedDate) {
       // PROCESSING STEP FILED: show elapsed + estimated remaining
+      // Use the PATH's duration for consistency with timeline display
       const filedDate = parseDate(sp.filedDate);
       
       if (filedDate) {
         adjustedStart = dateToYearsFromNow(filedDate);
         
-        const typicalMonths = PROCESSING_STEP_TIMES[stage.nodeId]?.typical || (stage.durationYears.max * 12);
+        // Use stage.durationYears.max (same as not-started stages) for consistency
+        const stageMaxMonths = stage.durationYears.max * 12;
         const elapsedMonths = monthsBetween(filedDate, now);
-        const remainingMonths = Math.max(1, typicalMonths - elapsedMonths);
+        const remainingMonths = Math.max(1, stageMaxMonths - elapsedMonths);
         const totalMonths = elapsedMonths + remainingMonths;
         const totalYears = totalMonths / 12;
         
@@ -291,19 +292,23 @@ function adjustStagesForProgress(
       }
     } else {
       // NOT STARTED: position based on when previous stage ends
-      // Use the track's current end position
-      if (!stage.isConcurrent) {
-        adjustedStart = Math.max(0, trackEndYears[track]);
+      if (stage.isConcurrent) {
+        // Concurrent stages start at the SAME time as the previous stage
+        // Find the previous stage on this track to get its start time
+        const prevStagesOnTrack = adjustedStages.filter(s => s.track === track);
+        if (prevStagesOnTrack.length > 0) {
+          const prevStage = prevStagesOnTrack[prevStagesOnTrack.length - 1];
+          adjustedStart = prevStage.startYear;
+        }
       } else {
-        // Concurrent stages start at the same time as the last non-concurrent stage on this track
-        // Keep original relative position
+        // Sequential stage: starts after current track end
+        adjustedStart = Math.max(0, trackEndYears[track]);
       }
       
-      // Update track end time
+      // Update track end time for ALL stages (including concurrent)
+      // GC marker needs to know when the last stage ends
       const endYear = adjustedStart + stage.durationYears.max;
-      if (!stage.isConcurrent) {
-        trackEndYears[track] = Math.max(trackEndYears[track], endYear);
-      }
+      trackEndYears[track] = Math.max(trackEndYears[track], endYear);
     }
 
     adjustedStages.push({
