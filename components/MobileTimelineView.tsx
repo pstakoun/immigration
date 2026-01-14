@@ -174,10 +174,30 @@ function MiniTimeline({
     ? Math.min((gcMarkerStage.startYear / maxYears) * 100, 96)
     : null;
   
+  // The track area starts after the indicator (w-1 = 4px) + gap (gap-2 = 8px) = 12px
+  const trackLeftOffset = 12;
+  
   return (
     <div className="mt-3 relative">
+      {/* "Now" marker - small triangle above tracks */}
+      {nowPosition !== null && (
+        <div 
+          className="h-2 mb-0.5 relative"
+          style={{ marginLeft: `${trackLeftOffset}px` }}
+        >
+          <div 
+            className="absolute bottom-0"
+            style={{ left: `${nowPosition}%`, transform: 'translateX(-50%)' }}
+          >
+            <div 
+              className="w-0 h-0 border-l-[4px] border-r-[4px] border-t-[5px] border-l-transparent border-r-transparent border-t-brand-500"
+            />
+          </div>
+        </div>
+      )}
+      
       {/* Timeline tracks */}
-      <div className="space-y-1 relative">
+      <div className="space-y-1">
         {/* Status track (if exists) */}
         {statusStages.length > 0 && (
           <div className="flex items-center gap-2">
@@ -203,39 +223,29 @@ function MiniTimeline({
             </div>
           </div>
         )}
-        
-        {/* "Now" marker - only show if we have progress */}
-        {nowPosition !== null && (
-          <div 
-            className="absolute top-0 bottom-0 w-0.5 bg-brand-600 z-10 pointer-events-none"
-            style={{ left: `calc(${nowPosition}% + 12px)` }}
-          >
-            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-brand-600 rounded-full" />
-          </div>
-        )}
       </div>
       
-      {/* Green Card finish marker */}
-      {gcMarkerPercent !== null && (
+      {/* Green Card finish marker - inline at the end */}
+      {gcMarkerPercent !== null && gcMarkerPercent > 50 && (
         <div 
-          className="absolute flex items-center pointer-events-none"
+          className="absolute flex items-center pointer-events-none z-10"
           style={{ 
-            left: `calc(${gcMarkerPercent}% + 12px)`,
+            left: `calc(${trackLeftOffset}px + ${gcMarkerPercent}%)`,
             top: hasMultipleTracks ? '50%' : '50%',
             transform: 'translateY(-50%)',
           }}
         >
-          <div className="w-4 h-4 rounded-full bg-green-500 border-2 border-white shadow flex items-center justify-center">
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+          <div className="w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white shadow-sm flex items-center justify-center">
+            <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
               <path d="M20 6L9 17l-5-5" />
             </svg>
           </div>
         </div>
       )}
       
-      {/* Year scale - show "Today" instead of "Now" and only show the "now" label if we have progress */}
-      <div className="flex justify-between mt-1.5 text-[9px] text-gray-400">
-        <span>{nowPosition !== null ? "Start" : "Today"}</span>
+      {/* Year scale */}
+      <div className="flex justify-between mt-1.5 text-[9px] text-gray-400" style={{ marginLeft: `${trackLeftOffset}px` }}>
+        <span>Today</span>
         <span>{Math.ceil(totalYears)} yr</span>
       </div>
     </div>
