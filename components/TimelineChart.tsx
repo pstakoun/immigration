@@ -746,6 +746,16 @@ export default function TimelineChart({
     );
   };
 
+  const getMiniStageColor = (stage: ComposedStage, progress?: StageProgress | null) => {
+    if (stage.isPriorityWait) return "bg-orange-500";
+    if (stage.nodeId === "gc") return "bg-green-600";
+    if (progress?.status === "approved") return "bg-green-600";
+    if (progress?.status === "filed") return "bg-blue-500";
+    const node = getNode(stage.nodeId);
+    const colors = node ? categoryColors[node.category] : categoryColors.work;
+    return colors.bg;
+  };
+
   return (
     <div className="w-full h-full bg-gray-50">
       {/* Mobile-first vertical timeline */}
@@ -774,6 +784,11 @@ export default function TimelineChart({
             const isTracked = selectedPathId === path.id;
             const isExpanded = expandedMobilePathId === path.id;
             const adjustedStages = adjustStagesForProgress(path.stages, globalProgress);
+            const miniStages = shiftStagePositions(adjustedStages, calculateTimelineOffset(adjustedStages));
+            const timelineEnd = Math.max(
+              1,
+              ...miniStages.map((stage) => stage.startYear + stage.durationYears.max)
+            );
             const stagesWithIndex = adjustedStages.map((stage, index) => ({ stage, index }));
             const trackableStages = stagesWithIndex.filter(({ stage }) => !stage.isPriorityWait && stage.nodeId !== "gc");
             const nextStageId = isTracked
@@ -853,6 +868,54 @@ export default function TimelineChart({
                         Self-file
                       </span>
                     )}
+                  </div>
+
+                  <div className="rounded-lg border border-gray-200 bg-gray-50/70 px-3 py-2">
+                    <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
+                      Timeline snapshot
+                    </div>
+                    <div className="mt-2 space-y-2">
+                      {(["status", "gc"] as const).map((track) => {
+                        const trackStages = miniStages
+                          .filter((stage) => stage.track === track)
+                          .sort((a, b) => a.startYear - b.startYear);
+                        if (trackStages.length === 0) return null;
+
+                        return (
+                          <div key={track} className="relative h-3">
+                            <div className="absolute inset-0 rounded-full bg-gray-200" />
+                            {trackStages.map((stage, index) => {
+                              const left = Math.min(98, (stage.startYear / timelineEnd) * 100);
+                              let width = Math.max(
+                                2,
+                                (stage.durationYears.max / timelineEnd) * 100
+                              );
+                              if (left + width > 100) {
+                                width = Math.max(2, 100 - left);
+                              }
+                              const color = getMiniStageColor(
+                                stage,
+                                getStageProgress(path.id, stage.nodeId)
+                              );
+                              return (
+                                <div
+                                  key={`${stage.nodeId}-${index}`}
+                                  className={`absolute top-0 h-3 rounded-full ${color}`}
+                                  style={{
+                                    left: `${left}%`,
+                                    width: `${width}%`,
+                                  }}
+                                />
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-[10px] text-gray-500">
+                      <span>Start</span>
+                      <span>End</span>
+                    </div>
                   </div>
 
                   <button
