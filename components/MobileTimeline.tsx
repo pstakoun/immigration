@@ -331,6 +331,143 @@ function MobileStageItem({
   );
 }
 
+// Mini Timeline Component - Birds-eye view of the path
+function MiniTimeline({
+  stages,
+  globalProgress,
+  totalYears,
+}: {
+  stages: ComposedStage[];
+  globalProgress: GlobalProgress | null | undefined;
+  totalYears: number;
+}) {
+  // Filter out the final GC marker for the bars
+  const visibleStages = stages.filter(s => s.nodeId !== "gc");
+  const gcMarker = stages.find(s => s.nodeId === "gc");
+  const gcApproved = gcMarker && globalProgress?.stages["gc"]?.status === "approved";
+  
+  // Group stages by track
+  const statusStages = visibleStages.filter(s => s.track === "status");
+  const gcStages = visibleStages.filter(s => s.track === "gc");
+  const hasMultipleTracks = statusStages.length > 0 && gcStages.length > 0;
+  
+  // Calculate total duration for scaling (add a bit for the GC marker)
+  const maxYear = (totalYears || Math.max(...visibleStages.map(s => s.startYear + s.durationYears.max), 1)) * 1.05;
+  
+  // Get color for a stage based on its state and type
+  const getStageColor = (stage: ComposedStage): string => {
+    const progress = globalProgress?.stages[stage.nodeId];
+    
+    if (progress?.status === "approved") {
+      return "bg-green-500";
+    }
+    if (progress?.status === "filed") {
+      return "bg-blue-500";
+    }
+    if (stage.isPriorityWait) {
+      return "bg-orange-400";
+    }
+    if (stage.track === "status") {
+      return "bg-emerald-400";
+    }
+    return "bg-amber-400";
+  };
+  
+  // Get border color for stage (darker version)
+  const getStageBorder = (stage: ComposedStage): string => {
+    const progress = globalProgress?.stages[stage.nodeId];
+    
+    if (progress?.status === "approved") {
+      return "border-green-600";
+    }
+    if (progress?.status === "filed") {
+      return "border-blue-600";
+    }
+    if (stage.isPriorityWait) {
+      return "border-orange-500";
+    }
+    if (stage.track === "status") {
+      return "border-emerald-500";
+    }
+    return "border-amber-500";
+  };
+  
+  // Render a track of stages
+  const renderTrack = (trackStages: ComposedStage[], isTop: boolean) => {
+    if (trackStages.length === 0) return null;
+    
+    return (
+      <div className={`relative h-2.5 bg-gray-100 rounded-sm overflow-visible ${isTop ? "" : ""}`}>
+        {trackStages.map((stage, idx) => {
+          const left = (stage.startYear / maxYear) * 100;
+          const width = Math.max(3, (stage.durationYears.max / maxYear) * 100);
+          const color = getStageColor(stage);
+          const border = getStageBorder(stage);
+          
+          return (
+            <div
+              key={`${stage.nodeId}-${idx}`}
+              className={`absolute h-full rounded-sm ${color} border ${border} ${
+                stage.isConcurrent ? "opacity-80 z-10" : ""
+              }`}
+              style={{
+                left: `${Math.min(left, 97)}%`,
+                width: `${Math.min(width, 100 - left)}%`,
+                // Offset concurrent stages
+                ...(stage.isConcurrent ? { 
+                  marginTop: "2px",
+                  height: "8px",
+                  zIndex: 5,
+                } : {}),
+              }}
+            />
+          );
+        })}
+      </div>
+    );
+  };
+  
+  // Render GC marker at the end
+  const renderGCMarker = () => (
+    <div 
+      className={`absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full flex items-center justify-center ${
+        gcApproved ? "bg-green-500" : "bg-green-400"
+      } border-2 ${gcApproved ? "border-green-600" : "border-green-500"} shadow-sm`}
+    >
+      {gcApproved ? (
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4">
+          <path d="M20 6L9 17l-5-5" />
+        </svg>
+      ) : (
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" />
+        </svg>
+      )}
+    </div>
+  );
+  
+  // If only one track, render all stages in a single bar
+  if (!hasMultipleTracks) {
+    return (
+      <div className="mt-3 relative pr-5">
+        {renderTrack(visibleStages, true)}
+        {renderGCMarker()}
+      </div>
+    );
+  }
+  
+  // Two tracks: status on top, GC on bottom
+  return (
+    <div className="mt-3 relative pr-5">
+      <div className="space-y-0.5">
+        {renderTrack(statusStages, true)}
+        {renderTrack(gcStages, false)}
+      </div>
+      {renderGCMarker()}
+    </div>
+  );
+}
+
 // Mobile Path Card Component
 function MobilePathCard({
   path,
@@ -430,6 +567,13 @@ function MobilePathCard({
             <div className="text-xs text-gray-500">${path.estimatedCost.toLocaleString()}</div>
           </div>
         </div>
+
+        {/* Mini Timeline - Visual representation of the path */}
+        <MiniTimeline
+          stages={path.stages}
+          globalProgress={globalProgress}
+          totalYears={path.totalYears.max}
+        />
 
         {/* Progress bar (if tracking or has progress) */}
         {globalProgress && progressSummary.total > 0 && (progressSummary.approved > 0 || progressSummary.filed > 0) && (
