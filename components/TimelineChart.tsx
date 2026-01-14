@@ -25,7 +25,7 @@ interface TimelineChartProps {
   onStageClick: (nodeId: string) => void;
   filters: FilterState;
   onMatchingCountChange: (count: number) => void;
-  onSelectPath?: (path: ComposedPath) => void;
+  onSelectPath?: (path: ComposedPath, options?: { intent?: "toggle" | "open" }) => void;
   onPathsGenerated?: (paths: ComposedPath[]) => void;
   selectedPathId?: string | null;
   globalProgress?: GlobalProgress | null;
@@ -854,6 +854,16 @@ export default function TimelineChart({
                       </span>
                     )}
                   </div>
+
+                  {isTracked && onSelectPath && (
+                    <button
+                      type="button"
+                      onClick={() => onSelectPath(path, { intent: "open" })}
+                      className="w-full rounded-lg border border-brand-200 bg-white px-3 py-2 text-[11px] font-semibold text-brand-700 hover:bg-brand-50"
+                    >
+                      Open checklist
+                    </button>
+                  )}
 
                   <div className="rounded-lg border border-gray-200 bg-gray-50/70 px-3 py-2">
                     <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">

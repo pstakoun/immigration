@@ -165,9 +165,28 @@ export default function Home() {
   };
 
   // Handle selecting a path to track (or untrack if clicking same path)
-  const handleSelectPath = (path: ComposedPath) => {
-    // If clicking the currently tracked path, untrack it
-    if (globalProgress?.selectedPathId === path.id) {
+  const handleSelectPath = (
+    path: ComposedPath,
+    options?: { intent?: "toggle" | "open" }
+  ) => {
+    const intent = options?.intent ?? "toggle";
+    const isSamePath = globalProgress?.selectedPathId === path.id;
+    
+    if (isSamePath) {
+      if (intent === "open") {
+        if (!selectedPath) {
+          setSelectedPath(path);
+        }
+        return;
+      }
+      
+      // If panel is closed, reopen it instead of untracking
+      if (!selectedPath) {
+        setSelectedPath(path);
+        return;
+      }
+      
+      // If clicking the currently tracked path while open, untrack it
       setSelectedPath(null);
       setGlobalProgress(prev => prev ? { ...prev, selectedPathId: null } : null);
       setExpandedStageId(null);
