@@ -20,6 +20,7 @@ interface TrackerPanelProps {
   onClose: () => void;
   expandedStageId: string | null;
   onExpandStage: (nodeId: string | null) => void;
+  isMobile?: boolean;
 }
 
 // Get node info from visa data
@@ -356,6 +357,7 @@ export default function TrackerPanel({
   onClose,
   expandedStageId,
   onExpandStage,
+  isMobile = false,
 }: TrackerPanelProps) {
   const stageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -560,26 +562,49 @@ export default function TrackerPanel({
     <>
       {/* Mobile overlay */}
       <div 
-        className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+        className={`fixed inset-0 bg-black/30 z-40 ${isMobile ? "" : "lg:hidden"}`}
         onClick={onClose}
       />
       
-      {/* Panel - fixed on mobile, side panel on desktop */}
-      <div className="fixed inset-y-0 right-0 w-full max-w-[400px] bg-white border-l border-gray-200 flex flex-col overflow-hidden z-50 lg:relative lg:w-[380px] lg:z-auto shadow-xl lg:shadow-none">
+      {/* Panel - full screen on mobile, side panel on desktop */}
+      <div className={`fixed bg-white border-l border-gray-200 flex flex-col overflow-hidden z-50 shadow-xl ${
+        isMobile 
+          ? "inset-0" 
+          : "inset-y-0 right-0 w-full max-w-[400px] lg:relative lg:w-[380px] lg:z-auto lg:shadow-none"
+      }`}>
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50 flex-shrink-0">
-        <div>
-          <h2 className="font-semibold text-gray-900">Track Progress</h2>
-          <p className="text-xs text-gray-500">{path.name}</p>
+      <div className={`px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50 flex-shrink-0 ${
+        isMobile ? "safe-area-top" : ""
+      }`}>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onClose}
+            className="p-2 -ml-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+            aria-label="Close"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              {isMobile ? (
+                <path d="M15 18l-6-6 6-6" />
+              ) : (
+                <path d="M18 6L6 18M6 6l12 12" />
+              )}
+            </svg>
+          </button>
+          <div>
+            <h2 className="font-semibold text-gray-900">Track Progress</h2>
+            <p className="text-xs text-gray-500 truncate max-w-[200px]">{path.name}</p>
+          </div>
         </div>
-        <button
-          onClick={onClose}
-          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-colors"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
+        {!isMobile && (
+          <button
+            onClick={onClose}
+            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Estimated Completion */}

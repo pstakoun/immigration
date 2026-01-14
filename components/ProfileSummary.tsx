@@ -61,14 +61,30 @@ export default function ProfileSummary({
   }
 
   return (
-    <div className="bg-white border-b border-gray-200 px-6 py-3">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            {tags.map((tag, i) => (
+    <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-2 sm:py-3">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+          {/* Tags - horizontal scroll on mobile */}
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar">
+            {tags.slice(0, 3).map((tag, i) => (
               <span
                 key={i}
-                className="px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-full whitespace-nowrap"
+                className="px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium bg-gray-100 text-gray-700 rounded-full whitespace-nowrap flex-shrink-0"
+              >
+                {tag}
+              </span>
+            ))}
+            {/* Show remaining count on mobile */}
+            {tags.length > 3 && (
+              <span className="px-2 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-500 rounded-full whitespace-nowrap flex-shrink-0 sm:hidden">
+                +{tags.length - 3}
+              </span>
+            )}
+            {/* Show all tags on larger screens */}
+            {tags.slice(3).map((tag, i) => (
+              <span
+                key={i + 3}
+                className="hidden sm:inline px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-full whitespace-nowrap flex-shrink-0"
               >
                 {tag}
               </span>
@@ -76,25 +92,26 @@ export default function ProfileSummary({
             
             {/* Progress indicator when tracking a path */}
             {selectedPathId && completedStagesCount > 0 && (
-              <span className="px-2.5 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full whitespace-nowrap flex items-center gap-1.5">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <span className="px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium bg-green-100 text-green-700 rounded-full whitespace-nowrap flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="sm:w-3 sm:h-3">
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
-                {completedStagesCount} completed
+                <span className="hidden sm:inline">{completedStagesCount} completed</span>
+                <span className="sm:hidden">{completedStagesCount}</span>
               </span>
             )}
           </div>
           <button
             onClick={onEdit}
-            className="text-sm text-brand-600 hover:text-brand-700 font-medium whitespace-nowrap"
+            className="text-xs sm:text-sm text-brand-600 hover:text-brand-700 font-medium whitespace-nowrap flex-shrink-0"
           >
             Edit
           </button>
         </div>
 
-        <div className="text-sm text-gray-600 whitespace-nowrap">
-          <span className="font-semibold text-brand-600">{matchingCount}</span>{" "}
-          {matchingCount === 1 ? "path" : "paths"}
+        <div className="text-xs sm:text-sm text-gray-600 whitespace-nowrap flex-shrink-0">
+          <span className="font-semibold text-brand-600">{matchingCount}</span>
+          <span className="hidden sm:inline"> {matchingCount === 1 ? "path" : "paths"}</span>
         </div>
       </div>
     </div>

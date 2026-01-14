@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import TimelineChart from "@/components/TimelineChart";
+import MobileTimeline from "@/components/MobileTimeline";
 import PathDetail from "@/components/PathDetail";
 import ProfileSummary from "@/components/ProfileSummary";
 import OnboardingQuiz from "@/components/OnboardingQuiz";
@@ -9,6 +10,7 @@ import TrackerPanel from "@/components/TrackerPanel";
 import { FilterState, defaultFilters } from "@/lib/filter-paths";
 import { ComposedPath } from "@/lib/path-composer";
 import { getStoredProfile, saveUserProfile } from "@/lib/storage";
+import { useIsMobile } from "@/lib/use-mobile";
 
 // Key for storing progress in localStorage
 const PROGRESS_STORAGE_KEY = "stateside_progress_v2";
@@ -90,6 +92,9 @@ export default function Home() {
   const [matchingCount, setMatchingCount] = useState(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  
+  // Responsive check
+  const isMobile = useIsMobile();
   
   // Global progress state - shared across all paths
   const [globalProgress, setGlobalProgress] = useState<GlobalProgress | null>(null);
@@ -346,11 +351,11 @@ export default function Home() {
       )}
 
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-3 flex-shrink-0">
+      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 flex-shrink-0">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             {/* Logo */}
-            <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center flex-shrink-0">
               <svg
                 width="20"
                 height="20"
@@ -367,7 +372,7 @@ export default function Home() {
                 />
               </svg>
             </div>
-            <span className="text-xl font-semibold text-gray-900 tracking-tight">
+            <span className="text-lg sm:text-xl font-semibold text-gray-900 tracking-tight">
               Stateside
             </span>
             <span className="text-sm text-gray-400 hidden sm:inline">
@@ -375,15 +380,15 @@ export default function Home() {
             </span>
           </div>
 
-          {/* Progress indicator - only show when tracking */}
-          {globalProgress?.selectedPathId && selectedPath && (
+          {/* Progress indicator - only show when tracking (desktop only, mobile shows in timeline) */}
+          {!isMobile && globalProgress?.selectedPathId && selectedPath && (
             <div className="flex items-center gap-3 text-sm">
               <div className="flex items-center gap-2 text-brand-700 bg-brand-50 px-3 py-1.5 rounded-lg">
                 <span className="w-2 h-2 bg-brand-500 rounded-full animate-pulse" />
-                <span className="font-medium">{selectedPath.name}</span>
+                <span className="font-medium truncate max-w-[200px]">{selectedPath.name}</span>
                 {progressSummary && (
-                  <span className="text-brand-600">
-                    • {progressSummary.approved}/{progressSummary.total} complete
+                  <span className="text-brand-600 whitespace-nowrap">
+                    • {progressSummary.approved}/{progressSummary.total}
                   </span>
                 )}
               </div>
@@ -412,20 +417,32 @@ export default function Home() {
 
       {/* Main content area with timeline and tracker panel */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Timeline area */}
-        <div className={`flex-1 relative overflow-hidden transition-all ${globalProgress?.selectedPathId ? "mr-0" : ""}`}>
-          <TimelineChart
-            onStageClick={handleTimelineStageClick}
-            filters={filters}
-            onMatchingCountChange={handleMatchingCountChange}
-            onSelectPath={handleSelectPath}
-            onPathsGenerated={handlePathsGenerated}
-            selectedPathId={globalProgress?.selectedPathId || null}
-            globalProgress={globalProgress}
-          />
+        {/* Timeline area - switches between mobile and desktop */}
+        <div className={`flex-1 relative overflow-hidden transition-all ${!isMobile && globalProgress?.selectedPathId ? "mr-0" : ""}`}>
+          {isMobile ? (
+            <MobileTimeline
+              onStageClick={handleTimelineStageClick}
+              filters={filters}
+              onMatchingCountChange={handleMatchingCountChange}
+              onSelectPath={handleSelectPath}
+              onPathsGenerated={handlePathsGenerated}
+              selectedPathId={globalProgress?.selectedPathId || null}
+              globalProgress={globalProgress}
+            />
+          ) : (
+            <TimelineChart
+              onStageClick={handleTimelineStageClick}
+              filters={filters}
+              onMatchingCountChange={handleMatchingCountChange}
+              onSelectPath={handleSelectPath}
+              onPathsGenerated={handlePathsGenerated}
+              selectedPathId={globalProgress?.selectedPathId || null}
+              globalProgress={globalProgress}
+            />
+          )}
         </div>
 
-        {/* Tracker Panel - shows when a path is selected */}
+        {/* Tracker Panel - shows when a path is selected (desktop only on side, mobile full screen) */}
         {globalProgress && selectedPath && (
           <TrackerPanel
             path={selectedPath}
@@ -435,6 +452,7 @@ export default function Home() {
             onClose={() => setSelectedPath(null)}
             expandedStageId={expandedStageId}
             onExpandStage={setExpandedStageId}
+            isMobile={isMobile}
           />
         )}
 

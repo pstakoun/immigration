@@ -85,13 +85,13 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
     filters.hasInvestmentCapital,
   ].filter(Boolean).length;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-100">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 sticky top-0 bg-white z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-brand-500 flex items-center justify-center flex-shrink-0">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="sm:w-6 sm:h-6">
                 <path
                   d="M5 12h14M12 5l7 7-7 7"
                   stroke="white"
@@ -101,18 +101,18 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
                 />
               </svg>
             </div>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">Welcome to Stateside</h1>
-              <p className="text-sm text-gray-500">Tell us about yourself to see your immigration paths</p>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-semibold text-gray-900">Welcome to Stateside</h1>
+              <p className="text-xs sm:text-sm text-gray-500 truncate">Tell us about yourself to see your paths</p>
             </div>
           </div>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="px-6 py-5 space-y-6">
+          <div className="px-4 sm:px-6 py-4 sm:py-5 space-y-5 sm:space-y-6">
             {/* Current Status */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-3">
+              <label className="block text-sm font-medium text-gray-900 mb-2 sm:mb-3">
                 Where are you now?
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -121,18 +121,18 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
                     key={option.value}
                     type="button"
                     onClick={() => updateFilter("currentStatus", option.value)}
-                    className={`p-3 rounded-xl border-2 text-left transition-all ${
+                    className={`p-2.5 sm:p-3 rounded-xl border-2 text-left transition-all ${
                       filters.currentStatus === option.value
                         ? "border-brand-500 bg-brand-50"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
-                    <div className={`font-medium text-sm ${
+                    <div className={`font-medium text-xs sm:text-sm ${
                       filters.currentStatus === option.value ? "text-brand-700" : "text-gray-900"
                     }`}>
                       {option.label}
                     </div>
-                    <div className="text-xs text-gray-500 mt-0.5">{option.description}</div>
+                    <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5 leading-tight">{option.description}</div>
                   </button>
                 ))}
               </div>
@@ -140,16 +140,16 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
 
             {/* Education */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-3">
+              <label className="block text-sm font-medium text-gray-900 mb-2 sm:mb-3">
                 Highest education level
               </label>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                 {educationOptions.map((option) => (
                   <button
                     key={option.value}
                     type="button"
                     onClick={() => updateFilter("education", option.value)}
-                    className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                    className={`px-3 sm:px-4 py-2 rounded-lg border-2 text-xs sm:text-sm font-medium transition-all ${
                       filters.education === option.value
                         ? "border-brand-500 bg-brand-50 text-brand-700"
                         : "border-gray-200 text-gray-700 hover:border-gray-300"
@@ -163,27 +163,27 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
 
             {/* Experience */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-3">
+              <label className="block text-sm font-medium text-gray-900 mb-2 sm:mb-3">
                 Years of work experience
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {experienceOptions.map((option) => (
                   <button
                     key={option.value}
                     type="button"
                     onClick={() => updateFilter("experience", option.value)}
-                    className={`p-3 rounded-xl border-2 text-center transition-all ${
+                    className={`p-2.5 sm:p-3 rounded-xl border-2 text-left sm:text-center transition-all ${
                       filters.experience === option.value
                         ? "border-brand-500 bg-brand-50"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
-                    <div className={`font-medium text-sm ${
+                    <div className={`font-medium text-xs sm:text-sm ${
                       filters.experience === option.value ? "text-brand-700" : "text-gray-900"
                     }`}>
                       {option.label}
                     </div>
-                    <div className="text-xs text-gray-500 mt-0.5">{option.description}</div>
+                    <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5">{option.description}</div>
                   </button>
                 ))}
               </div>
@@ -191,37 +191,37 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
 
             {/* STEM */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-3">
+              <label className="block text-sm font-medium text-gray-900 mb-2 sm:mb-3">
                 Is your degree in a STEM field?
               </label>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => updateFilter("isStem", true)}
-                  className={`flex-1 p-3 rounded-xl border-2 text-center transition-all ${
+                  className={`flex-1 p-2.5 sm:p-3 rounded-xl border-2 text-center transition-all ${
                     filters.isStem
                       ? "border-brand-500 bg-brand-50"
                       : "border-gray-200 hover:border-gray-300"
                   }`}
                 >
-                  <div className={`font-medium text-sm ${filters.isStem ? "text-brand-700" : "text-gray-900"}`}>
+                  <div className={`font-medium text-xs sm:text-sm ${filters.isStem ? "text-brand-700" : "text-gray-900"}`}>
                     Yes, STEM
                   </div>
-                  <div className="text-xs text-gray-500 mt-0.5">Science, Tech, Engineering, Math</div>
+                  <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5">Science, Tech, Engineering, Math</div>
                 </button>
                 <button
                   type="button"
                   onClick={() => updateFilter("isStem", false)}
-                  className={`flex-1 p-3 rounded-xl border-2 text-center transition-all ${
+                  className={`flex-1 p-2.5 sm:p-3 rounded-xl border-2 text-center transition-all ${
                     !filters.isStem
                       ? "border-brand-500 bg-brand-50"
                       : "border-gray-200 hover:border-gray-300"
                   }`}
                 >
-                  <div className={`font-medium text-sm ${!filters.isStem ? "text-brand-700" : "text-gray-900"}`}>
+                  <div className={`font-medium text-xs sm:text-sm ${!filters.isStem ? "text-brand-700" : "text-gray-900"}`}>
                     No
                   </div>
-                  <div className="text-xs text-gray-500 mt-0.5">Other field of study</div>
+                  <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5">Other field of study</div>
                 </button>
               </div>
             </div>
@@ -231,27 +231,27 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
               <label className="block text-sm font-medium text-gray-900 mb-1">
                 Country of birth
               </label>
-              <p className="text-xs text-gray-500 mb-3">
+              <p className="text-xs text-gray-500 mb-2 sm:mb-3">
                 Affects TN visa eligibility and green card wait times
               </p>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                 {countryOptions.map((option) => (
                   <button
                     key={option.value}
                     type="button"
                     onClick={() => updateFilter("countryOfBirth", option.value)}
-                    className={`p-3 rounded-xl border-2 text-center transition-all ${
+                    className={`p-2 sm:p-3 rounded-xl border-2 text-center transition-all ${
                       filters.countryOfBirth === option.value
                         ? "border-brand-500 bg-brand-50"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
-                    <div className={`font-medium text-sm ${
+                    <div className={`font-medium text-xs sm:text-sm ${
                       filters.countryOfBirth === option.value ? "text-brand-700" : "text-gray-900"
                     }`}>
                       {option.label}
                     </div>
-                    <div className="text-xs text-gray-500 mt-0.5">{option.description}</div>
+                    <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5 leading-tight">{option.description}</div>
                   </button>
                 ))}
               </div>
@@ -278,15 +278,15 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
               <button
                 type="button"
                 onClick={() => setShowSpecial(!showSpecial)}
-                className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-900">
+                  <span className="text-xs sm:text-sm font-medium text-gray-900">
                     I have special qualifications
                   </span>
                   {specialCount > 0 && (
-                    <span className="px-2 py-0.5 text-xs font-medium bg-brand-100 text-brand-700 rounded-full">
-                      {specialCount} selected
+                    <span className="px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-medium bg-brand-100 text-brand-700 rounded-full">
+                      {specialCount}
                     </span>
                   )}
                 </div>
@@ -299,78 +299,78 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className={`text-gray-400 transition-transform ${showSpecial ? "rotate-180" : ""}`}
+                  className={`text-gray-400 transition-transform flex-shrink-0 ${showSpecial ? "rotate-180" : ""}`}
                 >
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </button>
 
               {showSpecial && (
-                <div className="p-4 space-y-2 border-t border-gray-200">
-                  <p className="text-xs text-gray-500 mb-3">Select any that apply to unlock additional paths</p>
+                <div className="p-3 sm:p-4 space-y-2 border-t border-gray-200">
+                  <p className="text-[10px] sm:text-xs text-gray-500 mb-2 sm:mb-3">Select any that apply to unlock additional paths</p>
 
-                  <label className="flex items-start gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                  <label className="flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
                     <input
                       type="checkbox"
                       checked={filters.hasExtraordinaryAbility}
                       onChange={(e) => updateFilter("hasExtraordinaryAbility", e.target.checked)}
-                      className="mt-0.5 w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
+                      className="mt-0.5 w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500 flex-shrink-0"
                     />
-                    <div>
-                      <div className="font-medium text-sm text-gray-900">Extraordinary ability</div>
-                      <div className="text-xs text-gray-500">Awards, publications, high salary, media coverage, or significant contributions in your field</div>
+                    <div className="min-w-0">
+                      <div className="font-medium text-xs sm:text-sm text-gray-900">Extraordinary ability</div>
+                      <div className="text-[10px] sm:text-xs text-gray-500 leading-tight">Awards, publications, high salary, media coverage</div>
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                  <label className="flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
                     <input
                       type="checkbox"
                       checked={filters.isOutstandingResearcher}
                       onChange={(e) => updateFilter("isOutstandingResearcher", e.target.checked)}
-                      className="mt-0.5 w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
+                      className="mt-0.5 w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500 flex-shrink-0"
                     />
-                    <div>
-                      <div className="font-medium text-sm text-gray-900">Outstanding researcher</div>
-                      <div className="text-xs text-gray-500">3+ years research experience with international recognition</div>
+                    <div className="min-w-0">
+                      <div className="font-medium text-xs sm:text-sm text-gray-900">Outstanding researcher</div>
+                      <div className="text-[10px] sm:text-xs text-gray-500 leading-tight">3+ years research experience with recognition</div>
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                  <label className="flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
                     <input
                       type="checkbox"
                       checked={filters.isExecutive}
                       onChange={(e) => updateFilter("isExecutive", e.target.checked)}
-                      className="mt-0.5 w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500"
+                      className="mt-0.5 w-4 h-4 text-brand-600 border-gray-300 rounded focus:ring-brand-500 flex-shrink-0"
                     />
-                    <div>
-                      <div className="font-medium text-sm text-gray-900">Executive or manager</div>
-                      <div className="text-xs text-gray-500">Manager/executive at a multinational company for 1+ year</div>
+                    <div className="min-w-0">
+                      <div className="font-medium text-xs sm:text-sm text-gray-900">Executive or manager</div>
+                      <div className="text-[10px] sm:text-xs text-gray-500 leading-tight">Multinational company manager for 1+ year</div>
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                  <label className="flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
                     <input
                       type="checkbox"
                       checked={filters.isMarriedToUSCitizen}
                       onChange={(e) => updateFilter("isMarriedToUSCitizen", e.target.checked)}
-                      className="mt-0.5 w-4 h-4 text-pink-600 border-gray-300 rounded focus:ring-pink-500"
+                      className="mt-0.5 w-4 h-4 text-pink-600 border-gray-300 rounded focus:ring-pink-500 flex-shrink-0"
                     />
-                    <div>
-                      <div className="font-medium text-sm text-gray-900">Married or engaged to US citizen</div>
-                      <div className="text-xs text-gray-500">Unlocks family-based green card paths</div>
+                    <div className="min-w-0">
+                      <div className="font-medium text-xs sm:text-sm text-gray-900">Married to US citizen</div>
+                      <div className="text-[10px] sm:text-xs text-gray-500 leading-tight">Unlocks family-based green card paths</div>
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                  <label className="flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
                     <input
                       type="checkbox"
                       checked={filters.hasInvestmentCapital}
                       onChange={(e) => updateFilter("hasInvestmentCapital", e.target.checked)}
-                      className="mt-0.5 w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500"
+                      className="mt-0.5 w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500 flex-shrink-0"
                     />
-                    <div>
-                      <div className="font-medium text-sm text-gray-900">$800k+ to invest</div>
-                      <div className="text-xs text-gray-500">Unlocks EB-5 investor visa path</div>
+                    <div className="min-w-0">
+                      <div className="font-medium text-xs sm:text-sm text-gray-900">$800k+ to invest</div>
+                      <div className="text-[10px] sm:text-xs text-gray-500 leading-tight">Unlocks EB-5 investor visa path</div>
                     </div>
                   </label>
                 </div>
@@ -379,14 +379,14 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 rounded-b-2xl">
+          <div className="px-4 sm:px-6 py-4 bg-gray-50 border-t border-gray-100 rounded-b-2xl sticky bottom-0">
             <button
               type="submit"
-              className="w-full py-3 px-4 bg-brand-500 hover:bg-brand-600 text-white font-semibold rounded-xl transition-colors"
+              className="w-full py-3 px-4 bg-brand-500 hover:bg-brand-600 active:bg-brand-700 text-white font-semibold rounded-xl transition-colors"
             >
               Show my immigration paths
             </button>
-            <p className="text-xs text-gray-500 text-center mt-3">
+            <p className="text-[10px] sm:text-xs text-gray-500 text-center mt-2 sm:mt-3">
               You can track your progress on any path after exploring
             </p>
           </div>
