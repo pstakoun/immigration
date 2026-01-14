@@ -558,182 +558,427 @@ export default function TimelineChart({
   }, [paths, selectedPathId, globalProgress]);
 
   return (
-    <div className="w-full h-full overflow-x-auto overflow-y-auto bg-gray-50">
-      <div className="min-w-[1200px] p-6">
-        {/* Tracking instruction banner */}
-        {selectedPathId && globalProgress && (
-          <div className="mb-4 flex items-center justify-center gap-2 text-sm text-brand-700 bg-brand-50 border border-brand-200 rounded-lg px-4 py-2" style={{ marginLeft: "220px" }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 16v-4M12 8h.01" />
-            </svg>
-            <span>
-              Click any stage to edit details in the panel →
-            </span>
+    <div className="w-full h-full bg-gray-50">
+      {/* Mobile-friendly timeline */}
+      <div className="lg:hidden h-full overflow-y-auto px-4 py-4">
+        <div className="mb-4 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+          <div className="text-sm font-semibold text-gray-900">Your paths, optimized for mobile</div>
+          <div className="text-xs text-gray-500 mt-1">
+            Tap a path to track it. Tap any stage for details.
           </div>
-        )}
-        
-        {/* Year markers */}
-        <div className="flex mb-2" style={{ marginLeft: "220px" }}>
-          {years.map((year) => (
-            <div
-              key={year}
-              className="text-xs text-gray-500 font-medium"
-              style={{ width: PIXELS_PER_YEAR, flexShrink: 0 }}
-            >
-              {globalTimelineInfo.hasProgress 
-                ? (year === 0 ? "Start" : `+${year} yr`)
-                : (year === 0 ? "Today" : `Year ${year}`)}
-            </div>
-          ))}
-        </div>
-
-        {/* Grid lines */}
-        <div
-          className="relative border-l border-gray-300"
-          style={{ marginLeft: "220px" }}
-        >
-          <div className="absolute inset-0 flex pointer-events-none">
-            {years.map((year) => (
-              <div
-                key={year}
-                className="border-l border-gray-200"
-                style={{ width: PIXELS_PER_YEAR, flexShrink: 0 }}
-              />
-            ))}
-          </div>
-          
-          {/* NOW marker - vertical line showing where "today" is on the timeline */}
-          {/* Position is based on the tracked path's offset */}
-          {globalTimelineInfo.hasProgress && globalTimelineInfo.nowPosition > 0 && (
-            <div 
-              className="absolute top-0 bottom-0 w-0.5 bg-brand-500 z-20 pointer-events-none"
-              style={{ left: `${globalTimelineInfo.nowPosition * PIXELS_PER_YEAR}px` }}
-            >
-              <div className="absolute -top-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-brand-500 text-white text-[9px] font-bold rounded whitespace-nowrap">
-                NOW
-              </div>
+          {selectedPathId && globalProgress && (
+            <div className="mt-3 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2 text-[11px] text-brand-700">
+              <span className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-pulse" />
+              Tracking updates are shown inline with each stage.
             </div>
           )}
+        </div>
 
-          {/* Path lanes */}
-          <div className="relative py-4">
-            {sortedPaths.length === 0 && (
-              <div className="py-12 text-center text-gray-500">
-                <p className="text-lg font-medium">No matching paths</p>
-                <p className="text-sm mt-1">
-                  Try adjusting your criteria to see available immigration paths.
-                </p>
-              </div>
-            )}
-            {sortedPaths.map((path, pathIndex) => {
-              const isSelected = selectedPath === path.id;
-              const isDimmed = selectedPath !== null && !isSelected;
-              const isTracked = selectedPathId === path.id;
-              const multiTrack = hasMultipleTracks(path.stages);
-              const hasConcurrent = hasConcurrentStages(path.stages);
-              // Add extra height if we have concurrent stages that need offset
-              const pathHeight = multiTrack
-                ? TRACK_HEIGHT * 2 + TRACK_GAP + (hasConcurrent ? CONCURRENT_OFFSET : 0)
-                : TRACK_HEIGHT;
+        {sortedPaths.length === 0 && (
+          <div className="py-12 text-center text-gray-500">
+            <p className="text-lg font-medium">No matching paths</p>
+            <p className="text-sm mt-1">
+              Try adjusting your criteria to see available immigration paths.
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-4 pb-6">
+          {sortedPaths.map((path) => {
+            const isSelected = selectedPath === path.id;
+            const isDimmed = selectedPath !== null && !isSelected;
+            const isTracked = selectedPathId === path.id;
+            const adjustedStages = adjustStagesForProgress(path.stages, globalProgress);
+            const trackableStages = adjustedStages.filter(
+              (stage) => !stage.isPriorityWait && stage.nodeId !== "gc"
+            );
+            const currentStageIdx = isTracked ? trackableStages.findIndex((stage) => {
+              const sp = getStageProgress(path.id, stage.nodeId);
+              return !sp || sp.status !== "approved";
+            }) : -1;
+            const currentTrackableStage = currentStageIdx >= 0 ? trackableStages[currentStageIdx] : null;
+
+            const statusStages = adjustedStages.filter(
+              (stage) => (stage.track || "gc") === "status" && stage.nodeId !== "gc"
+            );
+            const gcStages = adjustedStages.filter(
+              (stage) => (stage.track || "gc") !== "status" && stage.nodeId !== "gc"
+            );
+            const finalStage = adjustedStages.find((stage) => stage.nodeId === "gc");
+
+            const renderStageRow = (stage: ComposedStage) => {
+              const node = getNode(stage.nodeId);
+              const stageProgress = getStageProgress(path.id, stage.nodeId) || { status: "not_started" as const };
+              const isApproved = stageProgress.status === "approved";
+              const isFiled = stageProgress.status === "filed";
+              const isNextStep = isTracked && currentTrackableStage?.nodeId === stage.nodeId && !isApproved && !isFiled;
+              const isCurrentStatus = stage.nodeId === currentNodeId && !isApproved && !isFiled;
+
+              if (stage.isPriorityWait) {
+                return (
+                  <button
+                    key={`${stage.nodeId}-${stage.startYear}`}
+                    onClick={() => handleStageClick(stage.nodeId, path)}
+                    className="w-full text-left rounded-lg border border-orange-200 bg-orange-50 px-3 py-3 transition-colors hover:bg-orange-100"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-1 h-3 w-3 rounded-full bg-orange-500" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-gray-900">Priority Date Wait</span>
+                          <span className="text-[10px] rounded-full bg-orange-100 px-2 py-0.5 text-orange-700">
+                            {stage.durationYears.display}
+                          </span>
+                        </div>
+                        {stage.note && (
+                          <div className="text-[11px] text-gray-600 mt-1">{stage.note}</div>
+                        )}
+                        {stage.priorityDateStr && (
+                          <div className="text-[10px] text-gray-500 mt-1">
+                            Visa bulletin cutoff: {stage.priorityDateStr}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              }
+
+              if (!node) return null;
 
               return (
-                <div
-                  key={path.id}
-                  className={`relative transition-all duration-200 group ${
-                    isDimmed ? "opacity-40" : "opacity-100"
-                  } ${isTracked ? "mb-6 mt-2" : "mb-6"}`}
-                  style={{ height: pathHeight + 24 }}
+                <button
+                  key={`${stage.nodeId}-${stage.startYear}`}
+                  onClick={() => handleStageClick(stage.nodeId, path)}
+                  className={`w-full text-left rounded-lg border px-3 py-3 transition-colors ${
+                    isApproved
+                      ? "border-green-200 bg-green-50 hover:bg-green-100"
+                      : isFiled
+                      ? "border-blue-200 bg-blue-50 hover:bg-blue-100"
+                      : "border-gray-200 bg-white hover:bg-gray-50"
+                  }`}
                 >
-                  {/* Tracked path highlight background */}
-                  {isTracked && (
-                    <div 
-                      className="absolute -inset-y-2 bg-brand-50 rounded-lg -z-10"
-                      style={{ left: "-220px", right: "-16px" }}
-                    />
-                  )}
-                  
-                  {/* Path header - positioned to the left, clickable */}
-                  <div className="absolute right-full mr-4 top-0 w-[200px]">
-                    <div 
-                      className={`text-right p-2 -m-2 rounded-lg cursor-pointer transition-colors ${
-                        isTracked 
-                          ? "bg-brand-500" 
-                          : "hover:bg-gray-100"
-                      }`}
-                      onClick={() => onSelectPath?.(path)}
-                    >
-                      <div className="flex items-center justify-end gap-2 mb-0.5">
-                        {isTracked ? (
-                          <span className="flex items-center gap-1.5 text-[10px] text-white/90 font-medium">
-                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                            Tracking
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1">
+                      {isApproved && (
+                        <div className="h-4 w-4 rounded-full bg-green-500 text-white text-[10px] flex items-center justify-center">
+                          ✓
+                        </div>
+                      )}
+                      {isFiled && (
+                        <div className="h-4 w-4 rounded-full bg-blue-500" />
+                      )}
+                      {!isApproved && !isFiled && (
+                        <div className="h-4 w-4 rounded-full border-2 border-gray-300" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-900">{node.name}</span>
+                        <span className={`text-[10px] rounded-full px-2 py-0.5 ${
+                          (stage.track || "gc") === "status" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                        }`}>
+                          {trackLabels[stage.track || "gc"] || "Track"}
+                        </span>
+                        {stage.isConcurrent && (
+                          <span className="text-[10px] rounded-full bg-gray-100 px-2 py-0.5 text-gray-600">
+                            concurrent
                           </span>
-                        ) : (
-                          <span className="text-[10px] text-brand-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                            Click to track →
+                        )}
+                        {isNextStep && (
+                          <span className="text-[10px] rounded-full bg-brand-100 px-2 py-0.5 text-brand-700">
+                            next step
+                          </span>
+                        )}
+                        {isCurrentStatus && (
+                          <span className="text-[10px] rounded-full bg-red-100 px-2 py-0.5 text-red-700">
+                            you are here
                           </span>
                         )}
                       </div>
-                      <div className={`font-semibold text-sm leading-tight ${isTracked ? "text-white" : "text-gray-900"}`}>
-                        {path.name}
+                      <div className="text-[11px] text-gray-600 mt-1">
+                        {isApproved && stageProgress.approvedDate
+                          ? `Approved ${formatDateShort(stageProgress.approvedDate)}`
+                          : isFiled && stageProgress.filedDate
+                          ? `Filed ${formatDateShort(stageProgress.filedDate)}`
+                          : stage.durationYears.display}
                       </div>
-                      <div className={`text-xs mt-0.5 ${isTracked ? "text-white/80" : "text-gray-500"}`}>
+                      {stage.note && (
+                        <div className="text-[10px] text-gray-500 mt-1">{stage.note}</div>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            };
+
+            return (
+              <div
+                key={path.id}
+                className={`rounded-2xl border bg-white shadow-sm transition-all ${
+                  isTracked ? "border-brand-300 shadow-brand-100" : "border-gray-200"
+                } ${isDimmed ? "opacity-60" : "opacity-100"}`}
+              >
+                <button
+                  className={`w-full text-left px-4 py-4 border-b transition-colors ${
+                    isTracked ? "bg-brand-500 text-white border-brand-500" : "hover:bg-gray-50 border-gray-100"
+                  }`}
+                  onClick={() => onSelectPath?.(path)}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold">{path.name}</div>
+                      <div className={`text-[11px] mt-1 ${isTracked ? "text-white/80" : "text-gray-500"}`}>
                         {path.totalYears.display} · ${path.estimatedCost.toLocaleString()}
                       </div>
-                      <div className="flex items-center justify-end gap-1.5 mt-1">
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
                         <span className={`text-[10px] font-medium ${isTracked ? "text-white/90" : "text-brand-600"}`}>
                           {path.gcCategory}
                         </span>
                         {path.hasLottery && (
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${isTracked ? "bg-white/20 text-white" : "bg-amber-100 text-amber-700"}`}>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                            isTracked ? "bg-white/20 text-white" : "bg-amber-100 text-amber-700"
+                          }`}>
                             lottery
                           </span>
                         )}
                         {path.isSelfPetition && (
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${isTracked ? "bg-white/20 text-white" : "bg-green-100 text-green-700"}`}>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                            isTracked ? "bg-white/20 text-white" : "bg-green-100 text-green-700"
+                          }`}>
                             self-file
                           </span>
                         )}
                       </div>
                     </div>
+                    <div className="text-right">
+                      {isTracked ? (
+                        <div className="text-[10px] font-medium text-white/90 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                          Tracking
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-brand-600 font-medium">Tap to track</div>
+                      )}
+                    </div>
                   </div>
+                </button>
 
-                  {/* Track backgrounds */}
-                  {multiTrack && (
-                    <>
-                      <div
-                        className="absolute left-0 right-0 bg-emerald-50/50 rounded"
-                        style={{ height: TRACK_HEIGHT, top: 0 }}
-                      />
-                      <div
-                        className="absolute left-0 right-0 bg-amber-50/50 rounded"
-                        style={{
-                          height: TRACK_HEIGHT + (hasConcurrent ? CONCURRENT_OFFSET : 0),
-                          top: TRACK_HEIGHT + TRACK_GAP,
-                        }}
-                      />
-                    </>
+                <div className="px-4 py-4 space-y-4">
+                  {statusStages.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide">
+                        Work status track
+                      </div>
+                      <div className="space-y-2">
+                        {statusStages.map((stage) => renderStageRow(stage))}
+                      </div>
+                    </div>
                   )}
 
-                  {/* Find current stage index (first non-approved stage) for tracked path */}
-                  {(() => {
-                    // Adjust stage positions based on actual progress (for ALL paths)
-                    // Since progress data is global, all paths should reflect actual dates
-                    const adjustedStages = adjustStagesForProgress(path.stages, globalProgress);
+                  {gcStages.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide">
+                        Green card track
+                      </div>
+                      <div className="space-y-2">
+                        {gcStages.map((stage) => renderStageRow(stage))}
+                      </div>
+                    </div>
+                  )}
+
+                  {finalStage && (
+                    <button
+                      onClick={() => handleStageClick(finalStage.nodeId, path)}
+                      className="w-full rounded-full border-2 border-green-600 bg-green-500 text-white py-2 text-sm font-semibold shadow-sm"
+                    >
+                      Green Card destination
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Desktop horizontal timeline */}
+      <div className="hidden lg:block w-full h-full overflow-x-auto overflow-y-auto">
+        <div className="min-w-[1200px] p-6">
+          {/* Tracking instruction banner */}
+          {selectedPathId && globalProgress && (
+            <div className="mb-4 flex items-center justify-center gap-2 text-sm text-brand-700 bg-brand-50 border border-brand-200 rounded-lg px-4 py-2" style={{ marginLeft: "220px" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4M12 8h.01" />
+              </svg>
+              <span>
+                Click any stage to edit details in the panel →
+              </span>
+            </div>
+          )}
+          
+          {/* Year markers */}
+          <div className="flex mb-2" style={{ marginLeft: "220px" }}>
+            {years.map((year) => (
+              <div
+                key={year}
+                className="text-xs text-gray-500 font-medium"
+                style={{ width: PIXELS_PER_YEAR, flexShrink: 0 }}
+              >
+                {globalTimelineInfo.hasProgress 
+                  ? (year === 0 ? "Start" : `+${year} yr`)
+                  : (year === 0 ? "Today" : `Year ${year}`)}
+              </div>
+            ))}
+          </div>
+
+          {/* Grid lines */}
+          <div
+            className="relative border-l border-gray-300"
+            style={{ marginLeft: "220px" }}
+          >
+            <div className="absolute inset-0 flex pointer-events-none">
+              {years.map((year) => (
+                <div
+                  key={year}
+                  className="border-l border-gray-200"
+                  style={{ width: PIXELS_PER_YEAR, flexShrink: 0 }}
+                />
+              ))}
+            </div>
+            
+            {/* NOW marker - vertical line showing where "today" is on the timeline */}
+            {/* Position is based on the tracked path's offset */}
+            {globalTimelineInfo.hasProgress && globalTimelineInfo.nowPosition > 0 && (
+              <div 
+                className="absolute top-0 bottom-0 w-0.5 bg-brand-500 z-20 pointer-events-none"
+                style={{ left: `${globalTimelineInfo.nowPosition * PIXELS_PER_YEAR}px` }}
+              >
+                <div className="absolute -top-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-brand-500 text-white text-[9px] font-bold rounded whitespace-nowrap">
+                  NOW
+                </div>
+              </div>
+            )}
+
+            {/* Path lanes */}
+            <div className="relative py-4">
+              {sortedPaths.length === 0 && (
+                <div className="py-12 text-center text-gray-500">
+                  <p className="text-lg font-medium">No matching paths</p>
+                  <p className="text-sm mt-1">
+                    Try adjusting your criteria to see available immigration paths.
+                  </p>
+                </div>
+              )}
+              {sortedPaths.map((path, pathIndex) => {
+                const isSelected = selectedPath === path.id;
+                const isDimmed = selectedPath !== null && !isSelected;
+                const isTracked = selectedPathId === path.id;
+                const multiTrack = hasMultipleTracks(path.stages);
+                const hasConcurrent = hasConcurrentStages(path.stages);
+                // Add extra height if we have concurrent stages that need offset
+                const pathHeight = multiTrack
+                  ? TRACK_HEIGHT * 2 + TRACK_GAP + (hasConcurrent ? CONCURRENT_OFFSET : 0)
+                  : TRACK_HEIGHT;
+
+                return (
+                  <div
+                    key={path.id}
+                    className={`relative transition-all duration-200 group ${
+                      isDimmed ? "opacity-40" : "opacity-100"
+                    } ${isTracked ? "mb-6 mt-2" : "mb-6"}`}
+                    style={{ height: pathHeight + 24 }}
+                  >
+                    {/* Tracked path highlight background */}
+                    {isTracked && (
+                      <div 
+                        className="absolute -inset-y-2 bg-brand-50 rounded-lg -z-10"
+                        style={{ left: "-220px", right: "-16px" }}
+                      />
+                    )}
                     
-                    // Use the global offset to shift all paths consistently
-                    // This ensures "NOW" appears at the same position across all paths
-                    const shiftedStages = shiftStagePositions(adjustedStages, globalTimelineInfo.nowPosition);
-                    
-                    // Calculate current stage for this path if it's being tracked
-                    const currentStageIdx = isTracked ? shiftedStages.findIndex(s => {
-                      if (s.isPriorityWait || s.nodeId === "gc") return false;
-                      const sp = getStageProgress(path.id, s.nodeId);
-                      return !sp || sp.status !== "approved";
-                    }) : -1;
-                    
-                    const stageElements = shiftedStages.map((stage, idx) => {
+                    {/* Path header - positioned to the left, clickable */}
+                    <div className="absolute right-full mr-4 top-0 w-[200px]">
+                      <div 
+                        className={`text-right p-2 -m-2 rounded-lg cursor-pointer transition-colors ${
+                          isTracked 
+                            ? "bg-brand-500" 
+                            : "hover:bg-gray-100"
+                        }`}
+                        onClick={() => onSelectPath?.(path)}
+                      >
+                        <div className="flex items-center justify-end gap-2 mb-0.5">
+                          {isTracked ? (
+                            <span className="flex items-center gap-1.5 text-[10px] text-white/90 font-medium">
+                              <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                              Tracking
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-brand-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                              Click to track →
+                            </span>
+                          )}
+                        </div>
+                        <div className={`font-semibold text-sm leading-tight ${isTracked ? "text-white" : "text-gray-900"}`}>
+                          {path.name}
+                        </div>
+                        <div className={`text-xs mt-0.5 ${isTracked ? "text-white/80" : "text-gray-500"}`}>
+                          {path.totalYears.display} · ${path.estimatedCost.toLocaleString()}
+                        </div>
+                        <div className="flex items-center justify-end gap-1.5 mt-1">
+                          <span className={`text-[10px] font-medium ${isTracked ? "text-white/90" : "text-brand-600"}`}>
+                            {path.gcCategory}
+                          </span>
+                          {path.hasLottery && (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${isTracked ? "bg-white/20 text-white" : "bg-amber-100 text-amber-700"}`}>
+                              lottery
+                            </span>
+                          )}
+                          {path.isSelfPetition && (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${isTracked ? "bg-white/20 text-white" : "bg-green-100 text-green-700"}`}>
+                              self-file
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Track backgrounds */}
+                    {multiTrack && (
+                      <>
+                        <div
+                          className="absolute left-0 right-0 bg-emerald-50/50 rounded"
+                          style={{ height: TRACK_HEIGHT, top: 0 }}
+                        />
+                        <div
+                          className="absolute left-0 right-0 bg-amber-50/50 rounded"
+                          style={{
+                            height: TRACK_HEIGHT + (hasConcurrent ? CONCURRENT_OFFSET : 0),
+                            top: TRACK_HEIGHT + TRACK_GAP,
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Find current stage index (first non-approved stage) for tracked path */}
+                    {(() => {
+                      // Adjust stage positions based on actual progress (for ALL paths)
+                      // Since progress data is global, all paths should reflect actual dates
+                      const adjustedStages = adjustStagesForProgress(path.stages, globalProgress);
+                      
+                      // Use the global offset to shift all paths consistently
+                      // This ensures "NOW" appears at the same position across all paths
+                      const shiftedStages = shiftStagePositions(adjustedStages, globalTimelineInfo.nowPosition);
+                      
+                      // Calculate current stage for this path if it's being tracked
+                      const currentStageIdx = isTracked ? shiftedStages.findIndex(s => {
+                        if (s.isPriorityWait || s.nodeId === "gc") return false;
+                        const sp = getStageProgress(path.id, s.nodeId);
+                        return !sp || sp.status !== "approved";
+                      }) : -1;
+                      
+                      const stageElements = shiftedStages.map((stage, idx) => {
                     const stageProgress = getStageProgress(path.id, stage.nodeId);
                     const isApproved = stageProgress?.status === "approved";
                     const isFiled = stageProgress?.status === "filed";
