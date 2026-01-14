@@ -473,14 +473,16 @@ function MobilePathCard({
   path,
   isSelected,
   isTracked,
-  onSelect,
+  onToggleExpand,
+  onTrack,
   onStageClick,
   globalProgress,
 }: {
   path: ComposedPath;
   isSelected: boolean;
   isTracked: boolean;
-  onSelect: () => void;
+  onToggleExpand: () => void;
+  onTrack: () => void;
   onStageClick: (nodeId: string) => void;
   globalProgress: GlobalProgress | null | undefined;
 }) {
@@ -534,8 +536,8 @@ function MobilePathCard({
     >
       {/* Path header */}
       <div 
-        className={`px-4 py-3 ${isTracked ? "bg-brand-50" : "bg-gray-50"}`}
-        onClick={onSelect}
+        className={`px-4 py-3 ${isTracked ? "bg-brand-50" : "bg-gray-50"} cursor-pointer`}
+        onClick={onToggleExpand}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -653,7 +655,7 @@ function MobilePathCard({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onSelect();
+                onTrack();
               }}
               className="w-full mt-2 py-2.5 bg-brand-500 text-white font-semibold rounded-xl active:bg-brand-600 transition-colors"
             >
@@ -741,22 +743,20 @@ export default function MobileTimeline({
     }
   }, [paths.length, filters]);
 
-  // Handle path selection
-  const handleSelectPath = useCallback((path: ComposedPath) => {
-    // Toggle expansion
+  // Handle path expand/collapse (header tap)
+  const handleToggleExpand = useCallback((path: ComposedPath) => {
+    // Simply toggle expansion - tracking is done via the "Track This Path" button
     if (expandedPathId === path.id) {
-      // If clicking expanded tracked path, just collapse
-      if (selectedPathId === path.id) {
-        setExpandedPathId(null);
-      } else {
-        // Track it
-        onSelectPath?.(path);
-      }
+      setExpandedPathId(null);
     } else {
-      // Expand this path
       setExpandedPathId(path.id);
     }
-  }, [expandedPathId, selectedPathId, onSelectPath]);
+  }, [expandedPathId]);
+
+  // Handle explicit track button click
+  const handleTrackPath = useCallback((path: ComposedPath) => {
+    onSelectPath?.(path);
+  }, [onSelectPath]);
 
   // Handle stage click
   const handleStageClick = useCallback((nodeId: string, path: ComposedPath) => {
@@ -824,7 +824,8 @@ export default function MobileTimeline({
             path={path}
             isSelected={expandedPathId === path.id}
             isTracked={selectedPathId === path.id}
-            onSelect={() => handleSelectPath(path)}
+            onToggleExpand={() => handleToggleExpand(path)}
+            onTrack={() => handleTrackPath(path)}
             onStageClick={(nodeId) => handleStageClick(nodeId, path)}
             globalProgress={globalProgress}
           />
