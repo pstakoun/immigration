@@ -43,6 +43,17 @@ const trackLabels: Record<string, string> = {
   gc: "GC Process",
 };
 
+const trackBadgeStyles: Record<"status" | "gc", string> = {
+  status: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  gc: "bg-amber-50 text-amber-700 border-amber-200",
+};
+
+const stageStatusBadgeStyles: Record<StageProgress["status"], { label: string; className: string }> = {
+  not_started: { label: "Not started", className: "bg-gray-100 text-gray-600 border-gray-200" },
+  filed: { label: "Filed", className: "bg-blue-100 text-blue-700 border-blue-200" },
+  approved: { label: "Approved", className: "bg-green-100 text-green-700 border-green-200" },
+};
+
 // Format YYYY-MM-DD date string for display
 function formatDateForDisplay(dateStr?: string): string {
   if (!dateStr) return "";
@@ -72,6 +83,24 @@ function formatDateShort(dateStr?: string): string {
   } catch {
     return dateStr;
   }
+}
+
+function getPriorityWaitMeta(note?: string): { title: string; subtitle?: string; accentClass: string } {
+  if (note?.includes("Filing") || note?.includes("Dates for Filing")) {
+    return {
+      title: "Filing wait",
+      subtitle: "Wait until you can file I-485.",
+      accentClass: "text-blue-600",
+    };
+  }
+  if (note?.includes("Final Action") || note?.includes("approval")) {
+    return {
+      title: "Approval wait",
+      subtitle: "I-485 pending. EAD/AP valid while you wait.",
+      accentClass: "text-emerald-600",
+    };
+  }
+  return { title: "Priority date wait", accentClass: "text-orange-600" };
 }
 
 // Calculate months between two dates
@@ -558,8 +587,337 @@ export default function TimelineChart({
   }, [paths, selectedPathId, globalProgress]);
 
   return (
-    <div className="w-full h-full overflow-x-auto overflow-y-auto bg-gray-50">
-      <div className="min-w-[1200px] p-6">
+    <div className="w-full h-full bg-gray-50">
+      {/* Mobile timeline */}
+      <div className="md:hidden h-full overflow-y-auto">
+        <div className="px-4 py-5 space-y-4">
+          {selectedPathId && globalProgress && (
+            <div className="flex items-start gap-2 text-xs text-brand-700 bg-brand-50 border border-brand-200 rounded-lg px-3 py-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4M12 8h.01" />
+              </svg>
+              <span>Tap any stage to update details.</span>
+            </div>
+          )}
+
+          {sortedPaths.length === 0 && (
+            <div className="py-12 text-center text-gray-500">
+              <p className="text-lg font-medium">No matching paths</p>
+              <p className="text-sm mt-1">
+                Try adjusting your criteria to see available immigration paths.
+              </p>
+            </div>
+          )}
+
+          {sortedPaths.map((path) => {
+            const isTracked = selectedPathId === path.id;
+            const adjustedStages = adjustStagesForProgress(path.stages, globalProgress);
+            const statusStages = adjustedStages.filter((stage) => stage.track === "status");
+            const gcStages = adjustedStages.filter((stage) => stage.track === "gc");
+            const trackableStages = adjustedStages.filter(
+              (stage) => !stage.isPriorityWait && stage.nodeId !== "gc"
+            );
+            const nextStageId = isTracked
+              ? trackableStages.find((stage) => {
+                  const sp = getStageProgress(path.id, stage.nodeId);
+                  return !sp || sp.status !== "approved";
+                })?.nodeId
+              : null;
+
+            const renderStage = (stage: ComposedStage, index: number) => {
+              if (stage.isPriorityWait) {
+                const waitMeta = getPriorityWaitMeta(stage.note);
+                return (
+                  <div
+                    key={`${stage.nodeId}-${index}`}
+                    className="rounded-lg border border-orange-200 bg-orange-50/60 px-3 py-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-sm font-semibold text-gray-900">Priority Date Wait</div>
+                        <div className={`text-[11px] font-medium ${waitMeta.accentClass}`}>
+                          {waitMeta.title}
+                        </div>
+                      </div>
+                      <span className="text-xs font-semibold text-orange-700 whitespace-nowrap">
+                        {stage.durationYears.display}
+                      </span>
+                    </div>
+                    {waitMeta.subtitle && (
+                      <div className="text-[11px] text-gray-600 mt-1">{waitMeta.subtitle}</div>
+                    )}
+                    {stage.note && (
+                      <div className="text-[11px] text-gray-600 mt-1">{stage.note}</div>
+                    )}
+                    {stage.priorityDateStr && (
+                      <div className="text-[10px] text-gray-500 mt-1">
+                        Visa bulletin cutoff: {stage.priorityDateStr}
+                      </div>
+                    )}
+                    {stage.velocityInfo && (
+                      <>
+                        <div className="text-[10px] text-amber-700 mt-1">
+                          {stage.velocityInfo.explanation}
+                        </div>
+                        {stage.velocityInfo.rangeMin !== stage.velocityInfo.rangeMax && (
+                          <div className="text-[10px] text-gray-500">
+                            Range: {Math.round(stage.velocityInfo.rangeMin / 12)}-
+                            {Math.round(stage.velocityInfo.rangeMax / 12)} yr
+                          </div>
+                        )}
+                        {stage.velocityInfo.confidence < 0.7 && (
+                          <div className="text-[10px] text-gray-400 italic">
+                            Estimate confidence: {Math.round(stage.velocityInfo.confidence * 100)}%
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {(stage.note?.includes("Final Action") || stage.note?.includes("EAD")) && (
+                      <div className="text-[10px] text-emerald-700 mt-1">
+                        EAD • Advance Parole • AC21 portability
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              if (stage.nodeId === "gc") {
+                return (
+                  <div
+                    key={`${stage.nodeId}-${index}`}
+                    className="rounded-full border border-green-500 bg-green-50 px-3 py-2 text-xs font-semibold text-green-700 inline-flex items-center gap-1"
+                  >
+                    <span>Green Card</span>
+                  </div>
+                );
+              }
+
+              const node = getNode(stage.nodeId);
+              if (!node) return null;
+
+              const stageProgress = (getStageProgress(path.id, stage.nodeId) || {
+                status: "not_started",
+              }) as StageProgress;
+              const status = stageProgress.status;
+              const statusBadge = stageStatusBadgeStyles[status];
+              const isApproved = status === "approved";
+              const isFiled = status === "filed";
+              const hasProgress = isApproved || isFiled;
+              const isNextStep = Boolean(isTracked && nextStageId && stage.nodeId === nextStageId && !hasProgress);
+              const isCurrentStatus = stage.nodeId === currentNodeId && !hasProgress;
+              const durationText = stage.durationYears.display || `${stage.durationYears.min}-${stage.durationYears.max} yr`;
+              const processingMonths = isStatusVisa(stage.nodeId)
+                ? STATUS_VISA_PROCESSING_MONTHS[stage.nodeId] || 1
+                : (stage.durationYears?.max || 0.5) * 12;
+              const progressPercent = isFiled && stageProgress.filedDate
+                ? getFiledProgress(stageProgress.filedDate, processingMonths)
+                : 0;
+              const stageColor = categoryColors[node.category] || categoryColors.work;
+              const timeLabel = isApproved && stageProgress.approvedDate
+                ? `Done ${formatDateShort(stageProgress.approvedDate)}`
+                : isFiled && stageProgress.filedDate
+                ? `Filed ${formatDateShort(stageProgress.filedDate)}`
+                : durationText;
+
+              return (
+                <button
+                  key={`${stage.nodeId}-${index}`}
+                  type="button"
+                  onClick={() => handleStageClick(stage.nodeId, path)}
+                  className={`w-full text-left rounded-lg border bg-white px-3 py-2 shadow-sm transition-colors ${
+                    isNextStep ? "border-brand-300 bg-brand-50/60" : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={`h-2.5 w-2.5 rounded-full ${stageColor.bg}`} />
+                      <span className="text-sm font-semibold text-gray-900 truncate">{node.name}</span>
+                    </div>
+                    <span className="text-xs text-gray-500 whitespace-nowrap">{timeLabel}</span>
+                  </div>
+
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <span
+                      className={`px-2 py-0.5 text-[10px] font-medium rounded-full border ${trackBadgeStyles[stage.track]}`}
+                    >
+                      {trackLabels[stage.track]}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 text-[10px] font-medium rounded-full border ${statusBadge.className}`}
+                    >
+                      {statusBadge.label}
+                    </span>
+                    {stage.isConcurrent && (
+                      <span className="px-2 py-0.5 text-[10px] font-medium rounded-full border border-purple-200 bg-purple-50 text-purple-700">
+                        Concurrent
+                      </span>
+                    )}
+                    {isCurrentStatus && (
+                      <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full border border-red-200 bg-red-50 text-red-600">
+                        Current status
+                      </span>
+                    )}
+                    {isNextStep && (
+                      <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full border border-brand-200 bg-brand-50 text-brand-600">
+                        Next step
+                      </span>
+                    )}
+                  </div>
+
+                  {stage.note && (
+                    <div className="text-[11px] text-gray-600 mt-1">{stage.note}</div>
+                  )}
+
+                  {isFiled && stageProgress.filedDate && (
+                    <div className="text-[11px] text-blue-700 mt-1">
+                      Filed {formatDateForDisplay(stageProgress.filedDate)}
+                    </div>
+                  )}
+                  {isApproved && stageProgress.approvedDate && (
+                    <div className="text-[11px] text-green-700 mt-1">
+                      Approved {formatDateForDisplay(stageProgress.approvedDate)}
+                      {isStatusVisa(stage.nodeId) && (
+                        <span className="text-gray-500 ml-1">
+                          (valid {Math.round((STATUS_VISA_VALIDITY_MONTHS[stage.nodeId] || 0) / 12)} yrs)
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {stageProgress.receiptNumber && (
+                    <div className="text-[10px] text-gray-500 font-mono mt-1">
+                      {stageProgress.receiptNumber}
+                    </div>
+                  )}
+                  {isFiled && progressPercent > 0 && (
+                    <div className="mt-2">
+                      <div className="h-1.5 w-full rounded-full bg-blue-100">
+                        <div
+                          className="h-1.5 rounded-full bg-blue-500"
+                          style={{ width: `${Math.round(progressPercent)}%` }}
+                        />
+                      </div>
+                      <div className="text-[10px] text-blue-600 mt-1">
+                        {Math.round(progressPercent)}% elapsed
+                      </div>
+                    </div>
+                  )}
+                </button>
+              );
+            };
+
+            return (
+              <div
+                key={path.id}
+                className={`rounded-xl border bg-white shadow-sm ${
+                  isTracked ? "border-brand-300 ring-2 ring-brand-100" : "border-gray-200"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => onSelectPath?.(path)}
+                  className={`w-full text-left px-4 py-3 border-b ${
+                    isTracked ? "border-brand-200 bg-brand-50/60" : "border-gray-100"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-gray-900 truncate">{path.name}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {path.totalYears.display} · ${path.estimatedCost.toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      {isTracked ? (
+                        <span className="text-[10px] font-semibold text-white bg-brand-500 px-2 py-0.5 rounded-full">
+                          Tracking
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-medium text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full">
+                          Tap to track
+                        </span>
+                      )}
+                      <span className="text-[10px] font-medium text-brand-700">
+                        {path.gcCategory}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {path.hasLottery && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
+                        lottery
+                      </span>
+                    )}
+                    {path.isSelfPetition && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                        self-file
+                      </span>
+                    )}
+                  </div>
+                </button>
+
+                <div className="px-4 py-3 space-y-4">
+                  {statusStages.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] uppercase tracking-wide text-gray-500">
+                        <span>Status track</span>
+                        <span>{statusStages.length} stages</span>
+                      </div>
+                      <div className="mt-2 space-y-2">
+                        {statusStages.map((stage, index) => renderStage(stage, index))}
+                      </div>
+                    </div>
+                  )}
+
+                  {gcStages.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] uppercase tracking-wide text-gray-500">
+                        <span>GC process</span>
+                        <span>{gcStages.filter((stage) => stage.nodeId !== "gc").length} stages</span>
+                      </div>
+                      <div className="mt-2 space-y-2">
+                        {gcStages.map((stage, index) => renderStage(stage, index))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          <div className="pt-2 space-y-2">
+            <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded bg-emerald-500" />
+                <span>Work Status</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded bg-amber-500" />
+                <span>GC Process</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded bg-blue-500" />
+                <span>Filed</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded bg-green-600" />
+                <span>Approved</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded bg-orange-500" />
+                <span>PD Wait</span>
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-400">
+              Live data from DOL, USCIS, and State Dept. Timelines are estimates. Consult an immigration attorney for your situation.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop timeline */}
+      <div className="hidden md:block w-full h-full overflow-x-auto overflow-y-auto">
+        <div className="min-w-[1200px] p-6">
         {/* Tracking instruction banner */}
         {selectedPathId && globalProgress && (
           <div className="mb-4 flex items-center justify-center gap-2 text-sm text-brand-700 bg-brand-50 border border-brand-200 rounded-lg px-4 py-2" style={{ marginLeft: "220px" }}>
@@ -1102,6 +1460,7 @@ export default function TimelineChart({
         </div>
 
       </div>
+    </div>
     </div>
   );
 }
