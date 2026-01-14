@@ -58,6 +58,37 @@ function MiniTimeline({
   const gcTrack = stages.filter(s => (s.track === "gc" || s.isPriorityWait) && s.nodeId !== "gc");
   const hasMultipleTracks = statusTrack.length > 0 && gcTrack.length > 0;
   
+  // Check if there's any progress (to show "NOW" marker)
+  const hasProgress = globalProgress && Object.keys(globalProgress.stages).some(
+    nodeId => {
+      const sp = globalProgress.stages[nodeId];
+      return sp && (sp.status === "filed" || sp.status === "approved");
+    }
+  );
+  
+  // Calculate "NOW" position based on progress
+  // Find the latest end time of approved stages or current position of filed stages
+  let nowPosition = 0;
+  if (hasProgress && globalProgress) {
+    for (const stage of stages) {
+      const sp = globalProgress.stages[stage.nodeId];
+      if (sp?.status === "approved") {
+        const endYear = (stage.startYear || 0) + (stage.durationYears?.max || 0.5);
+        nowPosition = Math.max(nowPosition, endYear);
+      } else if (sp?.status === "filed" && sp.filedDate) {
+        // For filed stages, estimate current position based on elapsed time
+        const startYear = stage.startYear || 0;
+        const duration = stage.durationYears?.max || 0.5;
+        const filedDate = parseDate(sp.filedDate);
+        if (filedDate) {
+          const elapsed = monthsBetween(filedDate, new Date()) / 12;
+          const currentPos = startYear + Math.min(elapsed, duration);
+          nowPosition = Math.max(nowPosition, currentPos);
+        }
+      }
+    }
+  }
+  
   // Render a single track of stages
   const renderTrack = (trackStages: ComposedStage[], trackHeight: number) => {
     return trackStages.map((stage, idx) => {
@@ -96,7 +127,7 @@ function MiniTimeline({
             width: `${widthPercent}%`,
             height: `${trackHeight}px`,
             backgroundColor: color,
-            opacity: isApproved ? 0.6 : 1,
+            opacity: isApproved ? 0.7 : 1,
           }}
           title={node?.name || stage.nodeId}
         />
@@ -107,47 +138,86 @@ function MiniTimeline({
   // Find the GC endpoint marker position
   const gcStage = stages.find(s => s.nodeId === "gc");
   const gcPosition = gcStage ? ((gcStage.startYear || 0) / maxEndYear) * 100 : null;
+  
+  // Year labels to show
+  const yearLabels = [];
+  const step = maxEndYear <= 4 ? 1 : maxEndYear <= 8 ? 2 : 3;
+  for (let y = 0; y <= maxEndYear; y += step) {
+    yearLabels.push(y);
+  }
 
   return (
-    <div className="relative w-full bg-gray-100 rounded overflow-hidden" style={{ height: hasMultipleTracks ? "16px" : "10px" }}>
-      {/* Background grid lines for years */}
-      <div className="absolute inset-0 flex">
-        {Array.from({ length: Math.ceil(maxEndYear) }).map((_, i) => (
+    <div className="relative w-full">
+      {/* Timeline bar */}
+      <div className="relative w-full bg-gray-100 rounded overflow-hidden" style={{ height: hasMultipleTracks ? "16px" : "10px" }}>
+        {/* Background grid lines for years */}
+        <div className="absolute inset-0 flex">
+          {Array.from({ length: Math.ceil(maxEndYear) }).map((_, i) => (
+            <div
+              key={i}
+              className="border-l border-gray-200/50"
+              style={{ width: `${100 / maxEndYear}%` }}
+            />
+          ))}
+        </div>
+        
+        {hasMultipleTracks ? (
+          <>
+            {/* Status track (top) */}
+            <div className="absolute left-0 right-0 top-0" style={{ height: "7px" }}>
+              {renderTrack(statusTrack, 7)}
+            </div>
+            {/* GC track (bottom) */}
+            <div className="absolute left-0 right-0 bottom-0" style={{ height: "7px" }}>
+              {renderTrack(gcTrack, 7)}
+            </div>
+          </>
+        ) : (
+          /* Single track */
+          <div className="absolute inset-0">
+            {renderTrack([...statusTrack, ...gcTrack], 10)}
+          </div>
+        )}
+        
+        {/* NOW marker - only show if there's progress */}
+        {hasProgress && nowPosition > 0 && (
           <div
-            key={i}
-            className="border-l border-gray-200"
-            style={{ width: `${100 / maxEndYear}%` }}
-          />
-        ))}
+            className="absolute top-0 bottom-0 w-0.5 bg-brand-600 z-10"
+            style={{ left: `${(nowPosition / maxEndYear) * 100}%` }}
+          >
+            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-brand-600 rounded-full border border-white" />
+          </div>
+        )}
+        
+        {/* GC endpoint marker */}
+        {gcPosition !== null && (
+          <div
+            className="absolute top-0 bottom-0 w-0.5 bg-green-600 z-5"
+            style={{ left: `${Math.min(98, gcPosition)}%` }}
+          >
+            <div className="absolute top-1/2 -translate-y-1/2 -right-1 w-2.5 h-2.5 bg-green-600 rounded-full flex items-center justify-center">
+              <div className="w-1 h-1 bg-white rounded-full" />
+            </div>
+          </div>
+        )}
       </div>
       
-      {hasMultipleTracks ? (
-        <>
-          {/* Status track (top) */}
-          <div className="absolute left-0 right-0 top-0" style={{ height: "7px" }}>
-            {renderTrack(statusTrack, 7)}
-          </div>
-          {/* GC track (bottom) */}
-          <div className="absolute left-0 right-0 bottom-0" style={{ height: "7px" }}>
-            {renderTrack(gcTrack, 7)}
-          </div>
-        </>
-      ) : (
-        /* Single track */
-        <div className="absolute inset-0">
-          {renderTrack([...statusTrack, ...gcTrack], 10)}
-        </div>
-      )}
-      
-      {/* GC endpoint marker */}
-      {gcPosition !== null && (
-        <div
-          className="absolute top-0 bottom-0 w-1 bg-green-600 rounded-r"
-          style={{ left: `${Math.min(98, gcPosition)}%` }}
-        >
-          <div className="absolute -top-0.5 -bottom-0.5 -right-0.5 w-1.5 bg-green-600 rounded-full" />
-        </div>
-      )}
+      {/* Year scale labels */}
+      <div className="relative w-full flex justify-between mt-1 px-0.5">
+        {yearLabels.map((year) => (
+          <span 
+            key={year} 
+            className="text-[8px] text-gray-400"
+            style={{ 
+              position: year === 0 ? 'relative' : 'absolute',
+              left: year === 0 ? '0' : `${(year / maxEndYear) * 100}%`,
+              transform: year === 0 ? 'none' : 'translateX(-50%)',
+            }}
+          >
+            {year === 0 ? 'Now' : `${year}yr`}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
