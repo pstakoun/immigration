@@ -1,0 +1,659 @@
+"use client";
+
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import visaData from "@/data/visa-paths.json";
+import { FilterState, statusToNodeId } from "@/lib/filter-paths";
+import { generatePaths, ComposedStage, ComposedPath, setProcessingTimes } from "@/lib/path-composer";
+import { adaptDynamicData } from "@/lib/processing-times";
+import { DynamicData, DEFAULT_PRIORITY_DATES, DEFAULT_DATES_FOR_FILING } from "@/lib/dynamic-data";
+import { trackStageClick, trackPathsGenerated } from "@/lib/analytics";
+import { GlobalProgress, StageProgress } from "@/app/page";
+import { 
+  STATUS_VISA_NODES, 
+  STATUS_VISA_VALIDITY_MONTHS,
+  isStatusVisa,
+} from "@/lib/constants";
+
+interface MobileTimelineViewProps {
+  onStageClick: (nodeId: string) => void;
+  filters: FilterState;
+  onMatchingCountChange: (count: number) => void;
+  onSelectPath?: (path: ComposedPath) => void;
+  onPathsGenerated?: (paths: ComposedPath[]) => void;
+  selectedPathId?: string | null;
+  globalProgress?: GlobalProgress | null;
+}
+
+const categoryColors: Record<string, { bg: string; border: string; text: string; light: string }> = {
+  entry: { bg: "bg-brand-600", border: "border-brand-700", text: "text-white", light: "bg-brand-50" },
+  work: { bg: "bg-emerald-500", border: "border-emerald-600", text: "text-white", light: "bg-emerald-50" },
+  greencard: { bg: "bg-amber-500", border: "border-amber-600", text: "text-white", light: "bg-amber-50" },
+  citizenship: { bg: "bg-purple-500", border: "border-purple-600", text: "text-white", light: "bg-purple-50" },
+};
+
+// Format date for display
+function formatDateShort(dateStr?: string): string {
+  if (!dateStr) return "";
+  try {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      year: "2-digit",
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+// Get node info from visa data
+function getNode(nodeId: string) {
+  return visaData.nodes[nodeId as keyof typeof visaData.nodes];
+}
+
+// Mobile Path Card Component
+function MobilePathCard({
+  path,
+  isTracked,
+  isExpanded,
+  onToggleExpand,
+  onSelectPath,
+  onStageClick,
+  globalProgress,
+}: {
+  path: ComposedPath;
+  isTracked: boolean;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  onSelectPath: () => void;
+  onStageClick: (nodeId: string) => void;
+  globalProgress: GlobalProgress | null | undefined;
+}) {
+  // Calculate progress
+  const progressInfo = useMemo(() => {
+    if (!globalProgress) return { approved: 0, filed: 0, total: 0 };
+    
+    let approved = 0;
+    let filed = 0;
+    let total = 0;
+    
+    for (const stage of path.stages) {
+      if (stage.isPriorityWait || stage.nodeId === "gc") continue;
+      total++;
+      const sp = globalProgress.stages[stage.nodeId];
+      if (sp?.status === "approved") approved++;
+      else if (sp?.status === "filed") filed++;
+    }
+    
+    return { approved, filed, total };
+  }, [path.stages, globalProgress]);
+
+  const progressPercent = progressInfo.total > 0 
+    ? ((progressInfo.approved + progressInfo.filed * 0.5) / progressInfo.total) * 100 
+    : 0;
+
+  return (
+    <div 
+      className={`bg-white rounded-xl shadow-sm border overflow-hidden transition-all ${
+        isTracked ? "border-brand-500 ring-2 ring-brand-200" : "border-gray-200"
+      }`}
+    >
+      {/* Card Header - Always Visible */}
+      <div 
+        className="p-4 cursor-pointer active:bg-gray-50"
+        onClick={onToggleExpand}
+      >
+        {/* Tracking indicator */}
+        {isTracked && (
+          <div className="flex items-center gap-1.5 text-xs text-brand-600 font-medium mb-2">
+            <span className="w-2 h-2 bg-brand-500 rounded-full animate-pulse" />
+            Tracking this path
+          </div>
+        )}
+        
+        {/* Path name and badges */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-gray-900 leading-tight">
+              {path.name}
+            </h3>
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <span className="text-xs font-medium text-brand-700 bg-brand-50 px-2 py-0.5 rounded">
+                {path.gcCategory}
+              </span>
+              {path.hasLottery && (
+                <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
+                  lottery
+                </span>
+              )}
+              {path.isSelfPetition && (
+                <span className="text-xs font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded">
+                  self-file
+                </span>
+              )}
+            </div>
+          </div>
+          
+          {/* Expand icon */}
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className={`text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? "rotate-180" : ""}`}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </div>
+        
+        {/* Key metrics */}
+        <div className="flex items-center gap-4 mt-3 text-sm">
+          <div className="flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v6l4 2" />
+            </svg>
+            <span className="font-medium text-gray-900">{path.totalYears.display}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+            </svg>
+            <span className="text-gray-600">${path.estimatedCost.toLocaleString()}</span>
+          </div>
+        </div>
+        
+        {/* Progress bar (only show if tracking or has progress) */}
+        {(isTracked || progressInfo.approved > 0 || progressInfo.filed > 0) && (
+          <div className="mt-3">
+            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+              <span>{progressInfo.approved}/{progressInfo.total} complete</span>
+              {progressInfo.filed > 0 && (
+                <span className="text-blue-600">{progressInfo.filed} pending</span>
+              )}
+            </div>
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Expanded Content - Vertical Stage Timeline */}
+      {isExpanded && (
+        <div className="border-t border-gray-100">
+          {/* Track button */}
+          <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectPath();
+              }}
+              className={`w-full py-2.5 rounded-lg font-medium text-sm transition-colors ${
+                isTracked 
+                  ? "bg-gray-200 text-gray-700" 
+                  : "bg-brand-500 text-white active:bg-brand-600"
+              }`}
+            >
+              {isTracked ? "Stop Tracking" : "Track This Path"}
+            </button>
+          </div>
+          
+          {/* Stages */}
+          <MobileStageList 
+            stages={path.stages}
+            globalProgress={globalProgress}
+            onStageClick={onStageClick}
+            isTracked={isTracked}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Mobile Stage List with Vertical Timeline
+function MobileStageList({
+  stages,
+  globalProgress,
+  onStageClick,
+  isTracked,
+}: {
+  stages: ComposedStage[];
+  globalProgress: GlobalProgress | null | undefined;
+  onStageClick: (nodeId: string) => void;
+  isTracked: boolean;
+}) {
+  // Group stages by track for display
+  const statusStages = stages.filter(s => s.track === "status" && !s.isPriorityWait);
+  const gcStages = stages.filter(s => s.track === "gc" || s.isPriorityWait || s.nodeId === "gc");
+
+  return (
+    <div className="divide-y divide-gray-100">
+      {/* Status track (if exists) */}
+      {statusStages.length > 0 && (
+        <div className="px-4 py-3">
+          <div className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-2">
+            Work Status
+          </div>
+          <div className="space-y-1">
+            {statusStages.map((stage, idx) => (
+              <MobileStageItem 
+                key={`${stage.nodeId}-${idx}`}
+                stage={stage}
+                globalProgress={globalProgress}
+                onStageClick={onStageClick}
+                isTracked={isTracked}
+                isFirst={idx === 0}
+                isLast={idx === statusStages.length - 1}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* GC track */}
+      {gcStages.length > 0 && (
+        <div className="px-4 py-3">
+          <div className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">
+            Green Card Process
+          </div>
+          <div className="space-y-1">
+            {gcStages.map((stage, idx) => (
+              <MobileStageItem 
+                key={`${stage.nodeId}-${idx}`}
+                stage={stage}
+                globalProgress={globalProgress}
+                onStageClick={onStageClick}
+                isTracked={isTracked}
+                isFirst={idx === 0}
+                isLast={idx === gcStages.length - 1}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Individual Stage Item for Mobile
+function MobileStageItem({
+  stage,
+  globalProgress,
+  onStageClick,
+  isTracked,
+  isFirst,
+  isLast,
+}: {
+  stage: ComposedStage;
+  globalProgress: GlobalProgress | null | undefined;
+  onStageClick: (nodeId: string) => void;
+  isTracked: boolean;
+  isFirst: boolean;
+  isLast: boolean;
+}) {
+  const node = getNode(stage.nodeId);
+  const stageProgress = globalProgress?.stages[stage.nodeId];
+  const isApproved = stageProgress?.status === "approved";
+  const isFiled = stageProgress?.status === "filed";
+  const hasProgress = isApproved || isFiled;
+  
+  // Special handling for PD wait stages
+  if (stage.isPriorityWait) {
+    return (
+      <div 
+        className="flex items-start gap-3 py-2.5 px-3 -mx-3 rounded-lg cursor-pointer active:bg-orange-50"
+        onClick={() => onStageClick(stage.nodeId)}
+      >
+        <div className="flex flex-col items-center">
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+            isApproved ? "bg-green-100 text-green-600" : "bg-orange-100 text-orange-600"
+          }`}>
+            {isApproved ? (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+              </svg>
+            )}
+          </div>
+          {!isLast && <div className="w-0.5 h-4 bg-gray-200 mt-1" />}
+        </div>
+        
+        <div className="flex-1 min-w-0 pt-0.5">
+          <div className={`font-medium text-sm ${isApproved ? "text-gray-400 line-through" : "text-orange-700"}`}>
+            Priority Date Wait
+          </div>
+          <div className="text-xs text-gray-500 mt-0.5">
+            {isApproved 
+              ? "✓ Date became current" 
+              : `Est. ${stage.durationYears.display} wait`
+            }
+          </div>
+          {stage.velocityInfo && !isApproved && (
+            <div className="text-xs text-orange-600 mt-1">
+              {stage.velocityInfo.explanation}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+  
+  // Final green card marker
+  if (stage.nodeId === "gc") {
+    return (
+      <div className="flex items-start gap-3 py-2.5 px-3 -mx-3 rounded-lg">
+        <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        </div>
+        
+        <div className="flex-1 min-w-0 pt-0.5">
+          <div className="font-semibold text-sm text-green-700">
+            Green Card
+          </div>
+          <div className="text-xs text-gray-500 mt-0.5">
+            Permanent Resident status
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!node) return null;
+  
+  const colors = categoryColors[node.category] || categoryColors.work;
+
+  return (
+    <div 
+      className={`flex items-start gap-3 py-2.5 px-3 -mx-3 rounded-lg cursor-pointer transition-colors ${
+        isTracked ? "active:bg-brand-50" : "active:bg-gray-50"
+      }`}
+      onClick={() => onStageClick(stage.nodeId)}
+    >
+      {/* Timeline node */}
+      <div className="flex flex-col items-center">
+        <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+          isApproved 
+            ? "bg-green-500 text-white" 
+            : isFiled 
+              ? "bg-blue-500 text-white" 
+              : `${colors.light} ${colors.border} border`
+        }`}>
+          {isApproved ? (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+          ) : isFiled ? (
+            <div className="w-2 h-2 bg-white rounded-full" />
+          ) : (
+            <div className={`w-2 h-2 rounded-full ${colors.bg}`} />
+          )}
+        </div>
+        {!isLast && <div className="w-0.5 h-4 bg-gray-200 mt-1" />}
+      </div>
+      
+      {/* Stage content */}
+      <div className="flex-1 min-w-0 pt-0.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className={`font-medium text-sm ${
+            isApproved ? "text-gray-400 line-through" : "text-gray-900"
+          }`}>
+            {node.name}
+          </div>
+          <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
+            isApproved 
+              ? "bg-green-100 text-green-700" 
+              : isFiled 
+                ? "bg-blue-100 text-blue-700" 
+                : "bg-gray-100 text-gray-600"
+          }`}>
+            {isApproved 
+              ? "Done" 
+              : isFiled 
+                ? "Pending" 
+                : stage.durationYears.display
+            }
+          </span>
+        </div>
+        
+        {/* Progress details */}
+        {hasProgress && (
+          <div className="text-xs text-gray-500 mt-0.5">
+            {isApproved && stageProgress?.approvedDate && (
+              <span>Approved {formatDateShort(stageProgress.approvedDate)}</span>
+            )}
+            {isFiled && stageProgress?.filedDate && (
+              <span>Filed {formatDateShort(stageProgress.filedDate)}</span>
+            )}
+            {stageProgress?.receiptNumber && (
+              <span className="font-mono ml-2">{stageProgress.receiptNumber}</span>
+            )}
+          </div>
+        )}
+        
+        {/* Concurrent indicator */}
+        {stage.isConcurrent && !hasProgress && (
+          <div className="text-xs text-gray-400 mt-0.5">
+            ↳ Concurrent with previous step
+          </div>
+        )}
+        
+        {/* Tap to edit hint for tracked paths */}
+        {isTracked && (
+          <div className="text-xs text-brand-600 mt-1">
+            Tap to {hasProgress ? "edit" : "log progress"} →
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Main Mobile Timeline View Component
+export default function MobileTimelineView({
+  onStageClick,
+  filters,
+  onMatchingCountChange,
+  onSelectPath,
+  onPathsGenerated,
+  selectedPathId,
+  globalProgress,
+}: MobileTimelineViewProps) {
+  const [expandedPathId, setExpandedPathId] = useState<string | null>(null);
+  const [processingTimesLoaded, setProcessingTimesLoaded] = useState(false);
+  const [priorityDates, setPriorityDates] = useState<DynamicData["priorityDates"]>(DEFAULT_PRIORITY_DATES);
+  const [datesForFiling, setDatesForFiling] = useState<DynamicData["datesForFiling"]>(DEFAULT_DATES_FOR_FILING);
+
+  // Fetch processing times on mount
+  useEffect(() => {
+    async function fetchTimes() {
+      try {
+        const response = await fetch("/api/processing-times");
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            const adapted = adaptDynamicData(result.data);
+            setProcessingTimes(adapted);
+            setPriorityDates(result.data.priorityDates);
+            setDatesForFiling(result.data.datesForFiling);
+            setProcessingTimesLoaded(true);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch processing times:", error);
+      }
+    }
+    fetchTimes();
+  }, []);
+
+  // Generate paths
+  const paths = useMemo(() => {
+    const generatedPaths = generatePaths(filters, priorityDates, datesForFiling);
+    onMatchingCountChange(generatedPaths.length);
+    return generatedPaths;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, onMatchingCountChange, processingTimesLoaded, priorityDates, datesForFiling]);
+
+  // Notify parent when paths are regenerated
+  useEffect(() => {
+    if (paths.length > 0 && onPathsGenerated) {
+      onPathsGenerated(paths);
+    }
+  }, [paths, onPathsGenerated]);
+
+  // Sort paths with tracked path at top
+  const sortedPaths = useMemo(() => {
+    if (!selectedPathId) return paths;
+    
+    return [...paths].sort((a, b) => {
+      if (a.id === selectedPathId) return -1;
+      if (b.id === selectedPathId) return 1;
+      return 0;
+    });
+  }, [paths, selectedPathId]);
+
+  // Track analytics
+  const lastTrackedFilters = useRef<string>("");
+  useEffect(() => {
+    if (paths.length > 0) {
+      const filterHash = `${filters.education}-${filters.experience}-${filters.countryOfBirth}-${paths.length}`;
+      if (filterHash !== lastTrackedFilters.current) {
+        lastTrackedFilters.current = filterHash;
+        trackPathsGenerated(paths.length, filters);
+      }
+    }
+  }, [paths.length, filters]);
+
+  // Auto-expand tracked path
+  useEffect(() => {
+    if (selectedPathId) {
+      setExpandedPathId(selectedPathId);
+    }
+  }, [selectedPathId]);
+
+  const handleStageClick = useCallback((nodeId: string, path: ComposedPath) => {
+    const node = getNode(nodeId);
+    const nodeName = node?.name || nodeId;
+    trackStageClick(nodeId, nodeName);
+    
+    // If this path isn't currently tracked, start tracking it
+    if (selectedPathId !== path.id && onSelectPath) {
+      onSelectPath(path);
+    }
+    
+    onStageClick(nodeId);
+  }, [onStageClick, selectedPathId, onSelectPath]);
+
+  const handleSelectPath = useCallback((path: ComposedPath) => {
+    if (onSelectPath) {
+      onSelectPath(path);
+    }
+  }, [onSelectPath]);
+
+  const handleToggleExpand = useCallback((pathId: string) => {
+    setExpandedPathId(current => current === pathId ? null : pathId);
+  }, []);
+
+  return (
+    <div className="flex-1 overflow-y-auto bg-gray-50">
+      <div className="p-4 space-y-3 pb-24">
+        {/* Quick Stats */}
+        {selectedPathId && globalProgress && (
+          <div className="bg-brand-500 rounded-xl p-4 text-white shadow-lg">
+            <div className="text-xs uppercase tracking-wide text-brand-100 font-medium">
+              Tracking Progress
+            </div>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-2xl font-bold">
+                {(() => {
+                  const trackedPath = paths.find(p => p.id === selectedPathId);
+                  if (!trackedPath) return "—";
+                  let approved = 0;
+                  let total = 0;
+                  for (const stage of trackedPath.stages) {
+                    if (stage.isPriorityWait || stage.nodeId === "gc") continue;
+                    total++;
+                    if (globalProgress.stages[stage.nodeId]?.status === "approved") approved++;
+                  }
+                  return `${approved}/${total}`;
+                })()}
+              </span>
+              <span className="text-brand-200 text-sm">stages complete</span>
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {sortedPaths.length === 0 && (
+          <div className="py-12 text-center">
+            <div className="w-16 h-16 mx-auto bg-gray-200 rounded-full flex items-center justify-center mb-4">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-gray-400">
+                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">No matching paths</h3>
+            <p className="text-gray-500 mt-1 text-sm">
+              Try adjusting your profile to see available paths.
+            </p>
+          </div>
+        )}
+
+        {/* Path Cards */}
+        {sortedPaths.map((path) => (
+          <MobilePathCard
+            key={path.id}
+            path={path}
+            isTracked={selectedPathId === path.id}
+            isExpanded={expandedPathId === path.id}
+            onToggleExpand={() => handleToggleExpand(path.id)}
+            onSelectPath={() => handleSelectPath(path)}
+            onStageClick={(nodeId) => handleStageClick(nodeId, path)}
+            globalProgress={globalProgress}
+          />
+        ))}
+
+        {/* Legend */}
+        {sortedPaths.length > 0 && (
+          <div className="bg-white rounded-xl p-4 border border-gray-200 mt-6">
+            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+              Legend
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-emerald-500" />
+                <span className="text-gray-600">Work Status</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-amber-500" />
+                <span className="text-gray-600">GC Process</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-blue-500" />
+                <span className="text-gray-600">Filed/Pending</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-green-500" />
+                <span className="text-gray-600">Approved</span>
+              </div>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-3">
+              Live data from DOL, USCIS, and State Dept. Timelines are estimates.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
