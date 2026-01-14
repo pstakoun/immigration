@@ -95,6 +95,7 @@ export default function Home() {
   const [globalProgress, setGlobalProgress] = useState<GlobalProgress | null>(null);
   const [selectedPath, setSelectedPath] = useState<ComposedPath | null>(null);
   const [expandedStageId, setExpandedStageId] = useState<string | null>(null);
+  const [currentPaths, setCurrentPaths] = useState<ComposedPath[]>([]);
 
   // Load stored profile and progress on mount
   useEffect(() => {
@@ -143,6 +144,9 @@ export default function Home() {
 
   // Update selected path when paths are regenerated (e.g., after filter/PD change)
   const handlePathsGenerated = useCallback((paths: ComposedPath[]) => {
+    // Store paths for later lookup (e.g., when reopening checklist)
+    setCurrentPaths(paths);
+    
     if (globalProgress?.selectedPathId) {
       // Find the updated version of the selected path
       const updatedPath = paths.find(p => p.id === globalProgress.selectedPathId);
@@ -294,10 +298,27 @@ export default function Home() {
     setExpandedStageId(null);
   };
 
+  // Handle opening the checklist (TrackerPanel) for the currently tracked path
+  const handleOpenChecklist = useCallback(() => {
+    if (globalProgress?.selectedPathId && currentPaths.length > 0) {
+      const trackedPath = currentPaths.find(p => p.id === globalProgress.selectedPathId);
+      if (trackedPath) {
+        setSelectedPath(trackedPath);
+      }
+    }
+  }, [globalProgress?.selectedPathId, currentPaths]);
+
   // Handle clicking a stage in the timeline
   const handleTimelineStageClick = (nodeId: string) => {
-    if (globalProgress?.selectedPathId && selectedPath) {
-      // If tracking, expand this stage in the panel
+    if (globalProgress?.selectedPathId) {
+      // If tracking, expand this stage in the panel and ensure panel is open
+      if (!selectedPath) {
+        // Panel was closed, reopen it
+        const trackedPath = currentPaths.find(p => p.id === globalProgress.selectedPathId);
+        if (trackedPath) {
+          setSelectedPath(trackedPath);
+        }
+      }
       setExpandedStageId(nodeId);
     } else {
       // Otherwise, show the info panel
@@ -400,19 +421,29 @@ export default function Home() {
             </div>
           )}
 
-          {/* Mobile tracking indicator */}
-          {globalProgress?.selectedPathId && selectedPath && (
-            <button
-              onClick={handleStopTracking}
-              className="md:hidden flex items-center gap-1.5 text-brand-700 bg-brand-50 px-2 py-1 rounded-lg text-xs font-medium"
-              title="Stop tracking"
-            >
-              <span className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-pulse" />
-              <span className="max-w-[100px] truncate">{selectedPath.name}</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
+          {/* Mobile tracking indicator - shows when tracking (even if panel closed) */}
+          {globalProgress?.selectedPathId && (
+            <div className="md:hidden flex items-center gap-1">
+              <button
+                onClick={handleOpenChecklist}
+                className="flex items-center gap-1.5 text-brand-700 bg-brand-50 px-2 py-1 rounded-lg text-xs font-medium"
+                title="Open checklist"
+              >
+                <span className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-pulse" />
+                <span className="max-w-[80px] truncate">
+                  {selectedPath?.name || currentPaths.find(p => p.id === globalProgress.selectedPathId)?.name || "Tracking"}
+                </span>
+              </button>
+              <button
+                onClick={handleStopTracking}
+                className="p-1 text-gray-400 hover:text-gray-600"
+                title="Stop tracking"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           )}
         </div>
       </header>
@@ -438,6 +469,7 @@ export default function Home() {
             onPathsGenerated={handlePathsGenerated}
             selectedPathId={globalProgress?.selectedPathId || null}
             globalProgress={globalProgress}
+            onOpenChecklist={handleOpenChecklist}
           />
         </div>
 

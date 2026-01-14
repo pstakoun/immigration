@@ -15,6 +15,7 @@ interface ResponsiveTimelineProps {
   onPathsGenerated?: (paths: ComposedPath[]) => void;
   selectedPathId?: string | null;
   globalProgress?: GlobalProgress | null;
+  onOpenChecklist?: () => void;
 }
 
 // Breakpoint for mobile (tailwind md = 768px)
