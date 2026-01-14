@@ -515,6 +515,7 @@ function PathCard({
   isTracked,
   globalProgress,
   onSelect,
+  onTrack,
   onStageClick,
 }: {
   path: ComposedPath;
@@ -522,6 +523,7 @@ function PathCard({
   isTracked: boolean;
   globalProgress: GlobalProgress | null;
   onSelect: () => void;
+  onTrack: () => void;
   onStageClick: (nodeId: string) => void;
 }) {
   // Calculate progress summary
@@ -668,7 +670,7 @@ function PathCard({
           {!isTracked && (
             <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
               <button
-                onClick={onSelect}
+                onClick={onTrack}
                 className="w-full py-2.5 px-4 bg-brand-500 text-white text-sm font-medium rounded-lg hover:bg-brand-600 active:bg-brand-700 transition-colors flex items-center justify-center gap-2"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -736,19 +738,18 @@ export default function MobileTimeline({
   }, [selectedPathId]);
 
   const handleSelectPath = (path: ComposedPath) => {
-    // If clicking the currently expanded path
+    // If clicking the currently expanded path, collapse it
     if (expandedPathId === path.id) {
-      // If it's not tracked, track it
-      if (selectedPathId !== path.id) {
-        onSelectPath(path);
-      } else {
-        // If it's already tracked, collapse it
-        setExpandedPathId(null);
-      }
+      setExpandedPathId(null);
     } else {
       // Expand the clicked path
       setExpandedPathId(path.id);
     }
+  };
+  
+  // Separate handler for explicitly tracking a path
+  const handleTrackPath = (path: ComposedPath) => {
+    onSelectPath(path);
   };
 
   return (
@@ -790,6 +791,7 @@ export default function MobileTimeline({
             isTracked={selectedPathId === path.id}
             globalProgress={globalProgress}
             onSelect={() => handleSelectPath(path)}
+            onTrack={() => handleTrackPath(path)}
             onStageClick={(nodeId) => onStageClick(nodeId, path)}
           />
         ))}
