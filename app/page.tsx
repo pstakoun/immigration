@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import TimelineChart from "@/components/TimelineChart";
+import ResponsiveTimeline from "@/components/ResponsiveTimeline";
 import PathDetail from "@/components/PathDetail";
 import ProfileSummary from "@/components/ProfileSummary";
 import OnboardingQuiz from "@/components/OnboardingQuiz";
@@ -346,17 +346,18 @@ export default function Home() {
       )}
 
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-3 flex-shrink-0">
+      <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-2 md:py-3 flex-shrink-0">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 md:gap-2.5">
             {/* Logo */}
-            <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
+            <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-brand-500 flex items-center justify-center flex-shrink-0">
               <svg
-                width="20"
-                height="20"
+                width="16"
+                height="16"
                 viewBox="0 0 24 24"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
+                className="md:w-5 md:h-5"
               >
                 <path
                   d="M5 12h14M12 5l7 7-7 7"
@@ -367,17 +368,17 @@ export default function Home() {
                 />
               </svg>
             </div>
-            <span className="text-xl font-semibold text-gray-900 tracking-tight">
+            <span className="text-lg md:text-xl font-semibold text-gray-900 tracking-tight">
               Stateside
             </span>
-            <span className="text-sm text-gray-400 hidden sm:inline">
+            <span className="text-sm text-gray-400 hidden md:inline">
               US immigration paths
             </span>
           </div>
 
-          {/* Progress indicator - only show when tracking */}
+          {/* Progress indicator - only show when tracking (desktop only) */}
           {globalProgress?.selectedPathId && selectedPath && (
-            <div className="flex items-center gap-3 text-sm">
+            <div className="hidden md:flex items-center gap-3 text-sm">
               <div className="flex items-center gap-2 text-brand-700 bg-brand-50 px-3 py-1.5 rounded-lg">
                 <span className="w-2 h-2 bg-brand-500 rounded-full animate-pulse" />
                 <span className="font-medium">{selectedPath.name}</span>
@@ -398,6 +399,21 @@ export default function Home() {
               </button>
             </div>
           )}
+
+          {/* Mobile tracking indicator */}
+          {globalProgress?.selectedPathId && selectedPath && (
+            <button
+              onClick={handleStopTracking}
+              className="md:hidden flex items-center gap-1.5 text-brand-700 bg-brand-50 px-2 py-1 rounded-lg text-xs font-medium"
+              title="Stop tracking"
+            >
+              <span className="w-1.5 h-1.5 bg-brand-500 rounded-full animate-pulse" />
+              <span className="max-w-[100px] truncate">{selectedPath.name}</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
       </header>
 
@@ -413,8 +429,8 @@ export default function Home() {
       {/* Main content area with timeline and tracker panel */}
       <div className="flex-1 flex overflow-hidden">
         {/* Timeline area */}
-        <div className={`flex-1 relative overflow-hidden transition-all ${globalProgress?.selectedPathId ? "mr-0" : ""}`}>
-          <TimelineChart
+        <div className={`flex-1 relative overflow-hidden transition-all ${globalProgress?.selectedPathId ? "md:mr-0" : ""}`}>
+          <ResponsiveTimeline
             onStageClick={handleTimelineStageClick}
             filters={filters}
             onMatchingCountChange={handleMatchingCountChange}

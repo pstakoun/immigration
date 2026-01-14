@@ -560,12 +560,12 @@ export default function TrackerPanel({
     <>
       {/* Mobile overlay */}
       <div 
-        className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+        className="fixed inset-0 bg-black/40 z-40 md:hidden"
         onClick={onClose}
       />
       
-      {/* Panel - fixed on mobile, side panel on desktop */}
-      <div className="fixed inset-y-0 right-0 w-full max-w-[400px] bg-white border-l border-gray-200 flex flex-col overflow-hidden z-50 lg:relative lg:w-[380px] lg:z-auto shadow-xl lg:shadow-none">
+      {/* Panel - full screen on mobile, side panel on desktop */}
+      <div className="fixed inset-0 md:inset-y-0 md:right-0 md:left-auto w-full md:max-w-[400px] bg-white md:border-l border-gray-200 flex flex-col overflow-hidden z-50 md:relative md:w-[380px] md:z-auto shadow-xl md:shadow-none">
       {/* Header */}
       <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50 flex-shrink-0">
         <div>
