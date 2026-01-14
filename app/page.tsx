@@ -164,13 +164,13 @@ export default function Home() {
     setShowOnboarding(true);
   };
 
-  // Handle selecting a path to track (or untrack if clicking same path)
+  // Handle selecting a path to track
+  // If already tracking this path, just ensure the TrackerPanel is shown
   const handleSelectPath = (path: ComposedPath) => {
-    // If clicking the currently tracked path, untrack it
+    // If clicking the currently tracked path, just ensure panel is visible (don't untrack)
     if (globalProgress?.selectedPathId === path.id) {
-      setSelectedPath(null);
-      setGlobalProgress(prev => prev ? { ...prev, selectedPathId: null } : null);
-      setExpandedStageId(null);
+      // Re-set selectedPath to show the TrackerPanel
+      setSelectedPath(path);
       return;
     }
     
@@ -400,16 +400,24 @@ export default function Home() {
             </div>
           )}
           
-          {/* Mobile: Show tracking status indicator */}
+          {/* Mobile: Show tracking status indicator - tappable to open TrackerPanel */}
           {globalProgress?.selectedPathId && selectedPath && (
-            <div className="md:hidden flex items-center gap-2">
-              <span className="w-2 h-2 bg-brand-500 rounded-full animate-pulse" />
-              <span className="text-xs font-medium text-brand-700 truncate max-w-[120px]">
-                {selectedPath.name}
-              </span>
+            <div className="md:hidden flex items-center gap-1">
+              <button
+                onClick={() => handleSelectPath(selectedPath)}
+                className="flex items-center gap-2 px-2 py-1 -ml-2 rounded-lg active:bg-brand-50"
+              >
+                <span className="w-2 h-2 bg-brand-500 rounded-full animate-pulse" />
+                <span className="text-xs font-medium text-brand-700 truncate max-w-[100px]">
+                  {selectedPath.name}
+                </span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-brand-500">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </button>
               <button
                 onClick={handleStopTracking}
-                className="text-gray-400 hover:text-gray-600 p-1 -mr-1"
+                className="text-gray-400 hover:text-gray-600 p-1.5 -mr-1"
                 title="Stop tracking"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
