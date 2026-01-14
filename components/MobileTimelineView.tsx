@@ -75,17 +75,27 @@ function MiniTimeline({
   const gcStages = stages.filter(s => (s.track === "gc" || s.isPriorityWait) && s.nodeId !== "gc");
   const hasMultipleTracks = statusStages.length > 0 && gcStages.length > 0;
   
-  // Calculate "now" position based on progress
-  // Find the furthest point we've reached on the theoretical timeline
+  // Calculate "now" position based on GC TRACK progress only
+  // Status visas (TN, H-1B, etc.) run in parallel and don't move the "now" marker
   const nowPosition = useMemo(() => {
     if (!globalProgress) return null;
     
     const now = new Date();
-    let furthestPosition = 0;
-    let hasAnyProgress = false;
+    let furthestGcPosition = 0;
+    let hasGcProgress = false;
+    
+    // Status visa nodes - these DON'T move the "now" marker when approved
+    // because they run on a parallel track (you can have approved TN while working on PERM)
+    const statusVisaNodes = new Set(['tn', 'h1b', 'opt', 'f1', 'l1a', 'l1b', 'o1']);
     
     for (const stage of stages) {
       if (stage.isPriorityWait || stage.nodeId === "gc") continue;
+      
+      // Skip status visas - they don't affect "now" position
+      if (statusVisaNodes.has(stage.nodeId)) continue;
+      
+      // Only consider GC track stages
+      if (stage.track !== "gc") continue;
       
       const sp = globalProgress.stages[stage.nodeId];
       if (!sp) continue;
@@ -95,27 +105,27 @@ function MiniTimeline({
       const stageEnd = stageStart + stageDuration;
       
       if (sp.status === "approved") {
-        // Completed - we're past this stage's end
-        hasAnyProgress = true;
-        furthestPosition = Math.max(furthestPosition, stageEnd);
+        // GC step completed - we're past this stage's end
+        hasGcProgress = true;
+        furthestGcPosition = Math.max(furthestGcPosition, stageEnd);
       } else if (sp.status === "filed" && sp.filedDate) {
-        // In progress - calculate how far through based on filed date
-        hasAnyProgress = true;
+        // GC step in progress - calculate how far through based on filed date
+        hasGcProgress = true;
         const filedDate = parseDate(sp.filedDate);
         if (filedDate) {
           const monthsElapsed = (now.getTime() - filedDate.getTime()) / (1000 * 60 * 60 * 24 * 30);
           const stageMonths = stageDuration * 12;
           const progressRatio = Math.min(monthsElapsed / stageMonths, 0.95); // Cap at 95% within stage
           const positionInStage = stageStart + (stageDuration * progressRatio);
-          furthestPosition = Math.max(furthestPosition, positionInStage);
+          furthestGcPosition = Math.max(furthestGcPosition, positionInStage);
         }
       }
     }
     
-    if (!hasAnyProgress) return null;
+    if (!hasGcProgress) return null;
     
     // Convert to percentage of the timeline
-    const percent = (furthestPosition / maxYears) * 100;
+    const percent = (furthestGcPosition / maxYears) * 100;
     
     // Don't show if basically at the start
     if (percent < 2) return null;
