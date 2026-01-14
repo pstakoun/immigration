@@ -51,8 +51,8 @@ function MiniTimeline({
   globalProgress: GlobalProgress | null | undefined;
   totalYears: number;
 }) {
-  // Calculate timeline bounds
-  const maxYears = Math.max(totalYears, 8);
+  // Calculate timeline bounds - use a reasonable scale
+  const maxYears = Math.max(totalYears * 1.1, 6); // Add 10% padding, min 6 years
   
   // Separate stages by track
   const statusStages = stages.filter(s => s.track === "status" && !s.isPriorityWait && s.nodeId !== "gc");
@@ -60,26 +60,35 @@ function MiniTimeline({
   const hasMultipleTracks = statusStages.length > 0 && gcStages.length > 0;
   
   // Render a single track of stages
-  const renderTrack = (trackStages: ComposedStage[], trackColor: string, trackType: "status" | "gc") => {
+  const renderTrack = (trackStages: ComposedStage[], trackColor: string) => {
     return (
-      <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
+      <div className="relative h-2.5 bg-gray-100 rounded-full overflow-hidden">
         {trackStages.map((stage, idx) => {
           const node = getNode(stage.nodeId);
           const startPercent = Math.max(0, (stage.startYear / maxYears) * 100);
           const durationYears = stage.durationYears?.max || 0.5;
-          const widthPercent = Math.min((durationYears / maxYears) * 100, 100 - startPercent);
+          // Leave small gap between segments (0.5% gap)
+          const widthPercent = Math.max(
+            Math.min((durationYears / maxYears) * 100 - 0.5, 100 - startPercent - 0.5),
+            1.5
+          );
           
           // Get progress status
           const sp = globalProgress?.stages[stage.nodeId];
           const isApproved = sp?.status === "approved";
           const isFiled = sp?.status === "filed";
           
-          // Determine color
+          // Determine color based on status and stage type
           let color = trackColor;
+          let opacity = 1;
+          
           if (stage.isPriorityWait) {
+            // PD wait - show as striped/hatched orange
             color = miniTimelineColors.pdWait;
+            if (isApproved) opacity = 0.5;
           } else if (isApproved) {
             color = miniTimelineColors.approved;
+            opacity = 0.85;
           } else if (isFiled) {
             color = miniTimelineColors.filed;
           } else if (node?.category) {
@@ -89,14 +98,13 @@ function MiniTimeline({
           return (
             <div
               key={`${stage.nodeId}-${idx}`}
-              className="absolute top-0 bottom-0 rounded-full"
+              className="absolute top-0 bottom-0 rounded-sm"
               style={{
                 left: `${startPercent}%`,
-                width: `${Math.max(widthPercent, 2)}%`,
+                width: `${widthPercent}%`,
                 backgroundColor: color,
-                opacity: isApproved ? 0.6 : 1,
+                opacity,
               }}
-              title={node?.name || stage.nodeId}
             />
           );
         })}
@@ -107,52 +115,62 @@ function MiniTimeline({
   // Find the GC marker position
   const gcMarkerStage = stages.find(s => s.nodeId === "gc");
   const gcMarkerPercent = gcMarkerStage 
-    ? Math.min((gcMarkerStage.startYear / maxYears) * 100, 98)
+    ? Math.min((gcMarkerStage.startYear / maxYears) * 100, 96)
     : null;
   
   return (
     <div className="mt-3 relative">
       {/* Timeline tracks */}
-      <div className={`space-y-1 ${hasMultipleTracks ? "" : ""}`}>
+      <div className="space-y-1">
         {/* Status track (if exists) */}
         {statusStages.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-1 h-2.5 rounded-sm flex-shrink-0" 
+              style={{ backgroundColor: miniTimelineColors.status }}
+            />
             <div className="flex-1">
-              {renderTrack(statusStages, miniTimelineColors.status, "status")}
+              {renderTrack(statusStages, miniTimelineColors.status)}
             </div>
           </div>
         )}
         
         {/* GC track */}
         {gcStages.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-1 h-2.5 rounded-sm flex-shrink-0" 
+              style={{ backgroundColor: miniTimelineColors.gc }}
+            />
             <div className="flex-1">
-              {renderTrack(gcStages, miniTimelineColors.gc, "gc")}
+              {renderTrack(gcStages, miniTimelineColors.gc)}
             </div>
           </div>
         )}
       </div>
       
-      {/* Green Card marker */}
+      {/* Green Card finish marker */}
       {gcMarkerPercent !== null && (
         <div 
-          className="absolute top-0 bottom-0 flex items-center"
-          style={{ left: `calc(${gcMarkerPercent}% + 8px)` }}
+          className="absolute flex items-center pointer-events-none"
+          style={{ 
+            left: `calc(${gcMarkerPercent}% + 12px)`,
+            top: hasMultipleTracks ? '50%' : '50%',
+            transform: 'translateY(-50%)',
+          }}
         >
-          <div className="w-3 h-3 rounded-full bg-green-500 border-2 border-white shadow-sm flex items-center justify-center">
-            <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4">
+          <div className="w-4 h-4 rounded-full bg-green-500 border-2 border-white shadow flex items-center justify-center">
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
               <path d="M20 6L9 17l-5-5" />
             </svg>
           </div>
         </div>
       )}
       
-      {/* Year markers */}
-      <div className="flex justify-between mt-1 px-1">
-        <span className="text-[9px] text-gray-400">Now</span>
-        <span className="text-[9px] text-gray-400">{Math.round(maxYears)}yr</span>
+      {/* Year scale */}
+      <div className="flex justify-between mt-1.5 text-[9px] text-gray-400">
+        <span>Now</span>
+        <span>{Math.ceil(totalYears)} yr</span>
       </div>
     </div>
   );
