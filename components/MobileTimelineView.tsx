@@ -24,12 +24,139 @@ interface MobileTimelineViewProps {
   globalProgress?: GlobalProgress | null;
 }
 
-const categoryColors: Record<string, { bg: string; border: string; text: string; light: string }> = {
-  entry: { bg: "bg-brand-600", border: "border-brand-700", text: "text-white", light: "bg-brand-50" },
-  work: { bg: "bg-emerald-500", border: "border-emerald-600", text: "text-white", light: "bg-emerald-50" },
-  greencard: { bg: "bg-amber-500", border: "border-amber-600", text: "text-white", light: "bg-amber-50" },
-  citizenship: { bg: "bg-purple-500", border: "border-purple-600", text: "text-white", light: "bg-purple-50" },
+const categoryColors: Record<string, { bg: string; border: string; text: string; light: string; hex: string }> = {
+  entry: { bg: "bg-brand-600", border: "border-brand-700", text: "text-white", light: "bg-brand-50", hex: "#16a34a" },
+  work: { bg: "bg-emerald-500", border: "border-emerald-600", text: "text-white", light: "bg-emerald-50", hex: "#10b981" },
+  greencard: { bg: "bg-amber-500", border: "border-amber-600", text: "text-white", light: "bg-amber-50", hex: "#f59e0b" },
+  citizenship: { bg: "bg-purple-500", border: "border-purple-600", text: "text-white", light: "bg-purple-50", hex: "#a855f7" },
 };
+
+// Colors for mini timeline (using hex for inline styles)
+const miniTimelineColors = {
+  status: "#10b981", // emerald-500
+  gc: "#f59e0b", // amber-500
+  pdWait: "#f97316", // orange-500
+  gcMarker: "#22c55e", // green-500
+  approved: "#22c55e", // green-500
+  filed: "#3b82f6", // blue-500
+};
+
+// Mini Timeline Component - compact visual preview of the path
+function MiniTimeline({ 
+  stages, 
+  globalProgress,
+  totalYears,
+}: { 
+  stages: ComposedStage[];
+  globalProgress: GlobalProgress | null | undefined;
+  totalYears: number;
+}) {
+  // Calculate timeline bounds
+  const maxYears = Math.max(totalYears, 8);
+  
+  // Separate stages by track
+  const statusStages = stages.filter(s => s.track === "status" && !s.isPriorityWait && s.nodeId !== "gc");
+  const gcStages = stages.filter(s => (s.track === "gc" || s.isPriorityWait) && s.nodeId !== "gc");
+  const hasMultipleTracks = statusStages.length > 0 && gcStages.length > 0;
+  
+  // Render a single track of stages
+  const renderTrack = (trackStages: ComposedStage[], trackColor: string, trackType: "status" | "gc") => {
+    return (
+      <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
+        {trackStages.map((stage, idx) => {
+          const node = getNode(stage.nodeId);
+          const startPercent = Math.max(0, (stage.startYear / maxYears) * 100);
+          const durationYears = stage.durationYears?.max || 0.5;
+          const widthPercent = Math.min((durationYears / maxYears) * 100, 100 - startPercent);
+          
+          // Get progress status
+          const sp = globalProgress?.stages[stage.nodeId];
+          const isApproved = sp?.status === "approved";
+          const isFiled = sp?.status === "filed";
+          
+          // Determine color
+          let color = trackColor;
+          if (stage.isPriorityWait) {
+            color = miniTimelineColors.pdWait;
+          } else if (isApproved) {
+            color = miniTimelineColors.approved;
+          } else if (isFiled) {
+            color = miniTimelineColors.filed;
+          } else if (node?.category) {
+            color = categoryColors[node.category]?.hex || trackColor;
+          }
+          
+          return (
+            <div
+              key={`${stage.nodeId}-${idx}`}
+              className="absolute top-0 bottom-0 rounded-full"
+              style={{
+                left: `${startPercent}%`,
+                width: `${Math.max(widthPercent, 2)}%`,
+                backgroundColor: color,
+                opacity: isApproved ? 0.6 : 1,
+              }}
+              title={node?.name || stage.nodeId}
+            />
+          );
+        })}
+      </div>
+    );
+  };
+  
+  // Find the GC marker position
+  const gcMarkerStage = stages.find(s => s.nodeId === "gc");
+  const gcMarkerPercent = gcMarkerStage 
+    ? Math.min((gcMarkerStage.startYear / maxYears) * 100, 98)
+    : null;
+  
+  return (
+    <div className="mt-3 relative">
+      {/* Timeline tracks */}
+      <div className={`space-y-1 ${hasMultipleTracks ? "" : ""}`}>
+        {/* Status track (if exists) */}
+        {statusStages.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" />
+            <div className="flex-1">
+              {renderTrack(statusStages, miniTimelineColors.status, "status")}
+            </div>
+          </div>
+        )}
+        
+        {/* GC track */}
+        {gcStages.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+            <div className="flex-1">
+              {renderTrack(gcStages, miniTimelineColors.gc, "gc")}
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Green Card marker */}
+      {gcMarkerPercent !== null && (
+        <div 
+          className="absolute top-0 bottom-0 flex items-center"
+          style={{ left: `calc(${gcMarkerPercent}% + 8px)` }}
+        >
+          <div className="w-3 h-3 rounded-full bg-green-500 border-2 border-white shadow-sm flex items-center justify-center">
+            <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4">
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+          </div>
+        </div>
+      )}
+      
+      {/* Year markers */}
+      <div className="flex justify-between mt-1 px-1">
+        <span className="text-[9px] text-gray-400">Now</span>
+        <span className="text-[9px] text-gray-400">{Math.round(maxYears)}yr</span>
+      </div>
+    </div>
+  );
+}
 
 // Format date for display
 function formatDateShort(dateStr?: string): string {
@@ -164,6 +291,13 @@ function MobilePathCard({
             <span className="text-gray-600">${path.estimatedCost.toLocaleString()}</span>
           </div>
         </div>
+        
+        {/* Mini Timeline Preview */}
+        <MiniTimeline 
+          stages={path.stages} 
+          globalProgress={globalProgress}
+          totalYears={path.totalYears.max}
+        />
         
         {/* Progress bar (only show if tracking or has progress) */}
         {(isTracked || progressInfo.approved > 0 || progressInfo.filed > 0) && (
