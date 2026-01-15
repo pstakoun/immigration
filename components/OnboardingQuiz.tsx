@@ -8,7 +8,10 @@ import {
   CurrentStatus,
   CountryOfBirth,
   EBCategory,
+  PriorityDate,
   defaultFilters,
+  priorityDateToISOString,
+  parsePriorityDateFromISO,
 } from "@/lib/filter-paths";
 import { trackOnboardingComplete } from "@/lib/analytics";
 
@@ -61,20 +64,12 @@ function hasExistingPriorityDate(filters: FilterState): boolean {
   return filters.existingPriorityDate !== null && filters.existingPriorityDateCategory !== null;
 }
 
-// Generate year options for priority date selector (10 years back to current)
-function getYearOptions(): number[] {
-  const currentYear = new Date().getFullYear();
-  const years: number[] = [];
-  for (let y = currentYear; y >= currentYear - 15; y--) {
-    years.push(y);
-  }
-  return years;
+// Format priority date for display
+function formatPDDisplay(pd: PriorityDate | null): string {
+  if (!pd) return "";
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${months[pd.month - 1]} ${pd.day}, ${pd.year}`;
 }
-
-const monthNames = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
-];
 
 const ebCategoryOptions: { value: EBCategory; label: string; description: string }[] = [
   { value: "eb1", label: "EB-1", description: "Priority workers" },
@@ -104,17 +99,24 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
     onComplete(filters);
   };
 
-  const handlePriorityDateChange = (month: number | null, year: number | null) => {
+  const handlePriorityDateChange = (dateStr: string) => {
     setFilters((prev) => {
-      if (month === null || year === null) {
+      if (!dateStr) {
         return { ...prev, existingPriorityDate: null };
       }
-      return { ...prev, existingPriorityDate: { month, year } };
+      const pd = parsePriorityDateFromISO(dateStr);
+      return { ...prev, existingPriorityDate: pd };
     });
   };
 
   const handlePriorityDateCategoryChange = (category: EBCategory | null) => {
     setFilters((prev) => ({ ...prev, existingPriorityDateCategory: category }));
+  };
+
+  // Get the date string for the input (YYYY-MM-DD format)
+  const getPriorityDateInputValue = (): string => {
+    if (!filters.existingPriorityDate) return "";
+    return priorityDateToISOString(filters.existingPriorityDate);
   };
 
   const togglePriorityDateSection = () => {
@@ -444,7 +446,7 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
                   </span>
                   {filters.existingPriorityDate && filters.existingPriorityDateCategory && (
                     <span className="px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-full">
-                      {monthNames[filters.existingPriorityDate.month - 1].slice(0, 3)} {filters.existingPriorityDate.year}
+                      {formatPDDisplay(filters.existingPriorityDate)}
                     </span>
                   )}
                 </div>
@@ -469,49 +471,18 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
                     If you have an approved I-140 from a previous employer, you can &quot;port&quot; that priority date to a new case. This can significantly reduce your green card wait time.
                   </p>
 
-                  {/* Priority Date Month/Year Selector */}
+                  {/* Priority Date Input */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Priority date
+                      <span className="text-gray-400 font-normal ml-1">(from I-140 approval notice)</span>
                     </label>
-                    <div className="flex gap-2">
-                      <select
-                        value={filters.existingPriorityDate?.month || ""}
-                        onChange={(e) => {
-                          const month = e.target.value ? parseInt(e.target.value) : null;
-                          handlePriorityDateChange(
-                            month,
-                            filters.existingPriorityDate?.year || new Date().getFullYear()
-                          );
-                        }}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-                      >
-                        <option value="">Month</option>
-                        {monthNames.map((name, idx) => (
-                          <option key={idx} value={idx + 1}>
-                            {name}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        value={filters.existingPriorityDate?.year || ""}
-                        onChange={(e) => {
-                          const year = e.target.value ? parseInt(e.target.value) : null;
-                          handlePriorityDateChange(
-                            filters.existingPriorityDate?.month || 1,
-                            year
-                          );
-                        }}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-                      >
-                        <option value="">Year</option>
-                        {getYearOptions().map((year) => (
-                          <option key={year} value={year}>
-                            {year}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    <input
+                      type="date"
+                      value={getPriorityDateInputValue()}
+                      onChange={(e) => handlePriorityDateChange(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                    />
                   </div>
 
                   {/* EB Category Selector */}

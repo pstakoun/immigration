@@ -213,7 +213,7 @@ const testFilters: FilterState = {
   education: "masters",
   experience: "gt5",
   hasApprovedI140: true,
-  existingPriorityDate: { month: 6, year: 2020 }, // Old PD that should be current
+  existingPriorityDate: { day: 1, month: 6, year: 2020 }, // Old PD that should be current
   existingPriorityDateCategory: "eb2",
 };
 

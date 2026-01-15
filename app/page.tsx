@@ -7,7 +7,7 @@ import PathDetail from "@/components/PathDetail";
 import ProfileSummary from "@/components/ProfileSummary";
 import OnboardingQuiz from "@/components/OnboardingQuiz";
 import TrackerPanel from "@/components/TrackerPanel";
-import { FilterState, defaultFilters } from "@/lib/filter-paths";
+import { FilterState, defaultFilters, priorityDateToISOString, parsePriorityDateFromISO } from "@/lib/filter-paths";
 import { ComposedPath } from "@/lib/path-composer";
 import { getStoredProfile, saveUserProfile } from "@/lib/storage";
 
@@ -136,15 +136,17 @@ export default function Home() {
       
       // Sync any ported PD to filters for PD wait calculation
       if (storedProgress.portedPriorityDate) {
-        const [year, month] = storedProgress.portedPriorityDate.split("-").map(Number);
+        const priorityDate = parsePriorityDateFromISO(storedProgress.portedPriorityDate);
         const category = storedProgress.portedPriorityDateCategory;
-        loadedFilters = {
-          ...loadedFilters,
-          existingPriorityDate: { year, month },
-          existingPriorityDateCategory: category === "eb1" ? "eb1" : 
-                                        category === "eb2" ? "eb2" : 
-                                        category === "eb3" ? "eb3" : null,
-        };
+        if (priorityDate) {
+          loadedFilters = {
+            ...loadedFilters,
+            existingPriorityDate: priorityDate,
+            existingPriorityDateCategory: category === "eb1" ? "eb1" : 
+                                          category === "eb2" ? "eb2" : 
+                                          category === "eb3" ? "eb3" : null,
+          };
+        }
       }
     }
     
@@ -180,6 +182,39 @@ export default function Home() {
     setFilters(newFilters);
     saveUserProfile(newFilters);
     setShowOnboarding(false);
+    
+    // Sync priority date from onboarding to global progress
+    // This ensures the TrackerPanel shows the same priority date
+    if (newFilters.existingPriorityDate && newFilters.existingPriorityDateCategory) {
+      const pdISOStr = priorityDateToISOString(newFilters.existingPriorityDate);
+      setGlobalProgress(prev => {
+        const now = new Date().toISOString();
+        if (!prev) {
+          return {
+            selectedPathId: null,
+            stages: {},
+            portedPriorityDate: pdISOStr,
+            portedPriorityDateCategory: newFilters.existingPriorityDateCategory,
+            startedAt: now,
+            updatedAt: now,
+          };
+        }
+        return {
+          ...prev,
+          portedPriorityDate: pdISOStr,
+          portedPriorityDateCategory: newFilters.existingPriorityDateCategory,
+          updatedAt: now,
+        };
+      });
+    } else if (globalProgress?.portedPriorityDate) {
+      // User cleared the priority date during onboarding edit, also clear from progress
+      setGlobalProgress(prev => prev ? {
+        ...prev,
+        portedPriorityDate: null,
+        portedPriorityDateCategory: null,
+        updatedAt: new Date().toISOString(),
+      } : null);
+    }
   };
 
   const handleEditProfile = () => {
@@ -288,9 +323,12 @@ export default function Home() {
       return;
     }
     
-    // Parse YYYY-MM-DD to PriorityDate format
-    const [year, month] = dateStr.split("-").map(Number);
-    const priorityDate = { year, month };
+    // Parse YYYY-MM-DD to PriorityDate format (now includes day)
+    const priorityDate = parsePriorityDateFromISO(dateStr);
+    if (!priorityDate) {
+      console.warn("Invalid priority date format:", dateStr);
+      return;
+    }
     
     // Map category string to EBCategory
     const ebCategory = category === "eb1" ? "eb1" : 

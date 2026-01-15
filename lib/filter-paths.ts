@@ -5,6 +5,7 @@ export type CountryOfBirth = "canada" | "mexico" | "india" | "china" | "other";
 export type EBCategory = "eb1" | "eb2" | "eb3";
 
 export interface PriorityDate {
+  day: number;   // 1-31
   month: number; // 1-12
   year: number;  // e.g., 2019
 }
@@ -130,16 +131,34 @@ export function calculatePDAgingSince(
   return Math.round(monthsElapsed * (velocityMonthsPerYear / 12));
 }
 
-// Helper to format priority date as "Mon YYYY" string
+// Helper to format priority date as "Mon D, YYYY" string
 export function formatPriorityDateShort(pd: PriorityDate): string {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return `${months[pd.month - 1]} ${pd.year}`;
+  return `${months[pd.month - 1]} ${pd.day}, ${pd.year}`;
 }
 
 // Helper to convert PriorityDate to "Month YYYY" string for visa bulletin comparison
+// Note: Visa bulletins use month/year, so day is not included here
 export function priorityDateToString(pd: PriorityDate): string {
   const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   return `${months[pd.month - 1]} ${pd.year}`;
+}
+
+// Helper to convert PriorityDate to YYYY-MM-DD string format
+export function priorityDateToISOString(pd: PriorityDate): string {
+  const month = pd.month.toString().padStart(2, "0");
+  const day = pd.day.toString().padStart(2, "0");
+  return `${pd.year}-${month}-${day}`;
+}
+
+// Helper to parse YYYY-MM-DD string to PriorityDate
+export function parsePriorityDateFromISO(dateStr: string): PriorityDate | null {
+  if (!dateStr) return null;
+  const parts = dateStr.split("-").map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return null;
+  const [year, month, day] = parts;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return { day, month, year };
 }
 
 // Education level ranking for comparison
