@@ -63,22 +63,50 @@ function MiniTimeline({
   stages, 
   globalProgress,
   totalYears,
+  isTracked,
+  globalNowOffset,
 }: { 
   stages: ComposedStage[];
   globalProgress: GlobalProgress | null | undefined;
   totalYears: number;
+  isTracked: boolean;
+  globalNowOffset: number; // Years offset for "now" position from tracked path
 }) {
-  // Calculate timeline bounds - use a reasonable scale
-  const maxYears = Math.max(totalYears * 1.1, 6); // Add 10% padding, min 6 years
+  // For non-tracked paths, we need to offset stages to start from "now"
+  // This shows that the user would have to START this path from scratch
+  const pathOffset = isTracked ? 0 : globalNowOffset;
   
-  // Separate stages by track
-  const statusStages = stages.filter(s => s.track === "status" && !s.isPriorityWait && s.nodeId !== "gc");
-  const gcStages = stages.filter(s => (s.track === "gc" || s.isPriorityWait) && s.nodeId !== "gc");
+  // Adjust totalYears for non-tracked paths (add the offset)
+  const adjustedTotalYears = totalYears + pathOffset;
+  
+  // Calculate timeline bounds - use a reasonable scale
+  const maxYears = Math.max(adjustedTotalYears * 1.1, 6); // Add 10% padding, min 6 years
+  
+  // Separate stages by track, applying offset for non-tracked paths
+  const applyOffset = (stage: ComposedStage): ComposedStage => ({
+    ...stage,
+    startYear: stage.startYear + pathOffset,
+  });
+  
+  const statusStages = stages
+    .filter(s => s.track === "status" && !s.isPriorityWait && s.nodeId !== "gc")
+    .map(applyOffset);
+  const gcStages = stages
+    .filter(s => (s.track === "gc" || s.isPriorityWait) && s.nodeId !== "gc")
+    .map(applyOffset);
   const hasMultipleTracks = statusStages.length > 0 && gcStages.length > 0;
   
-  // Calculate "now" position based on GC TRACK progress only
-  // Status visas (TN, H-1B, etc.) run in parallel and don't move the "now" marker
+  // Calculate "now" position
+  // For tracked paths: based on actual GC track progress
+  // For non-tracked paths: at the globalNowOffset position (where stages start)
   const nowPosition = useMemo(() => {
+    // For non-tracked paths with a global offset, show "now" at the offset position
+    if (!isTracked && globalNowOffset > 0) {
+      const percent = (globalNowOffset / maxYears) * 100;
+      return Math.min(percent, 95);
+    }
+    
+    // For tracked paths, calculate based on actual progress
     if (!globalProgress) return null;
     
     const now = new Date();
@@ -131,7 +159,7 @@ function MiniTimeline({
     // Don't show if basically at the start
     if (percent < 2) return null;
     return Math.min(percent, 95);
-  }, [stages, globalProgress, maxYears]);
+  }, [stages, globalProgress, maxYears, isTracked, globalNowOffset]);
   
   // Render a single track of stages
   const renderTrack = (trackStages: ComposedStage[], trackColor: string) => {
@@ -185,10 +213,10 @@ function MiniTimeline({
     );
   };
   
-  // Find the GC marker position
+  // Find the GC marker position (with offset applied for non-tracked paths)
   const gcMarkerStage = stages.find(s => s.nodeId === "gc");
   const gcMarkerPercent = gcMarkerStage 
-    ? Math.min((gcMarkerStage.startYear / maxYears) * 100, 96)
+    ? Math.min(((gcMarkerStage.startYear + pathOffset) / maxYears) * 100, 96)
     : null;
   
   return (
@@ -274,6 +302,7 @@ function MobilePathCard({
   onStageClick,
   globalProgress,
   onUpdatePortedPD,
+  globalNowOffset,
 }: {
   path: ComposedPath;
   isTracked: boolean;
@@ -283,6 +312,7 @@ function MobilePathCard({
   onStageClick: (nodeId: string) => void;
   globalProgress: GlobalProgress | null | undefined;
   onUpdatePortedPD?: (date: string | null, category: string | null) => void;
+  globalNowOffset: number;
 }) {
   // Calculate progress
   const progressInfo = useMemo(() => {
@@ -472,6 +502,8 @@ function MobilePathCard({
           stages={path.stages} 
           globalProgress={globalProgress}
           totalYears={path.totalYears.max}
+          isTracked={isTracked}
+          globalNowOffset={globalNowOffset}
         />
         
         {/* Progress bar (only show if tracking or has progress) */}
@@ -1281,6 +1313,68 @@ export default function MobileTimelineView({
     });
   }, [paths, selectedPathId]);
 
+  // Calculate global "now" offset based on the tracked path's progress
+  // This represents how far along the user is in their current path
+  // Non-tracked paths will use this to offset their stages (start from "now")
+  const globalNowOffset = useMemo(() => {
+    if (!selectedPathId || !globalProgress) return 0;
+    
+    const trackedPath = paths.find(p => p.id === selectedPathId);
+    if (!trackedPath) return 0;
+    
+    const now = new Date();
+    let furthestPosition = 0;
+    
+    // Status visa nodes run in parallel, so we consider them separately
+    const statusVisaNodes = new Set(['tn', 'h1b', 'opt', 'f1', 'l1a', 'l1b', 'o1']);
+    
+    for (const stage of trackedPath.stages) {
+      if (stage.isPriorityWait || stage.nodeId === "gc") continue;
+      
+      const sp = globalProgress.stages[stage.nodeId];
+      if (!sp) continue;
+      
+      // For status visas, we track them separately since they indicate current position
+      // even though they don't affect GC track positioning
+      if (statusVisaNodes.has(stage.nodeId)) {
+        if (sp.status === "approved" && sp.approvedDate) {
+          // Status visa approved - user is currently at this point in time
+          const approvedDate = parseDate(sp.approvedDate);
+          if (approvedDate) {
+            // Calculate how long since approval (in years from timeline start)
+            const monthsSinceApproval = (now.getTime() - approvedDate.getTime()) / (1000 * 60 * 60 * 24 * 30);
+            // User's "now" is at the stage start + time since approval
+            const currentPosition = stage.startYear + (monthsSinceApproval / 12);
+            furthestPosition = Math.max(furthestPosition, currentPosition);
+          }
+        } else if (sp.status === "filed" && sp.filedDate) {
+          // Status visa filed - user is in the process
+          furthestPosition = Math.max(furthestPosition, stage.startYear);
+        }
+        continue;
+      }
+      
+      // For GC track stages
+      const stageDuration = stage.durationYears?.max || 0.5;
+      const stageEnd = stage.startYear + stageDuration;
+      
+      if (sp.status === "approved") {
+        furthestPosition = Math.max(furthestPosition, stageEnd);
+      } else if (sp.status === "filed" && sp.filedDate) {
+        const filedDate = parseDate(sp.filedDate);
+        if (filedDate) {
+          const monthsElapsed = (now.getTime() - filedDate.getTime()) / (1000 * 60 * 60 * 24 * 30);
+          const stageMonths = stageDuration * 12;
+          const progressRatio = Math.min(monthsElapsed / stageMonths, 0.95);
+          const positionInStage = stage.startYear + (stageDuration * progressRatio);
+          furthestPosition = Math.max(furthestPosition, positionInStage);
+        }
+      }
+    }
+    
+    return furthestPosition;
+  }, [paths, selectedPathId, globalProgress]);
+
   // Track analytics
   const lastTrackedFilters = useRef<string>("");
   useEffect(() => {
@@ -1383,6 +1477,7 @@ export default function MobileTimelineView({
             onStageClick={(nodeId) => handleStageClick(nodeId, path)}
             globalProgress={globalProgress}
             onUpdatePortedPD={onUpdatePortedPD}
+            globalNowOffset={globalNowOffset}
           />
         ))}
 
