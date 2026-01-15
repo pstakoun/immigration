@@ -7,6 +7,7 @@ import {
   Experience,
   CurrentStatus,
   CountryOfBirth,
+  EBCategory,
   defaultFilters,
 } from "@/lib/filter-paths";
 import { trackOnboardingComplete } from "@/lib/analytics";
@@ -56,9 +57,35 @@ function hasAnySpecialCircumstance(filters: FilterState): boolean {
   );
 }
 
+function hasExistingPriorityDate(filters: FilterState): boolean {
+  return filters.existingPriorityDate !== null && filters.existingPriorityDateCategory !== null;
+}
+
+// Generate year options for priority date selector (10 years back to current)
+function getYearOptions(): number[] {
+  const currentYear = new Date().getFullYear();
+  const years: number[] = [];
+  for (let y = currentYear; y >= currentYear - 15; y--) {
+    years.push(y);
+  }
+  return years;
+}
+
+const monthNames = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+const ebCategoryOptions: { value: EBCategory; label: string; description: string }[] = [
+  { value: "eb1", label: "EB-1", description: "Priority workers" },
+  { value: "eb2", label: "EB-2", description: "Advanced degree / NIW" },
+  { value: "eb3", label: "EB-3", description: "Skilled workers" },
+];
+
 export default function OnboardingQuiz({ onComplete, initialFilters }: OnboardingQuizProps) {
   const [filters, setFilters] = useState<FilterState>(initialFilters || defaultFilters);
   const [showSpecial, setShowSpecial] = useState(() => hasAnySpecialCircumstance(initialFilters || defaultFilters));
+  const [showPriorityDate, setShowPriorityDate] = useState(() => hasExistingPriorityDate(initialFilters || defaultFilters));
 
   const updateFilter = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
     setFilters((prev) => {
@@ -75,6 +102,31 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
     e.preventDefault();
     trackOnboardingComplete(filters);
     onComplete(filters);
+  };
+
+  const handlePriorityDateChange = (month: number | null, year: number | null) => {
+    setFilters((prev) => {
+      if (month === null || year === null) {
+        return { ...prev, existingPriorityDate: null };
+      }
+      return { ...prev, existingPriorityDate: { month, year } };
+    });
+  };
+
+  const handlePriorityDateCategoryChange = (category: EBCategory | null) => {
+    setFilters((prev) => ({ ...prev, existingPriorityDateCategory: category }));
+  };
+
+  const togglePriorityDateSection = () => {
+    if (showPriorityDate) {
+      // Closing the section - clear the priority date data
+      setFilters((prev) => ({
+        ...prev,
+        existingPriorityDate: null,
+        existingPriorityDateCategory: null,
+      }));
+    }
+    setShowPriorityDate(!showPriorityDate);
   };
 
   const specialCount = [
@@ -375,6 +427,130 @@ export default function OnboardingQuiz({ onComplete, initialFilters }: Onboardin
                       <div className="text-xs text-gray-500">Unlocks EB-5 investor visa path</div>
                     </div>
                   </label>
+                </div>
+              )}
+            </div>
+
+            {/* Existing Priority Date - Collapsible */}
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={togglePriorityDateSection}
+                className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-900">
+                    I have a previous priority date
+                  </span>
+                  {filters.existingPriorityDate && filters.existingPriorityDateCategory && (
+                    <span className="px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-full">
+                      {monthNames[filters.existingPriorityDate.month - 1].slice(0, 3)} {filters.existingPriorityDate.year}
+                    </span>
+                  )}
+                </div>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={`text-gray-400 transition-transform ${showPriorityDate ? "rotate-180" : ""}`}
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+
+              {showPriorityDate && (
+                <div className="p-4 space-y-4 border-t border-gray-200">
+                  <p className="text-xs text-gray-500">
+                    If you have an approved I-140 from a previous employer, you can &quot;port&quot; that priority date to a new case. This can significantly reduce your green card wait time.
+                  </p>
+
+                  {/* Priority Date Month/Year Selector */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Priority date
+                    </label>
+                    <div className="flex gap-2">
+                      <select
+                        value={filters.existingPriorityDate?.month || ""}
+                        onChange={(e) => {
+                          const month = e.target.value ? parseInt(e.target.value) : null;
+                          handlePriorityDateChange(
+                            month,
+                            filters.existingPriorityDate?.year || new Date().getFullYear()
+                          );
+                        }}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                      >
+                        <option value="">Month</option>
+                        {monthNames.map((name, idx) => (
+                          <option key={idx} value={idx + 1}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={filters.existingPriorityDate?.year || ""}
+                        onChange={(e) => {
+                          const year = e.target.value ? parseInt(e.target.value) : null;
+                          handlePriorityDateChange(
+                            filters.existingPriorityDate?.month || 1,
+                            year
+                          );
+                        }}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                      >
+                        <option value="">Year</option>
+                        {getYearOptions().map((year) => (
+                          <option key={year} value={year}>
+                            {year}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* EB Category Selector */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Category of previous case
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {ebCategoryOptions.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => handlePriorityDateCategoryChange(option.value)}
+                          className={`p-2.5 rounded-xl border-2 text-center transition-all active:scale-[0.98] ${
+                            filters.existingPriorityDateCategory === option.value
+                              ? "border-emerald-500 bg-emerald-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <div className={`font-medium text-sm ${
+                            filters.existingPriorityDateCategory === option.value ? "text-emerald-700" : "text-gray-900"
+                          }`}>
+                            {option.label}
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-0.5">{option.description}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Helper note */}
+                  <div className="flex items-start gap-2 p-2.5 bg-amber-50 rounded-lg">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-amber-600 flex-shrink-0 mt-0.5">
+                      <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <p className="text-xs text-amber-800">
+                      Note: While you can port a priority date to reduce wait times, you&apos;ll still need to file a new PERM and I-140 with your new employer.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
