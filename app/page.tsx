@@ -124,6 +124,7 @@ export default function Home() {
     const storedProgress = loadProgress();
     
     let loadedFilters = profile?.filters || defaultFilters;
+    let updatedProgress = storedProgress;
     
     if (profile) {
       setShowOnboarding(false);
@@ -131,23 +132,55 @@ export default function Home() {
       setShowOnboarding(true);
     }
     
-    if (storedProgress) {
-      setGlobalProgress(storedProgress);
-      
-      // Sync any ported PD to filters for PD wait calculation
-      if (storedProgress.portedPriorityDate) {
-        const priorityDate = parsePriorityDateFromISO(storedProgress.portedPriorityDate);
-        const category = storedProgress.portedPriorityDateCategory;
-        if (priorityDate) {
-          loadedFilters = {
-            ...loadedFilters,
-            existingPriorityDate: priorityDate,
-            existingPriorityDateCategory: category === "eb1" ? "eb1" : 
-                                          category === "eb2" ? "eb2" : 
-                                          category === "eb3" ? "eb3" : null,
+    // Sync priority dates between profile and progress
+    // Profile is the source of truth for priority dates set in onboarding
+    const profilePD = loadedFilters.existingPriorityDate;
+    const profilePDCategory = loadedFilters.existingPriorityDateCategory;
+    const progressPD = storedProgress?.portedPriorityDate;
+    
+    if (profilePD && profilePDCategory) {
+      // Profile has priority date - ensure progress is synced
+      const profilePDStr = priorityDateToISOString(profilePD);
+      if (storedProgress) {
+        // Update progress to match profile if different
+        if (progressPD !== profilePDStr || storedProgress.portedPriorityDateCategory !== profilePDCategory) {
+          updatedProgress = {
+            ...storedProgress,
+            portedPriorityDate: profilePDStr,
+            portedPriorityDateCategory: profilePDCategory,
+            updatedAt: new Date().toISOString(),
           };
         }
+      } else {
+        // Create progress with the profile's priority date
+        updatedProgress = {
+          selectedPathId: null,
+          stages: {},
+          portedPriorityDate: profilePDStr,
+          portedPriorityDateCategory: profilePDCategory,
+          startedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
       }
+    } else if (progressPD && storedProgress?.portedPriorityDateCategory) {
+      // Progress has priority date but profile doesn't - sync to profile (legacy data)
+      const priorityDate = parsePriorityDateFromISO(progressPD);
+      const category = storedProgress.portedPriorityDateCategory;
+      if (priorityDate) {
+        loadedFilters = {
+          ...loadedFilters,
+          existingPriorityDate: priorityDate,
+          existingPriorityDateCategory: category === "eb1" ? "eb1" : 
+                                        category === "eb2" ? "eb2" : 
+                                        category === "eb3" ? "eb3" : null,
+        };
+        // Also save the updated filters to profile
+        saveUserProfile(loadedFilters);
+      }
+    }
+    
+    if (updatedProgress) {
+      setGlobalProgress(updatedProgress);
     }
     
     setFilters(loadedFilters);
@@ -206,14 +239,18 @@ export default function Home() {
           updatedAt: now,
         };
       });
-    } else if (globalProgress?.portedPriorityDate) {
+    } else {
       // User cleared the priority date during onboarding edit, also clear from progress
-      setGlobalProgress(prev => prev ? {
-        ...prev,
-        portedPriorityDate: null,
-        portedPriorityDateCategory: null,
-        updatedAt: new Date().toISOString(),
-      } : null);
+      // Use functional update to avoid stale closure
+      setGlobalProgress(prev => {
+        if (!prev || !prev.portedPriorityDate) return prev;
+        return {
+          ...prev,
+          portedPriorityDate: null,
+          portedPriorityDateCategory: null,
+          updatedAt: new Date().toISOString(),
+        };
+      });
     }
   };
 
