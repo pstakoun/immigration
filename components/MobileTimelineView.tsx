@@ -190,17 +190,11 @@ function MiniTimeline({
     ? Math.min((gcMarkerStage.startYear / maxYears) * 100, 96)
     : null;
   
-  // The track area starts after the indicator (w-1 = 4px) + gap (gap-2 = 8px) = 12px
-  const trackLeftOffset = 12;
-  
   return (
     <div className="mt-3 relative">
       {/* "Now" marker - small triangle above tracks */}
       {nowPosition !== null && (
-        <div 
-          className="h-2 mb-0.5 relative"
-          style={{ marginLeft: `${trackLeftOffset}px` }}
-        >
+        <div className="h-2 mb-0.5 relative">
           <div 
             className="absolute bottom-0"
             style={{ left: `${nowPosition}%`, transform: 'translateX(-50%)' }}
@@ -215,40 +209,20 @@ function MiniTimeline({
       {/* Timeline tracks */}
       <div className="space-y-1">
         {/* Status track (if exists) */}
-        {statusStages.length > 0 && (
-          <div className="flex items-center gap-2">
-            <div 
-              className="w-1 h-2.5 rounded-sm flex-shrink-0" 
-              style={{ backgroundColor: miniTimelineColors.status }}
-            />
-            <div className="flex-1 relative">
-              {renderTrack(statusStages, miniTimelineColors.status)}
-            </div>
-          </div>
-        )}
+        {statusStages.length > 0 && renderTrack(statusStages, miniTimelineColors.status)}
         
         {/* GC track */}
-        {gcStages.length > 0 && (
-          <div className="flex items-center gap-2">
-            <div 
-              className="w-1 h-2.5 rounded-sm flex-shrink-0" 
-              style={{ backgroundColor: miniTimelineColors.gc }}
-            />
-            <div className="flex-1 relative">
-              {renderTrack(gcStages, miniTimelineColors.gc)}
-            </div>
-          </div>
-        )}
+        {gcStages.length > 0 && renderTrack(gcStages, miniTimelineColors.gc)}
       </div>
       
-      {/* Green Card finish marker - inline at the end */}
+      {/* Green Card finish marker - at the end */}
       {gcMarkerPercent !== null && gcMarkerPercent > 50 && (
         <div 
           className="absolute flex items-center pointer-events-none z-10"
           style={{ 
-            left: `calc(${trackLeftOffset}px + ${gcMarkerPercent}%)`,
+            left: `${gcMarkerPercent}%`,
             top: hasMultipleTracks ? '50%' : '50%',
-            transform: 'translateY(-50%)',
+            transform: 'translate(-50%, -50%)',
           }}
         >
           <div className="w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-white shadow-sm flex items-center justify-center">
@@ -260,7 +234,7 @@ function MiniTimeline({
       )}
       
       {/* Year scale */}
-      <div className="flex justify-between mt-1.5 text-[9px] text-gray-400" style={{ marginLeft: `${trackLeftOffset}px` }}>
+      <div className="flex justify-between mt-1.5 text-[9px] text-gray-400">
         <span>Today</span>
         <span>{Math.ceil(totalYears)} yr</span>
       </div>
