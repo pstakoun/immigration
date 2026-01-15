@@ -243,7 +243,7 @@ function MiniTimeline({
   );
 }
 
-// Format date for display
+// Format date for display (consistent with desktop TrackerPanel)
 function formatDateShort(dateStr?: string): string {
   if (!dateStr) return "";
   try {
@@ -251,7 +251,8 @@ function formatDateShort(dateStr?: string): string {
     const date = new Date(year, month - 1, day);
     return date.toLocaleDateString("en-US", {
       month: "short",
-      year: "2-digit",
+      day: "numeric",
+      year: "numeric",
     });
   } catch {
     return dateStr;
