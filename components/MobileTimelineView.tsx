@@ -12,6 +12,8 @@ import {
   STATUS_VISA_NODES, 
   STATUS_VISA_VALIDITY_MONTHS,
   isStatusVisa,
+  PRIORITY_DATE_STAGES,
+  canEstablishPriorityDate,
 } from "@/lib/constants";
 
 interface MobileTimelineViewProps {
@@ -55,6 +57,39 @@ function parseDate(dateStr?: string): Date | null {
   } catch {
     return null;
   }
+}
+
+// Calculate time elapsed since a date
+function timeElapsed(dateStr?: string): string {
+  const date = parseDate(dateStr);
+  if (!date) return "";
+  
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) return "in the future";
+  if (diffDays === 0) return "today";
+  if (diffDays === 1) return "yesterday";
+  if (diffDays < 30) return `${diffDays} days ago`;
+  if (diffDays < 365) {
+    const months = Math.floor(diffDays / 30);
+    return `${months} month${months > 1 ? "s" : ""} ago`;
+  }
+  const years = (diffDays / 365).toFixed(1);
+  return `${years} years ago`;
+}
+
+// Format date for display with full month
+function formatDateDisplay(dateStr?: string): string {
+  if (!dateStr) return "";
+  const date = parseDate(dateStr);
+  if (!date) return dateStr;
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 // Mini Timeline Component - compact visual preview of the path
@@ -766,6 +801,312 @@ function MobileStageItem({
   );
 }
 
+// Priority Date Summary Card - shows at top of tracked path when expanded
+function PriorityDateSummaryCard({
+  globalProgress,
+  stages,
+  onEditClick,
+}: {
+  globalProgress: GlobalProgress | null | undefined;
+  stages: ComposedStage[];
+  onEditClick: () => void;
+}) {
+  // Find priority date from current path's approved I-140 or equivalent
+  const currentPathPD = useMemo(() => {
+    if (!globalProgress) return null;
+    
+    for (const nodeId of Array.from(PRIORITY_DATE_STAGES)) {
+      const stageProgress = globalProgress.stages[nodeId];
+      if (stageProgress?.status === "approved" && stageProgress.priorityDate) {
+        return { date: stageProgress.priorityDate, source: getNode(nodeId)?.name || nodeId };
+      }
+    }
+    return null;
+  }, [globalProgress]);
+
+  // Effective priority date (earlier of ported vs current)
+  const effectivePD = useMemo(() => {
+    if (!globalProgress) return null;
+    
+    if (globalProgress.portedPriorityDate && currentPathPD?.date) {
+      return globalProgress.portedPriorityDate < currentPathPD.date 
+        ? { date: globalProgress.portedPriorityDate, source: "Ported from previous case" }
+        : currentPathPD;
+    }
+    if (globalProgress.portedPriorityDate) {
+      return { date: globalProgress.portedPriorityDate, source: "Ported from previous case" };
+    }
+    return currentPathPD;
+  }, [globalProgress, currentPathPD]);
+
+  const hasPortedPD = !!globalProgress?.portedPriorityDate;
+
+  return (
+    <div className="bg-amber-50 rounded-xl border border-amber-200 overflow-hidden">
+      <div className="px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-600">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900">Priority Date</h4>
+              {effectivePD ? (
+                <p className="text-xs text-amber-700">{effectivePD.source}</p>
+              ) : (
+                <p className="text-xs text-gray-500">Not established yet</p>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {effectivePD && (
+              <div className="text-right mr-2">
+                <div className="text-sm font-bold text-gray-900">
+                  {formatDateDisplay(effectivePD.date)}
+                </div>
+                <div className="text-[10px] text-gray-500">{timeElapsed(effectivePD.date)}</div>
+              </div>
+            )}
+            <button
+              onClick={onEditClick}
+              className="p-2 rounded-lg bg-amber-100 text-amber-700 active:bg-amber-200 transition-colors"
+              aria-label={hasPortedPD ? "Edit priority date" : "Add priority date"}
+            >
+              {hasPortedPD ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="16" />
+                  <line x1="8" y1="12" x2="16" y2="12" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+        
+        {/* Show hint when no PD established */}
+        {!effectivePD && (
+          <p className="text-xs text-gray-500 mt-2 pl-10">
+            Tap + to add a priority date from a previous employer
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Priority Date Editor Sheet - for setting/editing ported priority date
+function PriorityDateEditorSheet({
+  globalProgress,
+  stages,
+  onUpdatePortedPD,
+  onClose,
+}: {
+  globalProgress: GlobalProgress | null | undefined;
+  stages: ComposedStage[];
+  onUpdatePortedPD: (date: string | null, category: string | null) => void;
+  onClose: () => void;
+}) {
+  // Find priority date from current path's approved I-140 or equivalent
+  const currentPathPD = useMemo(() => {
+    if (!globalProgress) return null;
+    
+    for (const nodeId of Array.from(PRIORITY_DATE_STAGES)) {
+      const stageProgress = globalProgress.stages[nodeId];
+      if (stageProgress?.status === "approved" && stageProgress.priorityDate) {
+        return { date: stageProgress.priorityDate, source: getNode(nodeId)?.name || nodeId };
+      }
+    }
+    return null;
+  }, [globalProgress]);
+
+  // Effective priority date (earlier of ported vs current)
+  const effectivePD = useMemo(() => {
+    if (!globalProgress) return null;
+    
+    if (globalProgress.portedPriorityDate && currentPathPD?.date) {
+      return globalProgress.portedPriorityDate < currentPathPD.date 
+        ? { date: globalProgress.portedPriorityDate, source: "Ported from previous case", isPorted: true }
+        : { ...currentPathPD, isPorted: false };
+    }
+    if (globalProgress.portedPriorityDate) {
+      return { date: globalProgress.portedPriorityDate, source: "Ported from previous case", isPorted: true };
+    }
+    return currentPathPD ? { ...currentPathPD, isPorted: false } : null;
+  }, [globalProgress, currentPathPD]);
+
+  const portedDate = globalProgress?.portedPriorityDate || "";
+  const portedCategory = globalProgress?.portedPriorityDateCategory || "";
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/40 z-40 animate-fade-in"
+        onClick={onClose}
+      />
+      
+      {/* Sheet */}
+      <div className="fixed inset-x-0 bottom-0 bg-white rounded-t-2xl z-50 max-h-[85vh] overflow-y-auto shadow-xl animate-slide-up safe-bottom">
+        {/* Drag handle */}
+        <div className="sticky top-0 bg-white pt-3 pb-2 border-b border-gray-100 z-10">
+          <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto" />
+        </div>
+        
+        <div className="p-4 space-y-5">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="font-semibold text-gray-900 text-lg">Priority Date</h3>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Your place in the green card queue
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 -m-2 text-gray-400 active:text-gray-600"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Current Effective PD Display */}
+          {effectivePD && (
+            <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+              <div className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-1">
+                Effective Priority Date
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-xl font-bold text-gray-900">
+                    {formatDateDisplay(effectivePD.date)}
+                  </div>
+                  <div className="text-sm text-amber-700 mt-0.5">
+                    {effectivePD.source} • {timeElapsed(effectivePD.date)}
+                  </div>
+                </div>
+                {effectivePD.isPorted && (
+                  <span className="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded-lg">
+                    Ported
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Explanation Card */}
+          <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+            <div className="flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-600">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 16v-4M12 8h.01" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-gray-900">What is a Priority Date?</h4>
+                <p className="text-xs text-gray-600 mt-1">
+                  Your priority date determines when you can file for a green card. If you have an approved I-140 from a <strong>previous employer</strong>, you can &quot;port&quot; that earlier date to your new case, potentially saving years of waiting.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Ported PD Form */}
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Ported Priority Date
+                </label>
+                {portedDate && (
+                  <button
+                    onClick={() => onUpdatePortedPD(null, null)}
+                    className="text-xs text-red-600 font-medium"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <input
+                type="date"
+                value={portedDate}
+                onChange={(e) => onUpdatePortedPD(e.target.value || null, portedCategory || null)}
+                className="w-full px-4 py-3 text-base border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                placeholder="Select date"
+              />
+              <p className="text-xs text-gray-500 mt-1.5">
+                Enter the priority date from your previous I-140 approval notice
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Previous Category
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: "eb1", label: "EB-1" },
+                  { value: "eb2", label: "EB-2" },
+                  { value: "eb3", label: "EB-3" },
+                ].map((cat) => (
+                  <button
+                    key={cat.value}
+                    onClick={() => onUpdatePortedPD(portedDate || null, cat.value)}
+                    className={`py-3 px-2 text-sm font-medium rounded-xl border-2 transition-all active:scale-95 ${
+                      portedCategory === cat.value
+                        ? "bg-brand-100 text-brand-700 border-brand-300"
+                        : "bg-white text-gray-600 border-gray-200"
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-1.5">
+                The employment-based category of your previous case
+              </p>
+            </div>
+          </div>
+
+          {/* Current Path PD Info */}
+          {currentPathPD && (
+            <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+              <div className="text-xs font-semibold text-green-800 uppercase tracking-wide mb-1">
+                From Current Path
+              </div>
+              <div className="text-sm text-gray-900">
+                <span className="font-medium">{formatDateDisplay(currentPathPD.date)}</span>
+                <span className="text-green-700 ml-2">via {currentPathPD.source}</span>
+              </div>
+              {globalProgress?.portedPriorityDate && currentPathPD.date < globalProgress.portedPriorityDate && (
+                <p className="text-xs text-green-600 mt-1">
+                  ✓ This date is earlier than your ported date, so it&apos;s being used
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+        
+        {/* Safe area */}
+        <div className="h-6" />
+      </div>
+    </>
+  );
+}
+
 // Stage Editor Sheet Component (inline)
 function StageEditorSheet({
   stage,
@@ -972,6 +1313,7 @@ export default function MobileTimelineView({
   const [processingTimesLoaded, setProcessingTimesLoaded] = useState(false);
   const [priorityDates, setPriorityDates] = useState<DynamicData["priorityDates"]>(DEFAULT_PRIORITY_DATES);
   const [datesForFiling, setDatesForFiling] = useState<DynamicData["datesForFiling"]>(DEFAULT_DATES_FOR_FILING);
+  const [showPriorityDateEditor, setShowPriorityDateEditor] = useState(false);
 
   // Fetch processing times on mount
   useEffect(() => {
@@ -1093,9 +1435,38 @@ export default function MobileTimelineView({
     }
   }, [onExpandStage]);
 
+  const handleOpenPriorityDateEditor = useCallback(() => {
+    setShowPriorityDateEditor(true);
+  }, []);
+
+  const handleClosePriorityDateEditor = useCallback(() => {
+    setShowPriorityDateEditor(false);
+  }, []);
+
+  const handleUpdatePortedPD = useCallback((date: string | null, category: string | null) => {
+    if (onUpdatePortedPD) {
+      onUpdatePortedPD(date, category);
+    }
+  }, [onUpdatePortedPD]);
+
+  // Get the tracked path for priority date components
+  const trackedPath = useMemo(() => {
+    if (!selectedPathId) return null;
+    return paths.find(p => p.id === selectedPathId) || null;
+  }, [selectedPathId, paths]);
+
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50">
       <div className="p-4 space-y-3 pb-24">
+        {/* Priority Date Card - shown when tracking a path */}
+        {selectedPathId && trackedPath && onUpdatePortedPD && (
+          <PriorityDateSummaryCard
+            globalProgress={globalProgress}
+            stages={trackedPath.stages}
+            onEditClick={handleOpenPriorityDateEditor}
+          />
+        )}
+
         {/* Empty state */}
         {sortedPaths.length === 0 && (
           <div className="py-12 text-center">
@@ -1163,6 +1534,16 @@ export default function MobileTimelineView({
           stageProgress={editingStageProgress}
           onUpdate={handleUpdateStage}
           onClose={handleCloseEditor}
+        />
+      )}
+      
+      {/* Priority Date Editor Sheet - for editing ported priority date */}
+      {showPriorityDateEditor && trackedPath && onUpdatePortedPD && (
+        <PriorityDateEditorSheet
+          globalProgress={globalProgress}
+          stages={trackedPath.stages}
+          onUpdatePortedPD={handleUpdatePortedPD}
+          onClose={handleClosePriorityDateEditor}
         />
       )}
     </div>
