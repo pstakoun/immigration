@@ -435,7 +435,7 @@ const concurrentTestFilters: FilterState = {
   ...baseFilters,
   education: 'masters',
   hasApprovedI140: true,
-  existingPriorityDate: { month: 6, year: 2023 },
+  existingPriorityDate: { day: 15, month: 6, year: 2023 },
   existingPriorityDateCategory: 'eb2',
 };
 
@@ -513,7 +513,7 @@ const indiaNewPDFilters: FilterState = {
   education: 'masters',
   countryOfBirth: 'india',
   hasApprovedI140: true,
-  existingPriorityDate: { month: 1, year: 2023 },
+  existingPriorityDate: { day: 15, month: 1, year: 2023 },
   existingPriorityDateCategory: 'eb2',
 };
 

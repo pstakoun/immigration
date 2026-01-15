@@ -7,7 +7,7 @@ import PathDetail from "@/components/PathDetail";
 import ProfileSummary from "@/components/ProfileSummary";
 import OnboardingQuiz from "@/components/OnboardingQuiz";
 import TrackerPanel from "@/components/TrackerPanel";
-import { FilterState, defaultFilters } from "@/lib/filter-paths";
+import { FilterState, defaultFilters, priorityDateToISOString, parsePriorityDateFromISO } from "@/lib/filter-paths";
 import { ComposedPath } from "@/lib/path-composer";
 import { getStoredProfile, saveUserProfile } from "@/lib/storage";
 
@@ -124,6 +124,7 @@ export default function Home() {
     const storedProgress = loadProgress();
     
     let loadedFilters = profile?.filters || defaultFilters;
+    let updatedProgress = storedProgress;
     
     if (profile) {
       setShowOnboarding(false);
@@ -131,21 +132,55 @@ export default function Home() {
       setShowOnboarding(true);
     }
     
-    if (storedProgress) {
-      setGlobalProgress(storedProgress);
-      
-      // Sync any ported PD to filters for PD wait calculation
-      if (storedProgress.portedPriorityDate) {
-        const [year, month] = storedProgress.portedPriorityDate.split("-").map(Number);
-        const category = storedProgress.portedPriorityDateCategory;
+    // Sync priority dates between profile and progress
+    // Profile is the source of truth for priority dates set in onboarding
+    const profilePD = loadedFilters.existingPriorityDate;
+    const profilePDCategory = loadedFilters.existingPriorityDateCategory;
+    const progressPD = storedProgress?.portedPriorityDate;
+    
+    if (profilePD && profilePDCategory) {
+      // Profile has priority date - ensure progress is synced
+      const profilePDStr = priorityDateToISOString(profilePD);
+      if (storedProgress) {
+        // Update progress to match profile if different
+        if (progressPD !== profilePDStr || storedProgress.portedPriorityDateCategory !== profilePDCategory) {
+          updatedProgress = {
+            ...storedProgress,
+            portedPriorityDate: profilePDStr,
+            portedPriorityDateCategory: profilePDCategory,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+      } else {
+        // Create progress with the profile's priority date
+        updatedProgress = {
+          selectedPathId: null,
+          stages: {},
+          portedPriorityDate: profilePDStr,
+          portedPriorityDateCategory: profilePDCategory,
+          startedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+      }
+    } else if (progressPD && storedProgress?.portedPriorityDateCategory) {
+      // Progress has priority date but profile doesn't - sync to profile (legacy data)
+      const priorityDate = parsePriorityDateFromISO(progressPD);
+      const category = storedProgress.portedPriorityDateCategory;
+      if (priorityDate) {
         loadedFilters = {
           ...loadedFilters,
-          existingPriorityDate: { year, month },
+          existingPriorityDate: priorityDate,
           existingPriorityDateCategory: category === "eb1" ? "eb1" : 
                                         category === "eb2" ? "eb2" : 
                                         category === "eb3" ? "eb3" : null,
         };
+        // Also save the updated filters to profile
+        saveUserProfile(loadedFilters);
       }
+    }
+    
+    if (updatedProgress) {
+      setGlobalProgress(updatedProgress);
     }
     
     setFilters(loadedFilters);
@@ -180,6 +215,43 @@ export default function Home() {
     setFilters(newFilters);
     saveUserProfile(newFilters);
     setShowOnboarding(false);
+    
+    // Sync priority date from onboarding to global progress
+    // This ensures the TrackerPanel shows the same priority date
+    if (newFilters.existingPriorityDate && newFilters.existingPriorityDateCategory) {
+      const pdISOStr = priorityDateToISOString(newFilters.existingPriorityDate);
+      setGlobalProgress(prev => {
+        const now = new Date().toISOString();
+        if (!prev) {
+          return {
+            selectedPathId: null,
+            stages: {},
+            portedPriorityDate: pdISOStr,
+            portedPriorityDateCategory: newFilters.existingPriorityDateCategory,
+            startedAt: now,
+            updatedAt: now,
+          };
+        }
+        return {
+          ...prev,
+          portedPriorityDate: pdISOStr,
+          portedPriorityDateCategory: newFilters.existingPriorityDateCategory,
+          updatedAt: now,
+        };
+      });
+    } else {
+      // User cleared the priority date during onboarding edit, also clear from progress
+      // Use functional update to avoid stale closure
+      setGlobalProgress(prev => {
+        if (!prev || !prev.portedPriorityDate) return prev;
+        return {
+          ...prev,
+          portedPriorityDate: null,
+          portedPriorityDateCategory: null,
+          updatedAt: new Date().toISOString(),
+        };
+      });
+    }
   };
 
   const handleEditProfile = () => {
@@ -288,9 +360,12 @@ export default function Home() {
       return;
     }
     
-    // Parse YYYY-MM-DD to PriorityDate format
-    const [year, month] = dateStr.split("-").map(Number);
-    const priorityDate = { year, month };
+    // Parse YYYY-MM-DD to PriorityDate format (now includes day)
+    const priorityDate = parsePriorityDateFromISO(dateStr);
+    if (!priorityDate) {
+      console.warn("Invalid priority date format:", dateStr);
+      return;
+    }
     
     // Map category string to EBCategory
     const ebCategory = category === "eb1" ? "eb1" : 

@@ -28,6 +28,8 @@ export function trackOnboardingComplete(filters: FilterState) {
     has_investment_capital: filters.hasInvestmentCapital,
     has_approved_i140: filters.hasApprovedI140,
     has_existing_priority_date: !!filters.existingPriorityDate,
+    existing_priority_date_category: filters.existingPriorityDateCategory,
+    existing_priority_date_year: filters.existingPriorityDate?.year,
   });
 
   // Set user properties for segmentation

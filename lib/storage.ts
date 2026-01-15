@@ -56,6 +56,14 @@ export function getStoredProfile(): UserProfile | null {
     if (profile.filters.existingPriorityDateCategory === undefined) {
       profile.filters.existingPriorityDateCategory = null;
     }
+    // Migration: add day field to existing priority dates (default to 1st of month)
+    if (profile.filters.existingPriorityDate && 
+        (profile.filters.existingPriorityDate as { day?: number }).day === undefined) {
+      profile.filters.existingPriorityDate = {
+        ...profile.filters.existingPriorityDate,
+        day: 1,
+      };
+    }
     
     // Migration: add needsNewPerm field
     if (profile.filters.needsNewPerm === undefined) {
