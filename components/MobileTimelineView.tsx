@@ -12,6 +12,7 @@ import {
   STATUS_VISA_NODES, 
   STATUS_VISA_VALIDITY_MONTHS,
   isStatusVisa,
+  PRIORITY_DATE_STAGES,
 } from "@/lib/constants";
 
 interface MobileTimelineViewProps {
@@ -793,10 +794,8 @@ function MobilePriorityDateSection({
   const currentPathPD = useMemo(() => {
     if (!globalProgress) return null;
     
-    // Priority date establishing stages
-    const pdStages = ['i140', 'perm', 'eb2niw', 'eb1a', 'eb1b', 'eb1c', 'eb1', 'i140_niw'];
-    
-    for (const nodeId of pdStages) {
+    // Use centralized constant for consistency with TrackerPanel
+    for (const nodeId of Array.from(PRIORITY_DATE_STAGES)) {
       const stageProgress = globalProgress.stages[nodeId];
       if (stageProgress?.status === "approved" && stageProgress.priorityDate) {
         const node = getNode(nodeId);
