@@ -235,7 +235,7 @@ function MiniTimeline({
       
       {/* Year scale */}
       <div className="flex justify-between mt-1.5 text-[9px] text-gray-400">
-        <span>0</span>
+        <span>Start</span>
         <span>{Math.ceil(totalYears)} yr</span>
       </div>
     </div>
@@ -304,39 +304,75 @@ function MobilePathCard({
     : 0;
 
   // Calculate estimated remaining time for tracked paths
+  // Uses same logic as desktop TrackerPanel for consistency
   const remainingEstimate = useMemo(() => {
     if (!globalProgress) return null;
     
     const now = new Date();
-    let remainingMonths = 0;
     
-    // Only count GC track stages for remaining time
-    const gcStages = path.stages.filter(s => s.track === "gc" && s.nodeId !== "gc");
+    // Helper to calculate months between dates
+    const monthsBetween = (date1: Date, date2: Date): number => {
+      return (date2.getTime() - date1.getTime()) / (1000 * 60 * 60 * 24 * 30);
+    };
     
-    for (const stage of gcStages) {
-      const sp = globalProgress.stages[stage.nodeId];
-      const stageMonths = (stage.durationYears?.max || 0) * 12;
+    // Only count GC track stages (not status track like TN/H-1B)
+    const gcStages = path.stages.filter(s => s.track === "gc" && s.nodeId !== "gc" && !s.isPriorityWait);
+    
+    // Check if there's any progress on GC track stages
+    const hasGcProgress = gcStages.some(s => {
+      const sp = globalProgress.stages[s.nodeId];
+      return sp && (sp.status === "filed" || sp.status === "approved");
+    });
+    
+    // Find earliest GC stage startYear from path composition
+    // This is when the GC process can BEGIN (e.g., year 2 for Student → NIW)
+    const earliestGcStartYear = gcStages.length > 0 
+      ? Math.min(...gcStages.map(s => s.startYear || 0))
+      : 0;
+    
+    // Track time like path-composer does:
+    // KEY: If there's NO progress on GC track, use the original startYear
+    let gcSequentialMonths = hasGcProgress ? 0 : earliestGcStartYear * 12;
+    let gcMaxEndMonths = hasGcProgress ? 0 : earliestGcStartYear * 12;
+    let prevStageStartMonths = hasGcProgress ? 0 : earliestGcStartYear * 12;
+    
+    for (let i = 0; i < gcStages.length; i++) {
+      const stage = gcStages[i];
+      const sp = globalProgress.stages[stage.nodeId] || { status: "not_started" };
+      const stageMaxMonths = (stage.durationYears?.max || 0) * 12;
       
-      if (sp?.status === "approved") {
-        // Done, no remaining time
-        continue;
-      } else if (sp?.status === "filed" && sp.filedDate) {
-        // In progress - calculate remaining
+      let stageRemainingMonths = 0;
+      
+      if (sp.status === "approved") {
+        stageRemainingMonths = 0;
+      } else if (sp.status === "filed" && sp.filedDate) {
         const filedDate = parseDate(sp.filedDate);
         if (filedDate) {
-          const elapsed = (now.getTime() - filedDate.getTime()) / (1000 * 60 * 60 * 24 * 30);
-          remainingMonths += Math.max(0, stageMonths - elapsed);
+          const elapsedMonths = monthsBetween(filedDate, now);
+          stageRemainingMonths = Math.max(0, stageMaxMonths - elapsedMonths);
         }
       } else {
-        // Not started - full duration
-        remainingMonths += stageMonths;
+        stageRemainingMonths = stageMaxMonths;
       }
+      
+      // Concurrent stages start at the SAME time as the previous stage
+      const stageStartMonths = stage.isConcurrent 
+        ? prevStageStartMonths 
+        : gcSequentialMonths;
+      
+      const stageEndMonths = stageStartMonths + stageRemainingMonths;
+      
+      prevStageStartMonths = stageStartMonths;
+      gcSequentialMonths = Math.max(gcSequentialMonths, stageEndMonths);
+      gcMaxEndMonths = Math.max(gcMaxEndMonths, stageEndMonths);
     }
     
+    let remainingMonths = gcMaxEndMonths;
+    
     // Add PD wait time if exists
-    const pdWait = path.stages.find(s => s.isPriorityWait);
-    if (pdWait) {
-      remainingMonths += (pdWait.durationYears?.max || 0) * 12;
+    const pdWaitStage = path.stages.find(s => s.isPriorityWait);
+    if (pdWaitStage) {
+      remainingMonths += (pdWaitStage.durationYears?.max || 0) * 12;
     }
     
     if (remainingMonths < 12) {
