@@ -617,6 +617,23 @@ export default function Home() {
           before consulting with an immigration attorney.
         </p>
       </div>
+
+      {/* Footer - minimal for consistency */}
+      <footer className="border-t border-gray-200 bg-gray-50 px-4 py-6 mt-auto">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center gap-4 text-sm text-gray-500">
+            <span className="font-medium text-gray-700">Stateside</span>
+            <span className="text-gray-300">·</span>
+            <a href="/guides" className="hover:text-gray-900">Guides</a>
+            <span className="text-gray-300">·</span>
+            <a href="/processing-times" className="hover:text-gray-900">Processing Times</a>
+          </div>
+          <p className="mt-3 text-xs text-gray-400 max-w-2xl">
+            Timelines are estimates based on USCIS, DOL, and State Department data. 
+            This is not legal advice—consult an immigration attorney for your specific situation.
+          </p>
+        </div>
+      </footer>
     </main>
   );
 }

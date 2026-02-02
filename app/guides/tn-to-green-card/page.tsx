@@ -2,11 +2,11 @@ import { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "TN to Green Card | Stateside",
+  title: "TN to Green Card",
   description:
     "How Canadian and Mexican TN visa holders can get a green card while managing dual intent.",
   openGraph: {
-    title: "TN to Green Card | Stateside",
+    title: "TN to Green Card",
     description: "The path from TN status to permanent residence.",
   },
 };

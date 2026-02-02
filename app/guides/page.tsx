@@ -2,11 +2,11 @@ import { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Guides | Stateside",
+  title: "Guides",
   description:
     "Guides on US immigration pathways: H-1B to green card, TN visa, EB-2 NIW, and PERM labor certification.",
   openGraph: {
-    title: "Guides | Stateside",
+    title: "Guides",
     description:
       "Guides on US immigration pathways: H-1B, TN visa, EB-2 NIW, and PERM.",
   },

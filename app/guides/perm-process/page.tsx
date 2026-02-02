@@ -2,11 +2,11 @@ import { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "PERM Labor Certification | Stateside",
+  title: "PERM Labor Certification",
   description:
     "How PERM works: prevailing wage, recruitment, filing, and what to expect from the DOL process.",
   openGraph: {
-    title: "PERM Labor Certification | Stateside",
+    title: "PERM Labor Certification",
     description: "Step-by-step guide to PERM for employer-sponsored green cards.",
   },
 };

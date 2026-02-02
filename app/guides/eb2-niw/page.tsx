@@ -2,11 +2,11 @@ import { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "EB-2 NIW | Stateside",
+  title: "EB-2 NIW",
   description:
     "Self-petition for a green card without employer sponsorship through the National Interest Waiver.",
   openGraph: {
-    title: "EB-2 NIW | Stateside",
+    title: "EB-2 NIW",
     description: "Get a green card without employer sponsorship.",
   },
 };

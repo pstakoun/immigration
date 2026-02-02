@@ -2,11 +2,11 @@ import { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "H-1B to Green Card | Stateside",
+  title: "H-1B to Green Card",
   description:
     "How to get a green card from H-1B status through employer sponsorship. PERM, I-140, I-485 process explained.",
   openGraph: {
-    title: "H-1B to Green Card | Stateside",
+    title: "H-1B to Green Card",
     description: "The employer-sponsored path from H-1B to permanent residence.",
   },
 };
