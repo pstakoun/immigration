@@ -468,9 +468,21 @@ export default function Home() {
             <span className="text-xl font-semibold text-gray-900 tracking-tight">
               Stateside
             </span>
-            <span className="text-sm text-gray-400 hidden sm:inline">
-              US immigration paths
+            <span className="text-sm text-gray-400 hidden sm:inline ml-1">
+              |
             </span>
+            <a 
+              href="/guides" 
+              className="text-sm text-gray-500 hover:text-brand-600 hidden sm:inline transition-colors"
+            >
+              Guides
+            </a>
+            <a 
+              href="/faq" 
+              className="text-sm text-gray-500 hover:text-brand-600 hidden sm:inline transition-colors"
+            >
+              FAQ
+            </a>
           </div>
 
           {/* Progress indicator - desktop only when tracking */}
