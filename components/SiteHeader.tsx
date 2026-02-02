@@ -8,7 +8,6 @@ const navigation = [
   { name: "Timeline Tool", href: "/" },
   { name: "Guides", href: "/guides" },
   { name: "Processing Times", href: "/processing-times" },
-  { name: "FAQ", href: "/faq" },
 ];
 
 export default function SiteHeader() {

@@ -5,13 +5,10 @@ const guides = [
   { name: "TN to Green Card", href: "/guides/tn-to-green-card" },
   { name: "EB-2 NIW Guide", href: "/guides/eb2-niw" },
   { name: "PERM Process", href: "/guides/perm-process" },
-  { name: "India Backlog", href: "/guides/india-green-card-backlog" },
-  { name: "China Backlog", href: "/guides/china-green-card-backlog" },
 ];
 
 const resources = [
   { name: "Processing Times", href: "/processing-times" },
-  { name: "FAQ", href: "/faq" },
   { name: "Timeline Tool", href: "/" },
 ];
 

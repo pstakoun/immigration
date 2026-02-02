@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Immigration Guides - US Visa & Green Card Pathways",
   description:
-    "Comprehensive guides on US immigration pathways including H-1B to Green Card, TN visa, EB-2 NIW, PERM process, and strategies for India and China backlogs.",
+    "Comprehensive guides on US immigration pathways including H-1B to Green Card, TN visa, EB-2 NIW, and PERM labor certification process.",
   keywords: [
     "US immigration guide",
     "green card guide",
@@ -12,14 +12,12 @@ export const metadata: Metadata = {
     "TN visa green card",
     "EB-2 NIW guide",
     "PERM process guide",
-    "India green card backlog",
-    "China green card backlog",
     "employment-based immigration",
   ],
   openGraph: {
     title: "Immigration Guides - US Visa & Green Card Pathways | Stateside",
     description:
-      "Comprehensive guides on US immigration pathways including H-1B, TN visa, EB-2 NIW, and strategies for dealing with backlogs.",
+      "Comprehensive guides on US immigration pathways including H-1B, TN visa, EB-2 NIW, and PERM process.",
   },
 };
 
@@ -60,27 +58,7 @@ const guides = [
     readTime: "14 min read",
     icon: "📋",
   },
-  {
-    title: "India Green Card Backlog",
-    description:
-      "Strategies for Indian nationals facing decades-long EB-2/EB-3 backlogs. Explore EB-1, NIW, and other options.",
-    href: "/guides/india-green-card-backlog",
-    category: "Country-Specific",
-    readTime: "11 min read",
-    icon: "🇮🇳",
-  },
-  {
-    title: "China Green Card Backlog",
-    description:
-      "Navigate the employment-based green card backlog for Chinese nationals with practical strategies and timeline estimates.",
-    href: "/guides/china-green-card-backlog",
-    category: "Country-Specific",
-    readTime: "10 min read",
-    icon: "🇨🇳",
-  },
 ];
-
-const categories = ["All", "Visa Pathways", "Self-Petition", "Process Guide", "Country-Specific"];
 
 export default function GuidesPage() {
   return (

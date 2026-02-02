@@ -478,10 +478,10 @@ export default function Home() {
               Guides
             </a>
             <a 
-              href="/faq" 
+              href="/processing-times" 
               className="text-sm text-gray-500 hover:text-brand-600 hidden sm:inline transition-colors"
             >
-              FAQ
+              Processing Times
             </a>
           </div>
 
