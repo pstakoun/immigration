@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function H1BToGreenCardGuide() {
   return (
-    <div className="max-w-3xl mx-auto px-4 md:px-6 py-12">
+    <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
       {/* Breadcrumb */}
       <Link
         href="/guides"
@@ -31,11 +31,12 @@ export default function H1BToGreenCardGuide() {
         Guides
       </Link>
 
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">
-        H-1B to Green Card
-      </h1>
+      <article className="max-w-2xl">
+        <h1 className="text-2xl font-semibold text-gray-900 mb-6">
+          H-1B to Green Card
+        </h1>
 
-      <div className="space-y-4 text-gray-700 leading-relaxed">
+        <div className="space-y-4 text-gray-700 leading-relaxed">
         <p>
           The H-1B to green card path is the most common route for employment-based
           immigration. Your employer sponsors you through a three-step process:
@@ -155,7 +156,8 @@ export default function H1BToGreenCardGuide() {
             </svg>
           </Link>
         </div>
-      </div>
+        </div>
+      </article>
     </div>
   );
 }

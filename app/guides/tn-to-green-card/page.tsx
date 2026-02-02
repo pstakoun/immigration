@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function TNToGreenCardGuide() {
   return (
-    <div className="max-w-3xl mx-auto px-4 md:px-6 py-12">
+    <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
       {/* Breadcrumb */}
       <Link
         href="/guides"
@@ -31,11 +31,12 @@ export default function TNToGreenCardGuide() {
         Guides
       </Link>
 
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">
-        TN Visa to Green Card
-      </h1>
+      <article className="max-w-2xl">
+        <h1 className="text-2xl font-semibold text-gray-900 mb-6">
+          TN Visa to Green Card
+        </h1>
 
-      <div className="space-y-4 text-gray-700 leading-relaxed">
+        <div className="space-y-4 text-gray-700 leading-relaxed">
         <p>
           The TN visa under NAFTA/USMCA allows Canadian and Mexican professionals to work
           in the US, but it&apos;s technically a non-immigrant visa with no direct path to
@@ -152,7 +153,8 @@ export default function TNToGreenCardGuide() {
             </svg>
           </Link>
         </div>
-      </div>
+        </div>
+      </article>
     </div>
   );
 }

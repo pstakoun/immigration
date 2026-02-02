@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function PERMProcessGuide() {
   return (
-    <div className="max-w-3xl mx-auto px-4 md:px-6 py-12">
+    <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
       {/* Breadcrumb */}
       <Link
         href="/guides"
@@ -31,11 +31,12 @@ export default function PERMProcessGuide() {
         Guides
       </Link>
 
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">
-        PERM Labor Certification
-      </h1>
+      <article className="max-w-2xl">
+        <h1 className="text-2xl font-semibold text-gray-900 mb-6">
+          PERM Labor Certification
+        </h1>
 
-      <div className="space-y-4 text-gray-700 leading-relaxed">
+        <div className="space-y-4 text-gray-700 leading-relaxed">
         <p>
           PERM (Program Electronic Review Management) is the Department of Labor process
           that verifies no qualified US workers are available for your position. It&apos;s
@@ -206,7 +207,8 @@ export default function PERMProcessGuide() {
             </svg>
           </Link>
         </div>
-      </div>
+        </div>
+      </article>
     </div>
   );
 }

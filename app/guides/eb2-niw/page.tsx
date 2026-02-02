@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function EB2NIWGuide() {
   return (
-    <div className="max-w-3xl mx-auto px-4 md:px-6 py-12">
+    <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
       {/* Breadcrumb */}
       <Link
         href="/guides"
@@ -31,11 +31,12 @@ export default function EB2NIWGuide() {
         Guides
       </Link>
 
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">
-        EB-2 NIW (National Interest Waiver)
-      </h1>
+      <article className="max-w-2xl">
+        <h1 className="text-2xl font-semibold text-gray-900 mb-6">
+          EB-2 NIW (National Interest Waiver)
+        </h1>
 
-      <div className="space-y-4 text-gray-700 leading-relaxed">
+        <div className="space-y-4 text-gray-700 leading-relaxed">
         <p>
           The National Interest Waiver is an exception to the usual EB-2 requirement of
           employer sponsorship and labor certification. You petition for yourself, arguing
@@ -186,7 +187,8 @@ export default function EB2NIWGuide() {
             </svg>
           </Link>
         </div>
-      </div>
+        </div>
+      </article>
     </div>
   );
 }
