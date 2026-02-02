@@ -2,22 +2,13 @@ import { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Immigration Guides - US Visa & Green Card Pathways",
+  title: "Guides | Stateside",
   description:
-    "Comprehensive guides on US immigration pathways including H-1B to Green Card, TN visa, EB-2 NIW, and PERM labor certification process.",
-  keywords: [
-    "US immigration guide",
-    "green card guide",
-    "H-1B to green card",
-    "TN visa green card",
-    "EB-2 NIW guide",
-    "PERM process guide",
-    "employment-based immigration",
-  ],
+    "Guides on US immigration pathways: H-1B to green card, TN visa, EB-2 NIW, and PERM labor certification.",
   openGraph: {
-    title: "Immigration Guides - US Visa & Green Card Pathways | Stateside",
+    title: "Guides | Stateside",
     description:
-      "Comprehensive guides on US immigration pathways including H-1B, TN visa, EB-2 NIW, and PERM process.",
+      "Guides on US immigration pathways: H-1B, TN visa, EB-2 NIW, and PERM.",
   },
 };
 
@@ -25,127 +16,74 @@ const guides = [
   {
     title: "H-1B to Green Card",
     description:
-      "Complete guide to transitioning from H-1B specialty occupation visa to permanent residence through EB-2 or EB-3.",
+      "The standard path from H-1B to permanent residence through employer sponsorship.",
     href: "/guides/h1b-to-green-card",
-    category: "Visa Pathways",
-    readTime: "12 min read",
-    icon: "🎯",
+    tag: "Most common",
   },
   {
     title: "TN to Green Card",
     description:
-      "How Canadian and Mexican professionals can navigate from TN visa to green card while managing dual intent concerns.",
+      "How Canadians and Mexicans can go from TN status to a green card.",
     href: "/guides/tn-to-green-card",
-    category: "Visa Pathways",
-    readTime: "10 min read",
-    icon: "🍁",
   },
   {
-    title: "EB-2 NIW (National Interest Waiver)",
+    title: "EB-2 NIW",
     description:
-      "Self-petition for a green card without employer sponsorship. Learn the requirements, evidence needed, and success strategies.",
+      "Self-petition for a green card without employer sponsorship or PERM.",
     href: "/guides/eb2-niw",
-    category: "Self-Petition",
-    readTime: "15 min read",
-    icon: "⭐",
+    tag: "Self-petition",
   },
   {
     title: "PERM Labor Certification",
     description:
-      "Step-by-step guide to the PERM process including prevailing wage, recruitment, and common pitfalls to avoid.",
+      "Step-by-step breakdown of the PERM process, timelines, and what to expect.",
     href: "/guides/perm-process",
-    category: "Process Guide",
-    readTime: "14 min read",
-    icon: "📋",
   },
 ];
 
 export default function GuidesPage() {
   return (
-    <div className="bg-gray-50">
-      {/* Hero */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="max-w-3xl">
-            <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
-              Immigration Guides
-            </h1>
-            <p className="mt-4 text-xl text-gray-600">
-              Comprehensive, up-to-date guides on US immigration pathways. 
-              Learn about visa options, green card processes, and strategies 
-              for your specific situation.
-            </p>
-            <div className="mt-6 flex items-center gap-4 text-sm text-gray-500">
-              <span className="flex items-center gap-1.5">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 6v6l4 2" />
-                </svg>
-                Updated regularly
-              </span>
-              <span className="flex items-center gap-1.5">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Based on official sources
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="bg-white min-h-screen">
+      <div className="max-w-2xl mx-auto px-4 py-12 md:py-16">
+        <h1 className="text-2xl font-semibold text-gray-900">Guides</h1>
+        <p className="mt-2 text-gray-600">
+          Deep dives into specific immigration pathways.
+        </p>
 
-      {/* Guides Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 space-y-1">
           {guides.map((guide) => (
             <Link
               key={guide.href}
               href={guide.href}
-              className="group bg-white rounded-xl border border-gray-200 p-6 hover:border-brand-300 hover:shadow-lg transition-all"
+              className="block py-4 -mx-4 px-4 rounded-lg hover:bg-gray-50 transition-colors group"
             >
-              <div className="flex items-start justify-between">
-                <span className="text-3xl">{guide.icon}</span>
-                <span className="text-xs font-medium text-brand-600 bg-brand-50 px-2 py-1 rounded-full">
-                  {guide.category}
-                </span>
-              </div>
-              <h2 className="mt-4 text-xl font-semibold text-gray-900 group-hover:text-brand-600 transition-colors">
-                {guide.title}
-              </h2>
-              <p className="mt-2 text-gray-600 text-sm line-clamp-2">
-                {guide.description}
-              </p>
-              <div className="mt-4 flex items-center justify-between">
-                <span className="text-xs text-gray-500">{guide.readTime}</span>
-                <span className="text-brand-600 text-sm font-medium group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
-                  Read guide
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </span>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-medium text-gray-900 group-hover:text-brand-600 transition-colors">
+                      {guide.title}
+                    </h2>
+                    {guide.tag && (
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                        {guide.tag}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {guide.description}
+                  </p>
+                </div>
+                <svg 
+                  className="w-5 h-5 text-gray-400 group-hover:text-brand-500 transition-colors flex-shrink-0 mt-0.5" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
+                </svg>
               </div>
             </Link>
           ))}
-        </div>
-
-        {/* CTA Section */}
-        <div className="mt-16 bg-brand-500 rounded-2xl p-8 md:p-12 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-white">
-            Ready to plan your immigration journey?
-          </h2>
-          <p className="mt-3 text-brand-100 max-w-2xl mx-auto">
-            Use our interactive timeline tool to visualize your path to a green card 
-            with personalized estimates based on your situation.
-          </p>
-          <Link
-            href="/"
-            className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-white text-brand-600 font-semibold rounded-lg hover:bg-brand-50 transition-colors"
-          >
-            Try the Timeline Tool
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </Link>
         </div>
       </div>
     </div>
