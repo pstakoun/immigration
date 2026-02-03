@@ -178,8 +178,9 @@ export default function TNToGreenCardGuide() {
             <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
               <p className="text-sm text-emerald-800">
                 <strong>If you were born in Canada or Mexico</strong> (not just a citizen), 
-                there&apos;s usually no visa backlog. Your priority date will likely be current 
-                immediately, which simplifies things a lot.
+                you fall under &quot;All Other Countries&quot; in the visa bulletin. Unlike India 
+                or China, any backlog is typically measured in months rather than years—and 
+                it&apos;s often current.
               </p>
             </div>
           )}
@@ -300,7 +301,7 @@ export default function TNToGreenCardGuide() {
                   </span>
                   <p className="text-sm text-gray-600">
                     {!loading && selectedCountry === "other" 
-                      ? "Born in Canada/Mexico? You can likely file this right away or with your I-140." 
+                      ? "Born in Canada/Mexico? Check the visa bulletin—dates for 'All Other Countries' are often current or close to it." 
                       : "File when your priority date is current."}
                   </p>
                 </div>

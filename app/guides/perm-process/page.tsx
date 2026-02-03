@@ -109,7 +109,7 @@ export default function PERMProcessGuide() {
           <span className="text-gray-500">typical duration</span>
         </div>
         
-        <p className="text-sm text-amber-600 mb-4">Add 6-12 months if audited (~25% of cases)</p>
+        <p className="text-sm text-amber-600 mb-4">Add 6-12 months if audited (affects 20-30% of cases)</p>
 
         {loading ? (
           <TimelineBarSkeleton />
@@ -204,11 +204,11 @@ export default function PERMProcessGuide() {
             <p className="mb-3">Your employer runs a series of job postings:</p>
             <ul className="space-y-1 text-sm text-gray-600 mb-3">
               <li><strong className="text-gray-900">State workforce agency posting</strong> — at least 30 days</li>
-              <li><strong className="text-gray-900">Company website or internal posting</strong> — at least 10 business days</li>
-              <li><strong className="text-gray-900">Additional recruitment</strong> — three more methods from a list 
-                (job fairs, campus recruitment, professional organizations, etc.)</li>
-              <li><strong className="text-gray-900">For professional positions:</strong> two Sunday newspaper ads in 
-                the area of employment</li>
+              <li><strong className="text-gray-900">Internal posting</strong> — at least 10 consecutive business days</li>
+              <li><strong className="text-gray-900">Two print advertisements</strong> — in a newspaper of general 
+                circulation (Sunday editions for professional positions requiring a degree)</li>
+              <li><strong className="text-gray-900">For professional positions:</strong> three additional recruitment 
+                methods (job fairs, employer website, professional organizations, etc.)</li>
             </ul>
             <p className="text-sm text-gray-500">
               After recruitment ends, there&apos;s a mandatory 30-day &quot;quiet period&quot; 
@@ -240,8 +240,8 @@ export default function PERMProcessGuide() {
           <section className="pt-6 border-t border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Audit risk</h2>
             <p className="mb-3">
-              About 1 in 4 cases get audited. Some are random, but certain factors 
-              increase your odds:
+              DOL audits 20-30% of cases depending on the year. Some are random, but 
+              certain factors increase your odds:
             </p>
             <ul className="space-y-2 text-sm mb-4">
               <li className="flex gap-2">

@@ -251,7 +251,7 @@ export default function H1BToGreenCardGuide() {
                 properly and nobody qualified applied</li>
             </ul>
             <p className="text-sm text-gray-500">
-              DOL audits roughly 1 in 4 cases. If yours gets picked, expect an extra {processingTimes ? (processingTimes.permAudit.months - processingTimes.perm.months) : "6-8"} months 
+              DOL audits 20-30% of cases. If yours gets picked, expect an extra {processingTimes ? (processingTimes.permAudit.months - processingTimes.perm.months) : "6-8"} months 
               while they request and review documentation.
             </p>
           </section>
@@ -377,8 +377,9 @@ export default function H1BToGreenCardGuide() {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 flex-shrink-0" />
                 <span>
                   <strong className="text-gray-900">H-1B extensions:</strong> Normally capped 
-                  at 6 years, but you can extend in 1 or 3-year increments if your PERM has been 
-                  pending for over a year or your I-140 is approved.
+                  at 6 years. You can extend in 1-year increments if your PERM has been 
+                  pending for 365+ days. If your I-140 is approved and there&apos;s a visa 
+                  backlog, you can get 3-year extensions.
                 </span>
               </li>
               <li className="flex gap-3">

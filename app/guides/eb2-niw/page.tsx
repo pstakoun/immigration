@@ -288,7 +288,7 @@ export default function EB2NIWGuide() {
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
                     {!loading && selectedCountry === "other" 
-                      ? "Most countries can file immediately or with the I-140." 
+                      ? "For most countries, dates are often current or within a few months." 
                       : "File when your date is current. You can file I-140 and I-485 together if your date is already current."}
                   </p>
                 </div>
