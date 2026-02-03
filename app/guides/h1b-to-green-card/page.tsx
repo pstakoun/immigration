@@ -340,8 +340,9 @@ export default function H1BToGreenCardGuide() {
               priority date is current. They get their own EAD and AP while waiting.
             </p>
             <p className="text-sm text-gray-500">
-              If your I-140 is approved and you&apos;re past the 6-year H-1B mark, 
-              your H-4 spouse can also get an EAD to work.
+              Separately, if your I-140 is approved and you&apos;ve been granted 
+              H-1B extensions beyond 6 years (because of a visa backlog), your H-4 
+              spouse can get an EAD even before you file I-485.
             </p>
           </section>
 

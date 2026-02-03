@@ -107,11 +107,11 @@ const guides: GuideData[] = [
     subtitle: "Employer-sponsored EB-2/EB-3",
     category: "eb2",
     preWaitSteps: [
-      { label: "PERM", months: 18, color: "emerald" },
-      { label: "I-140", months: 6, color: "emerald" },
+      { label: "PERM", months: 17, color: "emerald" },
+      { label: "I-140", months: 9, color: "emerald" },
     ],
     postWaitSteps: [
-      { label: "I-485", months: 12, color: "amber" },
+      { label: "I-485", months: 18, color: "amber" },
     ],
   },
   {
@@ -120,11 +120,11 @@ const guides: GuideData[] = [
     subtitle: "Canadian & Mexican professionals",
     category: "eb2",
     preWaitSteps: [
-      { label: "PERM", months: 18, color: "emerald" },
-      { label: "I-140", months: 6, color: "emerald" },
+      { label: "PERM", months: 17, color: "emerald" },
+      { label: "I-140", months: 1, color: "emerald" },
     ],
     postWaitSteps: [
-      { label: "I-485", months: 12, color: "amber" },
+      { label: "I-485", months: 18, color: "amber" },
     ],
   },
   {
@@ -136,7 +136,7 @@ const guides: GuideData[] = [
       { label: "I-140 NIW", months: 9, color: "emerald" },
     ],
     postWaitSteps: [
-      { label: "I-485", months: 12, color: "amber" },
+      { label: "I-485", months: 18, color: "amber" },
     ],
   },
   {
@@ -147,7 +147,7 @@ const guides: GuideData[] = [
     preWaitSteps: [
       { label: "PWD", months: 6, color: "emerald" },
       { label: "Recruit", months: 3, color: "emerald" },
-      { label: "DOL", months: 15, color: "emerald" },
+      { label: "DOL", months: 17, color: "emerald" },
     ],
     postWaitSteps: [], // PERM guide doesn't show full GC timeline
   },
