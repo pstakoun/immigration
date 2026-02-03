@@ -87,6 +87,20 @@ function TimelineBar({
   );
 }
 
+// Loading skeleton for timeline
+function TimelineBarSkeleton() {
+  return (
+    <div className="my-6 animate-pulse">
+      <div className="h-10 rounded-lg bg-gray-200" />
+      <div className="flex mt-1.5 gap-2">
+        <div className="h-3 bg-gray-100 rounded flex-1" />
+        <div className="h-3 bg-gray-100 rounded flex-1" />
+        <div className="h-3 bg-gray-100 rounded flex-1" />
+      </div>
+    </div>
+  );
+}
+
 export default function EB2NIWGuide() {
   const [selectedCountry, setSelectedCountry] = useState<CountryOfBirth>("other");
   const [processingTimes, setProcessingTimes] = useState<{
@@ -94,6 +108,7 @@ export default function EB2NIWGuide() {
     i485: { min: number; max: number };
   } | null>(null);
   const [priorityDates, setPriorityDates] = useState<DynamicData["priorityDates"] | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/processing-times")
@@ -110,7 +125,8 @@ export default function EB2NIWGuide() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const i140Months = processingTimes?.i140.max ?? 9;
@@ -176,9 +192,13 @@ export default function EB2NIWGuide() {
         
         {/* Total timeline summary */}
         <div className="flex items-baseline gap-3 mb-2">
-          <span className="text-3xl font-semibold text-gray-900">
-            {formatTotalTime(totalMonths)}
-          </span>
+          {loading ? (
+            <div className="h-9 w-32 bg-gray-200 rounded animate-pulse" />
+          ) : (
+            <span className="text-3xl font-semibold text-gray-900">
+              {formatTotalTime(totalMonths)}
+            </span>
+          )}
           <span className="text-gray-500">
             total timeline
           </span>
@@ -191,7 +211,7 @@ export default function EB2NIWGuide() {
           No PERM required
         </div>
 
-        <TimelineBar steps={timelineSteps} />
+        {loading ? <TimelineBarSkeleton /> : <TimelineBar steps={timelineSteps} />}
 
         <div className="space-y-6 text-gray-700 leading-relaxed">
           <p>
@@ -261,7 +281,7 @@ export default function EB2NIWGuide() {
                 </div>
               </div>
               
-              {pdWaitMonths > 6 && (
+              {!loading && pdWaitMonths > 6 && (
                 <div className="flex gap-3">
                   <div className="w-3 h-3 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
                   <div>
@@ -288,7 +308,7 @@ export default function EB2NIWGuide() {
                     </span>
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
-                    File when your priority date is current. {selectedCountry === "other" && "For most countries, file immediately or concurrently."}
+                    File when your priority date is current. {!loading && selectedCountry === "other" && "For most countries, file immediately or concurrently."}
                   </p>
                 </div>
               </div>

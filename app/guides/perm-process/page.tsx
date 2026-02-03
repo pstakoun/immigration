@@ -50,12 +50,27 @@ function TimelineBar({
   );
 }
 
+// Loading skeleton for timeline
+function TimelineBarSkeleton() {
+  return (
+    <div className="my-6 animate-pulse">
+      <div className="h-10 rounded-lg bg-gray-200" />
+      <div className="flex mt-1.5 gap-2">
+        <div className="h-3 bg-gray-100 rounded flex-1" />
+        <div className="h-3 bg-gray-100 rounded flex-1" />
+        <div className="h-3 bg-gray-100 rounded flex-1" />
+      </div>
+    </div>
+  );
+}
+
 export default function PERMProcessGuide() {
   const [processingTimes, setProcessingTimes] = useState<{
     pwd: { months: number; processing: string };
     perm: { months: number; processing: string };
     permAudit: { months: number; processing: string };
   } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/processing-times")
@@ -70,7 +85,8 @@ export default function PERMProcessGuide() {
           });
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const pwdMonths = processingTimes?.pwd.months ?? 6;
@@ -108,9 +124,13 @@ export default function PERMProcessGuide() {
         
         {/* Total timeline summary */}
         <div className="flex items-baseline gap-3 mb-2">
-          <span className="text-3xl font-semibold text-gray-900">
-            {formatTotalTime(totalMonths)}
-          </span>
+          {loading ? (
+            <div className="h-9 w-32 bg-gray-200 rounded animate-pulse" />
+          ) : (
+            <span className="text-3xl font-semibold text-gray-900">
+              {formatTotalTime(totalMonths)}
+            </span>
+          )}
           <span className="text-gray-500">
             PERM process
           </span>
@@ -120,13 +140,17 @@ export default function PERMProcessGuide() {
           Add 6–12 months if audited
         </p>
 
-        <TimelineBar
-          steps={[
-            { label: "PWD", months: pwdMonths, color: "emerald" },
-            { label: "Recruit", months: recruitMonths, color: "emerald" },
-            { label: "DOL", months: permMonths, color: "emerald" },
-          ]}
-        />
+        {loading ? (
+          <TimelineBarSkeleton />
+        ) : (
+          <TimelineBar
+            steps={[
+              { label: "PWD", months: pwdMonths, color: "emerald" },
+              { label: "Recruit", months: recruitMonths, color: "emerald" },
+              { label: "DOL", months: permMonths, color: "emerald" },
+            ]}
+          />
+        )}
 
         <div className="space-y-6 text-gray-700 leading-relaxed">
           <p>
@@ -143,29 +167,37 @@ export default function PERMProcessGuide() {
                 View all times ↗
               </Link>
             </div>
-            <div className="grid sm:grid-cols-3 gap-4 text-sm">
-              <div>
-                <div className="text-gray-500">Prevailing Wage</div>
-                <div className="font-medium text-gray-900">
-                  {processingTimes?.pwd.processing ?? "Loading..."}
-                </div>
-                <div className="text-gray-500">~{pwdMonths} mo wait</div>
+            {loading ? (
+              <div className="grid sm:grid-cols-3 gap-4 animate-pulse">
+                <div><div className="h-4 bg-gray-200 rounded w-24 mb-2" /><div className="h-5 bg-gray-200 rounded w-20" /></div>
+                <div><div className="h-4 bg-gray-200 rounded w-24 mb-2" /><div className="h-5 bg-gray-200 rounded w-20" /></div>
+                <div><div className="h-4 bg-gray-200 rounded w-24 mb-2" /><div className="h-5 bg-gray-200 rounded w-20" /></div>
               </div>
-              <div>
-                <div className="text-gray-500">PERM (no audit)</div>
-                <div className="font-medium text-gray-900">
-                  {processingTimes?.perm.processing ?? "Loading..."}
+            ) : (
+              <div className="grid sm:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <div className="text-gray-500">Prevailing Wage</div>
+                  <div className="font-medium text-gray-900">
+                    {processingTimes?.pwd.processing}
+                  </div>
+                  <div className="text-gray-500">~{pwdMonths} mo wait</div>
                 </div>
-                <div className="text-gray-500">~{permMonths} mo wait</div>
-              </div>
-              <div>
-                <div className="text-gray-500">PERM (audited)</div>
-                <div className="font-medium text-amber-600">
-                  {processingTimes?.permAudit.processing ?? "Loading..."}
+                <div>
+                  <div className="text-gray-500">PERM (no audit)</div>
+                  <div className="font-medium text-gray-900">
+                    {processingTimes?.perm.processing}
+                  </div>
+                  <div className="text-gray-500">~{permMonths} mo wait</div>
                 </div>
-                <div className="text-amber-600">~{auditMonths} mo wait</div>
+                <div>
+                  <div className="text-gray-500">PERM (audited)</div>
+                  <div className="font-medium text-amber-600">
+                    {processingTimes?.permAudit.processing}
+                  </div>
+                  <div className="text-amber-600">~{auditMonths} mo wait</div>
+                </div>
               </div>
-            </div>
+            )}
           </section>
 
           {/* PWD Section */}

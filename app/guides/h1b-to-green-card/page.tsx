@@ -87,6 +87,20 @@ function TimelineBar({
   );
 }
 
+// Loading skeleton for timeline
+function TimelineBarSkeleton() {
+  return (
+    <div className="my-6 animate-pulse">
+      <div className="h-10 rounded-lg bg-gray-200" />
+      <div className="flex mt-1.5 gap-2">
+        <div className="h-3 bg-gray-100 rounded flex-1" />
+        <div className="h-3 bg-gray-100 rounded flex-1" />
+        <div className="h-3 bg-gray-100 rounded flex-1" />
+      </div>
+    </div>
+  );
+}
+
 // Live processing time display
 function LiveTime({
   label,
@@ -118,6 +132,7 @@ export default function H1BToGreenCardGuide() {
     i485: { min: number; max: number };
   } | null>(null);
   const [priorityDates, setPriorityDates] = useState<DynamicData["priorityDates"] | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/processing-times")
@@ -137,7 +152,8 @@ export default function H1BToGreenCardGuide() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const permMonths = processingTimes?.perm.months ?? 17;
@@ -205,16 +221,20 @@ export default function H1BToGreenCardGuide() {
         
         {/* Total timeline summary */}
         <div className="flex items-baseline gap-3 mb-2">
-          <span className="text-3xl font-semibold text-gray-900">
-            {formatTotalTime(totalMonths)}
-          </span>
+          {loading ? (
+            <div className="h-9 w-32 bg-gray-200 rounded animate-pulse" />
+          ) : (
+            <span className="text-3xl font-semibold text-gray-900">
+              {formatTotalTime(totalMonths)}
+            </span>
+          )}
           <span className="text-gray-500">
             total timeline
           </span>
         </div>
 
         {/* Visual timeline - correct order: PERM → I-140 → PD Wait → I-485 */}
-        <TimelineBar steps={timelineSteps} />
+        {loading ? <TimelineBarSkeleton /> : <TimelineBar steps={timelineSteps} />}
 
         <div className="space-y-6 text-gray-700 leading-relaxed">
           <p>
@@ -294,8 +314,8 @@ export default function H1BToGreenCardGuide() {
             </p>
           </section>
 
-          {/* Priority Date Wait Section - only show if significant */}
-          {pdWaitMonths > 6 && (
+          {/* Priority Date Wait Section - only show if significant and data loaded */}
+          {!loading && pdWaitMonths > 6 && (
             <section id="pd-wait" className="pt-6 border-t border-gray-100">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-3 h-3 rounded-full bg-orange-500" />

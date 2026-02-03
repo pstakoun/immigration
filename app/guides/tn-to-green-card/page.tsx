@@ -88,6 +88,20 @@ function TimelineBar({
   );
 }
 
+// Loading skeleton for timeline
+function TimelineBarSkeleton() {
+  return (
+    <div className="my-6 animate-pulse">
+      <div className="h-10 rounded-lg bg-gray-200" />
+      <div className="flex mt-1.5 gap-2">
+        <div className="h-3 bg-gray-100 rounded flex-1" />
+        <div className="h-3 bg-gray-100 rounded flex-1" />
+        <div className="h-3 bg-gray-100 rounded flex-1" />
+      </div>
+    </div>
+  );
+}
+
 export default function TNToGreenCardGuide() {
   const [selectedCountry, setSelectedCountry] = useState<CountryOfBirth>("other");
   const [processingTimes, setProcessingTimes] = useState<{
@@ -96,6 +110,7 @@ export default function TNToGreenCardGuide() {
     i485: { min: number; max: number };
   } | null>(null);
   const [priorityDates, setPriorityDates] = useState<DynamicData["priorityDates"] | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/processing-times")
@@ -113,7 +128,8 @@ export default function TNToGreenCardGuide() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const permMonths = processingTimes?.perm.months ?? 17;
@@ -181,15 +197,19 @@ export default function TNToGreenCardGuide() {
         
         {/* Total timeline summary */}
         <div className="flex items-baseline gap-3 mb-2">
-          <span className="text-3xl font-semibold text-gray-900">
-            {formatTotalTime(totalMonths)}
-          </span>
+          {loading ? (
+            <div className="h-9 w-32 bg-gray-200 rounded animate-pulse" />
+          ) : (
+            <span className="text-3xl font-semibold text-gray-900">
+              {formatTotalTime(totalMonths)}
+            </span>
+          )}
           <span className="text-gray-500">
             total timeline
           </span>
         </div>
 
-        <TimelineBar steps={timelineSteps} />
+        {loading ? <TimelineBarSkeleton /> : <TimelineBar steps={timelineSteps} />}
 
         <div className="space-y-6 text-gray-700 leading-relaxed">
           <p>
@@ -198,7 +218,7 @@ export default function TNToGreenCardGuide() {
             you to maintain intent to return home, but filing for a green card shows immigrant intent.
           </p>
           
-          {selectedCountry === "other" && (
+          {!loading && selectedCountry === "other" && (
             <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
               <p className="text-sm text-emerald-800">
                 <strong>Good news:</strong> If you were born in Canada or Mexico (not just a citizen), 
@@ -260,7 +280,7 @@ export default function TNToGreenCardGuide() {
                 </div>
               </div>
               
-              {pdWaitMonths > 6 && (
+              {!loading && pdWaitMonths > 6 && (
                 <div className="flex gap-3">
                   <div className="w-3 h-3 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
                   <div>
@@ -280,7 +300,7 @@ export default function TNToGreenCardGuide() {
                   <span className="text-gray-500 ml-2">{processingTimes ? `${processingTimes.i485.min}-${processingTimes.i485.max}` : "10-18"} months</span>
                   <p className="text-sm text-gray-600">
                     This is when you officially have immigrant intent. 
-                    {selectedCountry === "other" && " Because Canada/Mexico are usually current, you can often file immediately or concurrently with I-140."}
+                    {!loading && selectedCountry === "other" && " Because Canada/Mexico are usually current, you can often file immediately or concurrently with I-140."}
                   </p>
                 </div>
               </div>
