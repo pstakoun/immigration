@@ -53,7 +53,7 @@ export default function SiteHeader() {
         {!isHome && (
           <Link
             href="/"
-            className="text-sm text-brand-600 hover:text-brand-700 font-medium transition-colors"
+            className="text-sm text-brand-500 hover:text-brand-600 font-medium transition-colors"
           >
             See your timeline →
           </Link>

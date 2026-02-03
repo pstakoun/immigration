@@ -6,16 +6,14 @@ import { DynamicData } from "@/lib/dynamic-data";
 import { calculateNewFilerWait } from "@/lib/processing-times";
 import { CountryOfBirth, EBCategory } from "@/lib/filter-paths";
 
-// Timeline bar for guide cards - shows processing steps + PD wait
+// Timeline bar for guide cards - shows processing steps with PD wait in correct order
+// Order: PERM → I-140 → PD Wait → I-485
 function GuideTimeline({
   steps,
-  pdWaitMonths,
 }: {
   steps: { label: string; months: number; color: string }[];
-  pdWaitMonths: number;
 }) {
-  const processMonths = steps.reduce((sum, s) => sum + s.months, 0);
-  const totalMonths = processMonths + pdWaitMonths;
+  const totalMonths = steps.reduce((sum, s) => sum + s.months, 0);
   
   const colorClasses: Record<string, string> = {
     emerald: "bg-emerald-500",
@@ -38,24 +36,20 @@ function GuideTimeline({
             </div>
           );
         })}
-        {pdWaitMonths > 0 && (
-          <div
-            className="bg-orange-500 flex items-center justify-center text-xs text-white font-medium border-l border-white/20"
-            style={{ width: `${Math.max((pdWaitMonths / totalMonths) * 100, 15)}%` }}
-          >
-            <span className="truncate px-1">PD Wait</span>
-          </div>
-        )}
       </div>
       <div className="flex mt-1.5 text-[10px] text-gray-500">
-        <div style={{ width: `${(processMonths / totalMonths) * 100}%` }} className="text-center">
-          ~{Math.round(processMonths / 12)} yr processing
-        </div>
-        {pdWaitMonths > 0 && (
-          <div style={{ width: `${(pdWaitMonths / totalMonths) * 100}%` }} className="text-center text-orange-600">
-            +{pdWaitMonths >= 12 ? `${Math.round(pdWaitMonths / 12)} yr` : `${pdWaitMonths} mo`} wait
-          </div>
-        )}
+        {steps.map((step, i) => {
+          const width = (step.months / totalMonths) * 100;
+          return (
+            <div
+              key={i}
+              className={`text-center ${step.color === "orange" ? "text-orange-600" : ""}`}
+              style={{ width: `${Math.max(width, 8)}%` }}
+            >
+              {step.months >= 12 ? `${(step.months / 12).toFixed(step.months >= 24 ? 0 : 1)} yr` : `${step.months} mo`}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -94,14 +88,16 @@ function CountryTabs({
   );
 }
 
-// Guide data with processing steps
+// Guide data - steps will be built dynamically with PD wait in correct position
 interface GuideData {
   slug: string;
   title: string;
   subtitle: string;
   category: EBCategory;
-  requiresPerm: boolean;
-  steps: { label: string; months: number; color: string }[];
+  // Base processing steps (before PD wait)
+  preWaitSteps: { label: string; months: number; color: string }[];
+  // Steps after PD wait (I-485)
+  postWaitSteps: { label: string; months: number; color: string }[];
 }
 
 const guides: GuideData[] = [
@@ -110,10 +106,11 @@ const guides: GuideData[] = [
     title: "H-1B to Green Card",
     subtitle: "Employer-sponsored EB-2/EB-3",
     category: "eb2",
-    requiresPerm: true,
-    steps: [
+    preWaitSteps: [
       { label: "PERM", months: 18, color: "emerald" },
       { label: "I-140", months: 6, color: "emerald" },
+    ],
+    postWaitSteps: [
       { label: "I-485", months: 12, color: "amber" },
     ],
   },
@@ -122,10 +119,11 @@ const guides: GuideData[] = [
     title: "TN to Green Card",
     subtitle: "Canadian & Mexican professionals",
     category: "eb2",
-    requiresPerm: true,
-    steps: [
+    preWaitSteps: [
       { label: "PERM", months: 18, color: "emerald" },
       { label: "I-140", months: 6, color: "emerald" },
+    ],
+    postWaitSteps: [
       { label: "I-485", months: 12, color: "amber" },
     ],
   },
@@ -134,9 +132,10 @@ const guides: GuideData[] = [
     title: "EB-2 NIW",
     subtitle: "Self-petition, no employer needed",
     category: "eb2",
-    requiresPerm: false,
-    steps: [
-      { label: "I-140 NIW", months: 12, color: "emerald" },
+    preWaitSteps: [
+      { label: "I-140 NIW", months: 9, color: "emerald" },
+    ],
+    postWaitSteps: [
       { label: "I-485", months: 12, color: "amber" },
     ],
   },
@@ -145,12 +144,12 @@ const guides: GuideData[] = [
     title: "PERM Process",
     subtitle: "Labor certification deep-dive",
     category: "eb2",
-    requiresPerm: true,
-    steps: [
+    preWaitSteps: [
       { label: "PWD", months: 6, color: "emerald" },
       { label: "Recruit", months: 3, color: "emerald" },
       { label: "DOL", months: 15, color: "emerald" },
     ],
+    postWaitSteps: [], // PERM guide doesn't show full GC timeline
   },
 ];
 
@@ -172,29 +171,38 @@ export default function GuidesPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Calculate PD wait for each guide based on selected country
-  const guidesWithWait = useMemo(() => {
-    if (!priorityDates) return guides.map(g => ({ ...g, pdWaitMonths: 0, totalMonths: 0 }));
-    
+  // Calculate PD wait and build complete timeline for each guide
+  const guidesWithTimeline = useMemo(() => {
     return guides.map((guide) => {
-      // Get priority date string for this category and country
-      const pdStr = priorityDates[guide.category]?.[
-        selectedCountry === "india" ? "india" : 
-        selectedCountry === "china" ? "china" : "allOther"
-      ] || "Current";
+      // Calculate PD wait
+      let pdWaitMonths = 0;
+      if (priorityDates && guide.postWaitSteps.length > 0) {
+        const pdStr = priorityDates[guide.category]?.[
+          selectedCountry === "india" ? "india" : 
+          selectedCountry === "china" ? "china" : "allOther"
+        ] || "Current";
+        const waitResult = calculateNewFilerWait(pdStr, selectedCountry, guide.category);
+        pdWaitMonths = Math.round(waitResult.estimatedMonths);
+      }
       
-      // Calculate wait for new filers
-      const waitResult = calculateNewFilerWait(pdStr, selectedCountry, guide.category);
-      const pdWaitMonths = Math.round(waitResult.estimatedMonths);
+      // Build complete timeline: preWait → PD Wait (if any) → postWait
+      const steps: { label: string; months: number; color: string }[] = [
+        ...guide.preWaitSteps,
+      ];
       
-      const processMonths = guide.steps.reduce((sum, s) => sum + s.months, 0);
-      const totalMonths = processMonths + pdWaitMonths;
+      if (pdWaitMonths > 0 && guide.postWaitSteps.length > 0) {
+        steps.push({ label: "PD Wait", months: pdWaitMonths, color: "orange" });
+      }
+      
+      steps.push(...guide.postWaitSteps);
+      
+      const totalMonths = steps.reduce((sum, s) => sum + s.months, 0);
       
       return {
         ...guide,
+        steps,
         pdWaitMonths,
         totalMonths,
-        pdStr,
       };
     });
   }, [priorityDates, selectedCountry]);
@@ -240,7 +248,7 @@ export default function GuidesPage() {
       {/* Guides list */}
       {!loading && (
         <div className="space-y-4">
-          {guidesWithWait.map((guide) => (
+          {guidesWithTimeline.map((guide) => (
             <Link
               key={guide.slug}
               href={`/guides/${guide.slug}`}
@@ -258,38 +266,23 @@ export default function GuidesPage() {
                     {formatTotalTime(guide.totalMonths)}
                   </div>
                   <div className="text-xs text-gray-500">
-                    total timeline
+                    total
                   </div>
                 </div>
               </div>
               
-              <GuideTimeline 
-                steps={guide.steps} 
-                pdWaitMonths={guide.pdWaitMonths}
-              />
-              
-              {/* Show PD wait note if significant */}
-              {guide.pdWaitMonths > 12 && (
-                <p className="mt-3 text-xs text-orange-600">
-                  Includes ~{Math.round(guide.pdWaitMonths / 12)} year priority date wait for {
-                    selectedCountry === "india" ? "India" : 
-                    selectedCountry === "china" ? "China" : "your country"
-                  }
-                </p>
-              )}
+              <GuideTimeline steps={guide.steps} />
             </Link>
           ))}
         </div>
       )}
 
-      {/* Country-specific note */}
+      {/* Country-specific note - only for backlogged countries */}
       {!loading && selectedCountry !== "other" && (
-        <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <p className="text-sm text-amber-800">
-            <strong>About priority date wait:</strong> The visa bulletin moves at different 
-            speeds. These estimates are based on historical movement patterns. Your actual 
-            wait may vary.{" "}
-            <Link href="/processing-times" className="underline hover:text-amber-900">
+        <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+          <p className="text-sm text-gray-600">
+            Priority date wait estimates are based on historical visa bulletin movement.{" "}
+            <Link href="/processing-times" className="text-brand-600 hover:text-brand-700">
               See current bulletin →
             </Link>
           </p>
@@ -304,7 +297,7 @@ export default function GuidesPage() {
           </p>
           <Link
             href="/"
-            className="flex-shrink-0 px-4 py-2 rounded-lg bg-gray-900 text-white font-medium hover:bg-gray-800 transition-colors text-center"
+            className="flex-shrink-0 px-4 py-2 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 transition-colors text-center"
           >
             See your timeline →
           </Link>

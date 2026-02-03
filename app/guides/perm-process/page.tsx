@@ -1,59 +1,19 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { DynamicData } from "@/lib/dynamic-data";
-import { calculateNewFilerWait } from "@/lib/processing-times";
-import { CountryOfBirth } from "@/lib/filter-paths";
 
-// Country selector tabs
-function CountryTabs({
-  selected,
-  onChange,
-}: {
-  selected: CountryOfBirth;
-  onChange: (country: CountryOfBirth) => void;
-}) {
-  const countries: { id: CountryOfBirth; label: string }[] = [
-    { id: "other", label: "Most countries" },
-    { id: "india", label: "India" },
-    { id: "china", label: "China" },
-  ];
-  
-  return (
-    <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
-      {countries.map((c) => (
-        <button
-          key={c.id}
-          onClick={() => onChange(c.id)}
-          className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-            selected === c.id
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-600 hover:text-gray-900"
-          }`}
-        >
-          {c.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// Timeline bar with PD wait
+// Timeline bar for PERM process (no PD wait since this is just PERM)
 function TimelineBar({
   steps,
-  pdWaitMonths,
 }: {
   steps: { label: string; months: number; color: string }[];
-  pdWaitMonths: number;
 }) {
-  const processMonths = steps.reduce((sum, s) => sum + s.months, 0);
-  const totalMonths = processMonths + pdWaitMonths;
+  const totalMonths = steps.reduce((sum, s) => sum + s.months, 0);
   
   const colorClasses: Record<string, string> = {
     emerald: "bg-emerald-500 text-white",
     amber: "bg-amber-500 text-white",
-    orange: "bg-orange-500 text-white",
   };
   
   return (
@@ -65,20 +25,12 @@ function TimelineBar({
             <div
               key={i}
               className={`${colorClasses[step.color]} flex items-center justify-center text-sm font-medium px-1 ${i > 0 ? "border-l border-white/20" : ""}`}
-              style={{ width: `${Math.max(width, 8)}%`, minWidth: "40px" }}
+              style={{ width: `${Math.max(width, 12)}%`, minWidth: "50px" }}
             >
               <span className="truncate">{step.label}</span>
             </div>
           );
         })}
-        {pdWaitMonths > 0 && (
-          <div
-            className="bg-orange-500 text-white flex items-center justify-center text-sm font-medium px-1 border-l border-white/20"
-            style={{ width: `${Math.max((pdWaitMonths / totalMonths) * 100, 15)}%`, minWidth: "60px" }}
-          >
-            <span className="truncate">PD Wait</span>
-          </div>
-        )}
       </div>
       <div className="flex mt-1.5 text-xs text-gray-500">
         {steps.map((step, i) => {
@@ -87,33 +39,23 @@ function TimelineBar({
             <div
               key={i}
               className="text-center"
-              style={{ width: `${Math.max(width, 8)}%`, minWidth: "40px" }}
+              style={{ width: `${Math.max(width, 12)}%`, minWidth: "50px" }}
             >
-              {step.months < 12 ? `${step.months} mo` : `${(step.months / 12).toFixed(1)} yr`}
+              {step.months >= 12 ? `${(step.months / 12).toFixed(1)} yr` : `${step.months} mo`}
             </div>
           );
         })}
-        {pdWaitMonths > 0 && (
-          <div
-            className="text-center text-orange-600"
-            style={{ width: `${Math.max((pdWaitMonths / totalMonths) * 100, 15)}%`, minWidth: "60px" }}
-          >
-            {pdWaitMonths >= 12 ? `~${Math.round(pdWaitMonths / 12)} yr` : `${pdWaitMonths} mo`}
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
 export default function PERMProcessGuide() {
-  const [selectedCountry, setSelectedCountry] = useState<CountryOfBirth>("other");
   const [processingTimes, setProcessingTimes] = useState<{
     pwd: { months: number; processing: string };
     perm: { months: number; processing: string };
     permAudit: { months: number; processing: string };
   } | null>(null);
-  const [priorityDates, setPriorityDates] = useState<DynamicData["priorityDates"] | null>(null);
 
   useEffect(() => {
     fetch("/api/processing-times")
@@ -126,9 +68,6 @@ export default function PERMProcessGuide() {
             perm: { months: pt.perm.months, processing: pt.perm.currentlyProcessing },
             permAudit: { months: pt.permAudit.months, processing: pt.permAudit.currentlyProcessing },
           });
-          if (data.data.priorityDates) {
-            setPriorityDates(data.data.priorityDates);
-          }
         }
       })
       .catch(() => {});
@@ -138,26 +77,13 @@ export default function PERMProcessGuide() {
   const recruitMonths = 3;
   const permMonths = processingTimes?.perm.months ?? 17;
   const auditMonths = processingTimes?.permAudit.months ?? 22;
-  const processMonths = pwdMonths + recruitMonths + permMonths;
-
-  // Calculate PD wait based on selected country (EB-2)
-  const pdWaitMonths = useMemo(() => {
-    if (!priorityDates) return 0;
-    const pdStr = priorityDates.eb2?.[
-      selectedCountry === "india" ? "india" : 
-      selectedCountry === "china" ? "china" : "allOther"
-    ] || "Current";
-    const waitResult = calculateNewFilerWait(pdStr, selectedCountry, "eb2");
-    return Math.round(waitResult.estimatedMonths);
-  }, [priorityDates, selectedCountry]);
-
-  const totalMonths = processMonths + pdWaitMonths;
+  const totalMonths = pwdMonths + recruitMonths + permMonths;
 
   // Format total time
   const formatTotalTime = (months: number) => {
-    if (months < 24) return `${Math.round(months / 12 * 2) / 2}–${Math.round(months / 12 * 2 + 1) / 2} years`;
-    const years = Math.round(months / 12);
-    return `~${years} years`;
+    if (months < 12) return `~${months} mo`;
+    const years = months / 12;
+    return `${Math.round(years * 2) / 2}–${Math.round(years * 2 + 1) / 2} years`;
   };
 
   return (
@@ -180,30 +106,15 @@ export default function PERMProcessGuide() {
           Department of Labor process for employer-sponsored green cards
         </p>
         
-        {/* Country selector */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
-          <span className="text-sm text-gray-500">Your country of birth:</span>
-          <CountryTabs selected={selectedCountry} onChange={setSelectedCountry} />
-        </div>
-        
         {/* Total timeline summary */}
         <div className="flex items-baseline gap-3 mb-2">
           <span className="text-3xl font-semibold text-gray-900">
             {formatTotalTime(totalMonths)}
           </span>
           <span className="text-gray-500">
-            total timeline (PERM + wait)
+            PERM process
           </span>
         </div>
-        
-        {pdWaitMonths > 12 && (
-          <p className="text-sm text-orange-600 mb-4">
-            Includes ~{Math.round(pdWaitMonths / 12)} year priority date wait for {
-              selectedCountry === "india" ? "India" : 
-              selectedCountry === "china" ? "China" : "your country"
-            }
-          </p>
-        )}
         
         <p className="text-sm text-amber-600 mb-4">
           Add 6–12 months if audited
@@ -215,7 +126,6 @@ export default function PERMProcessGuide() {
             { label: "Recruit", months: recruitMonths, color: "emerald" },
             { label: "DOL", months: permMonths, color: "emerald" },
           ]}
-          pdWaitMonths={pdWaitMonths}
         />
 
         <div className="space-y-6 text-gray-700 leading-relaxed">
@@ -313,24 +223,6 @@ export default function PERMProcessGuide() {
             </p>
           </section>
 
-          {/* Priority Date Wait Section */}
-          {pdWaitMonths > 6 && (
-            <section className="pt-6 border-t border-gray-100">
-              <div className="flex gap-3 mb-3">
-                <div className="w-3 h-3 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" />
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Priority Date Wait</h2>
-                  <span className="text-sm text-orange-600">~{pdWaitMonths >= 12 ? `${Math.round(pdWaitMonths / 12)} years` : `${pdWaitMonths} months`}</span>
-                </div>
-              </div>
-              <p>
-                After PERM + I-140 approval, wait for your priority date to become current.
-                For {selectedCountry === "india" ? "India" : selectedCountry === "china" ? "China" : "your country"}, 
-                this is the longest part of the process.
-              </p>
-            </section>
-          )}
-
           {/* Audits */}
           <section className="pt-6 border-t border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900 mb-3">Audit risk</h2>
@@ -385,7 +277,7 @@ export default function PERMProcessGuide() {
               </Link>
               <Link
                 href="/"
-                className="inline-flex items-center px-5 py-2.5 rounded-lg bg-gray-900 text-white font-medium hover:bg-gray-800 transition-colors"
+                className="inline-flex items-center px-5 py-2.5 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 transition-colors"
               >
                 See your timeline
                 <svg className="ml-2 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

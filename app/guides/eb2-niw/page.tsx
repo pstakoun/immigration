@@ -39,16 +39,13 @@ function CountryTabs({
   );
 }
 
-// Timeline bar with PD wait
+// Timeline bar - correct order: I-140 NIW → PD Wait → I-485
 function TimelineBar({
   steps,
-  pdWaitMonths,
 }: {
   steps: { label: string; months: number; color: string }[];
-  pdWaitMonths: number;
 }) {
-  const processMonths = steps.reduce((sum, s) => sum + s.months, 0);
-  const totalMonths = processMonths + pdWaitMonths;
+  const totalMonths = steps.reduce((sum, s) => sum + s.months, 0);
   
   const colorClasses: Record<string, string> = {
     emerald: "bg-emerald-500 text-white",
@@ -65,20 +62,12 @@ function TimelineBar({
             <div
               key={i}
               className={`${colorClasses[step.color]} flex items-center justify-center text-sm font-medium px-1 ${i > 0 ? "border-l border-white/20" : ""}`}
-              style={{ width: `${Math.max(width, 10)}%`, minWidth: "60px" }}
+              style={{ width: `${Math.max(width, 10)}%`, minWidth: "55px" }}
             >
               <span className="truncate">{step.label}</span>
             </div>
           );
         })}
-        {pdWaitMonths > 0 && (
-          <div
-            className="bg-orange-500 text-white flex items-center justify-center text-sm font-medium px-1 border-l border-white/20"
-            style={{ width: `${Math.max((pdWaitMonths / totalMonths) * 100, 15)}%`, minWidth: "60px" }}
-          >
-            <span className="truncate">PD Wait</span>
-          </div>
-        )}
       </div>
       <div className="flex mt-1.5 text-xs text-gray-500">
         {steps.map((step, i) => {
@@ -86,21 +75,13 @@ function TimelineBar({
           return (
             <div
               key={i}
-              className="text-center"
-              style={{ width: `${Math.max(width, 10)}%`, minWidth: "60px" }}
+              className={`text-center ${step.color === "orange" ? "text-orange-600" : ""}`}
+              style={{ width: `${Math.max(width, 10)}%`, minWidth: "55px" }}
             >
-              {step.months < 12 ? `${step.months} mo` : `${(step.months / 12).toFixed(1)} yr`}
+              {step.months >= 12 ? `${(step.months / 12).toFixed(step.months >= 24 ? 0 : 1)} yr` : `${step.months} mo`}
             </div>
           );
         })}
-        {pdWaitMonths > 0 && (
-          <div
-            className="text-center text-orange-600"
-            style={{ width: `${Math.max((pdWaitMonths / totalMonths) * 100, 15)}%`, minWidth: "60px" }}
-          >
-            {pdWaitMonths >= 12 ? `~${Math.round(pdWaitMonths / 12)} yr` : `${pdWaitMonths} mo`}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -134,7 +115,6 @@ export default function EB2NIWGuide() {
 
   const i140Months = processingTimes?.i140.max ?? 9;
   const i485Months = processingTimes?.i485.max ?? 18;
-  const processMonths = i140Months + i485Months;
 
   // Calculate PD wait based on selected country
   const pdWaitMonths = useMemo(() => {
@@ -147,7 +127,19 @@ export default function EB2NIWGuide() {
     return Math.round(waitResult.estimatedMonths);
   }, [priorityDates, selectedCountry]);
 
-  const totalMonths = processMonths + pdWaitMonths;
+  // Build timeline steps in correct order: I-140 NIW → PD Wait → I-485
+  const timelineSteps = useMemo(() => {
+    const steps: { label: string; months: number; color: string }[] = [
+      { label: "I-140 NIW", months: i140Months, color: "emerald" },
+    ];
+    if (pdWaitMonths > 0) {
+      steps.push({ label: "PD Wait", months: pdWaitMonths, color: "orange" });
+    }
+    steps.push({ label: "I-485", months: i485Months, color: "amber" });
+    return steps;
+  }, [i140Months, pdWaitMonths, i485Months]);
+
+  const totalMonths = timelineSteps.reduce((sum, s) => sum + s.months, 0);
 
   // Format total time
   const formatTotalTime = (months: number) => {
@@ -192,15 +184,6 @@ export default function EB2NIWGuide() {
           </span>
         </div>
         
-        {pdWaitMonths > 12 && (
-          <p className="text-sm text-orange-600 mb-4">
-            Includes ~{Math.round(pdWaitMonths / 12)} year priority date wait for {
-              selectedCountry === "india" ? "India" : 
-              selectedCountry === "china" ? "China" : "your country"
-            }
-          </p>
-        )}
-        
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium mb-4">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -208,13 +191,7 @@ export default function EB2NIWGuide() {
           No PERM required
         </div>
 
-        <TimelineBar
-          steps={[
-            { label: "I-140 NIW", months: i140Months, color: "emerald" },
-            { label: "I-485", months: i485Months, color: "amber" },
-          ]}
-          pdWaitMonths={pdWaitMonths}
-        />
+        <TimelineBar steps={timelineSteps} />
 
         <div className="space-y-6 text-gray-700 leading-relaxed">
           <p>
@@ -295,8 +272,7 @@ export default function EB2NIWGuide() {
                       </span>
                     </div>
                     <p className="text-sm text-gray-600 mt-1">
-                      Wait for your priority date to become current. This is the longest part for 
-                      {selectedCountry === "india" ? " India" : selectedCountry === "china" ? " China" : " backlogged countries"}.
+                      Wait for your priority date to become current before filing I-485.
                     </p>
                   </div>
                 </div>
@@ -312,7 +288,7 @@ export default function EB2NIWGuide() {
                     </span>
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
-                    Same as employer-sponsored. {selectedCountry === "other" && "For most countries, file immediately or concurrently."}
+                    File when your priority date is current. {selectedCountry === "other" && "For most countries, file immediately or concurrently."}
                   </p>
                 </div>
               </div>
@@ -358,7 +334,7 @@ export default function EB2NIWGuide() {
             </p>
             <Link
               href="/"
-              className="inline-flex items-center px-5 py-2.5 rounded-lg bg-gray-900 text-white font-medium hover:bg-gray-800 transition-colors"
+              className="inline-flex items-center px-5 py-2.5 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 transition-colors"
             >
               See your timeline
               <svg className="ml-2 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
