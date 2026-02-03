@@ -258,6 +258,9 @@ export default function ProcessingTimesPage() {
             </tbody>
           </table>
         </div>
+        <p className="text-xs text-gray-500 mt-3">
+          Audit Review shows when DOL processes audit responses. Total time for audited cases is typically 6-12 months longer than non-audited cases.
+        </p>
       </section>
 
       {/* Visa Bulletin */}

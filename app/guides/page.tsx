@@ -40,13 +40,18 @@ function GuideTimeline({
       <div className="flex mt-1.5 text-[10px] text-gray-500">
         {steps.map((step, i) => {
           const width = (step.months / totalMonths) * 100;
+          const formatTime = (m: number) => {
+            if (m < 1) return `${Math.round(m * 30)}d`;
+            if (m >= 12) return `${(m / 12).toFixed(m >= 24 ? 0 : 1)} yr`;
+            return `${Math.round(m)} mo`;
+          };
           return (
             <div
               key={i}
               className={`text-center ${step.color === "orange" ? "text-orange-600" : ""}`}
               style={{ width: `${Math.max(width, 8)}%` }}
             >
-              {step.months >= 12 ? `${(step.months / 12).toFixed(step.months >= 24 ? 0 : 1)} yr` : `${step.months} mo`}
+              {formatTime(step.months)}
             </div>
           );
         })}
@@ -121,7 +126,7 @@ const guides: GuideData[] = [
     category: "eb2",
     preWaitSteps: [
       { label: "PERM", months: 17, color: "emerald" },
-      { label: "I-140", months: 1, color: "emerald" },
+      { label: "I-140", months: 0.5, color: "emerald" },
     ],
     postWaitSteps: [
       { label: "I-485", months: 18, color: "amber" },

@@ -57,10 +57,15 @@ function TimelineBar({ steps }: { steps: { label: string; months: number; color:
       <div className="flex mt-1.5 text-xs text-gray-500">
         {steps.map((step, i) => {
           const width = (step.months / totalMonths) * 100;
+          const formatTime = (m: number) => {
+            if (m < 1) return `${Math.round(m * 30)}d`;
+            if (m >= 12) return `${(m / 12).toFixed(m >= 24 ? 0 : 1)} yr`;
+            return `${Math.round(m)} mo`;
+          };
           return (
             <div key={i} className={`text-center ${step.color === "orange" ? "text-orange-600" : ""}`}
               style={{ width: `${Math.max(width, 8)}%`, minWidth: "45px" }}>
-              {step.months >= 12 ? `${(step.months / 12).toFixed(step.months >= 24 ? 0 : 1)} yr` : `${step.months} mo`}
+              {formatTime(step.months)}
             </div>
           );
         })}
@@ -111,7 +116,7 @@ export default function TNToGreenCardGuide() {
   }, []);
 
   const permMonths = processingTimes?.perm.months ?? 17;
-  const i140Months = 1;
+  const i140Months = 0.5; // Premium processing (15 days)
   const i485Months = processingTimes?.i485.max ?? 18;
 
   const pdWaitMonths = useMemo(() => {
