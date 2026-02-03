@@ -1,94 +1,80 @@
-import { Metadata } from "next";
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
-export const metadata: Metadata = {
-  title: "EB-2 NIW (National Interest Waiver)",
-  description:
-    "Complete guide to EB-2 NIW self-petition. Learn the requirements, evidence needed, and realistic timelines for this employer-independent green card path.",
-};
-
-const steps = [
-  { id: "i140", label: "I-140 NIW", duration: "6-12mo", color: "emerald" },
-  { id: "i485", label: "I-485", duration: "10-18mo", color: "amber" },
-];
-
-function TimelineNav({ activeStep }: { activeStep?: string }) {
-  const colorMap: Record<string, { active: string; inactive: string }> = {
-    emerald: { active: "bg-emerald-500 text-white", inactive: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-    amber: { active: "bg-amber-500 text-white", inactive: "bg-amber-50 text-amber-700 border-amber-200" },
-  };
-  
-  return (
-    <div className="flex items-center gap-1 py-3 overflow-x-auto">
-      <div className="px-2 py-1 text-xs text-gray-400 border border-dashed border-gray-300 rounded">
-        No PERM
-      </div>
-      <svg className="w-4 h-4 mx-1 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-      </svg>
-      {steps.map((step, index) => {
-        const isActive = activeStep === step.id;
-        const colors = colorMap[step.color];
-        
-        return (
-          <div key={step.id} className="flex items-center">
-            <a
-              href={`#${step.id}`}
-              className={`
-                px-3 py-1.5 rounded border text-sm font-medium transition-colors
-                ${isActive ? colors.active : colors.inactive}
-                hover:opacity-80
-              `}
-            >
-              {step.label}
-              <span className={`ml-1.5 ${isActive ? "text-white/80" : "opacity-60"}`}>
-                {step.duration}
-              </span>
-            </a>
-            {index < steps.length - 1 && (
-              <svg className="w-4 h-4 mx-1 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            )}
-          </div>
-        );
-      })}
-      <span className="ml-3 text-sm text-gray-500">→ Green Card</span>
-    </div>
-  );
-}
-
-function StepHeader({
-  id,
-  title,
-  duration,
-  color,
+function TimelineBar({
+  steps,
 }: {
-  id: string;
-  title: string;
-  duration?: string;
-  color: "emerald" | "amber";
+  steps: { label: string; duration: string; months: number; color: string }[];
 }) {
-  const colorClasses = {
-    emerald: "bg-emerald-500",
-    amber: "bg-amber-500",
-  };
+  const totalMonths = steps.reduce((sum, s) => sum + s.months, 0);
   
   return (
-    <div id={id} className="flex items-center gap-3 mt-10 mb-4 scroll-mt-6">
-      <div className={`w-1 h-8 rounded-full ${colorClasses[color]}`} />
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-        {duration && <p className="text-sm text-gray-500">{duration}</p>}
+    <div className="my-6">
+      <div className="flex items-stretch h-10 rounded-lg overflow-hidden border border-gray-200">
+        {steps.map((step, i) => {
+          const width = (step.months / totalMonths) * 100;
+          const colorClasses: Record<string, string> = {
+            emerald: "bg-emerald-500 text-white",
+            amber: "bg-amber-500 text-white",
+          };
+          
+          return (
+            <div
+              key={i}
+              className={`${colorClasses[step.color]} flex items-center justify-center text-sm font-medium px-2 ${i > 0 ? "border-l border-white/20" : ""}`}
+              style={{ width: `${width}%`, minWidth: "60px" }}
+            >
+              <span className="truncate">{step.label}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex mt-1">
+        {steps.map((step, i) => {
+          const width = (step.months / totalMonths) * 100;
+          return (
+            <div
+              key={i}
+              className="text-xs text-gray-500 text-center"
+              style={{ width: `${width}%`, minWidth: "60px" }}
+            >
+              {step.duration}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
 export default function EB2NIWGuide() {
+  const [processingTimes, setProcessingTimes] = useState<{
+    i140: { min: number; max: number; premium: number };
+    i485: { min: number; max: number };
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/processing-times")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          const pt = data.data.processingTimes;
+          setProcessingTimes({
+            i140: { min: pt.i140.min, max: pt.i140.max, premium: pt.i140.premiumDays },
+            i485: { min: pt.i485.min, max: pt.i485.max },
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const i140Months = processingTimes?.i140.max ?? 9;
+  const i485Months = processingTimes?.i485.max ?? 18;
+
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
-      {/* Breadcrumb */}
       <Link
         href="/guides"
         className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors"
@@ -103,140 +89,161 @@ export default function EB2NIWGuide() {
         <h1 className="text-2xl font-semibold text-gray-900 mb-2">
           EB-2 NIW
         </h1>
-        <p className="text-gray-600 mb-4">
-          National Interest Waiver — self-petition path
+        <p className="text-gray-600 mb-2">
+          National Interest Waiver — self-petition, no employer needed
         </p>
-
-        {/* Visual timeline nav */}
-        <div className="border-b border-gray-200 mb-6">
-          <TimelineNav />
+        
+        <div className="flex items-baseline gap-3 mb-4">
+          <span className="text-3xl font-semibold text-gray-900">1–3 years</span>
+          <span className="text-gray-500">for most countries</span>
+        </div>
+        
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium mb-4">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          No PERM required
         </div>
 
-        <div className="space-y-4 text-gray-700 leading-relaxed">
+        <TimelineBar
+          steps={[
+            { label: "I-140 NIW", duration: `${i140Months} mo`, months: i140Months, color: "emerald" },
+            { label: "I-485", duration: `${i485Months} mo`, months: i485Months, color: "amber" },
+          ]}
+        />
+
+        <div className="space-y-6 text-gray-700 leading-relaxed">
           <p>
             NIW lets you skip PERM and petition for yourself. No employer sponsorship,
-            no labor certification. You argue that your work benefits the US enough
-            to waive the normal requirements.
-          </p>
-          <p>
-            Timeline is <strong className="text-gray-900">1-3 years</strong> for most
-            countries. India/China backlogs still apply—the NIW just gets you in line
-            faster since there&apos;s no PERM wait.
+            no labor certification. You argue your work benefits the US enough to waive
+            the normal requirements.
           </p>
 
           {/* Requirements */}
-          <h2 className="text-lg font-semibold text-gray-900 mt-10 mb-4">
-            Requirements
-          </h2>
-          <p>You need to meet EB-2 qualifications first:</p>
-          <ul className="space-y-2 text-sm mt-2">
-            <li className="flex gap-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-2 flex-shrink-0" />
-              <span>Master&apos;s degree or higher, OR</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-2 flex-shrink-0" />
-              <span>Bachelor&apos;s + 5 years of progressive experience</span>
-            </li>
-          </ul>
-          
-          <p className="mt-4">Then prove the NIW three-part test (Matter of Dhanasar):</p>
-          <div className="space-y-3 mt-3">
-            <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
-              <p className="text-sm">
-                <strong className="text-gray-900">1. Substantial merit and national importance</strong>
-                <br />
-                Your work has significant value beyond a single employer or state.
-              </p>
-            </div>
-            <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
-              <p className="text-sm">
-                <strong className="text-gray-900">2. Well positioned to advance the endeavor</strong>
-                <br />
-                Your education, experience, and track record show you can deliver.
-              </p>
-            </div>
-            <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
-              <p className="text-sm">
-                <strong className="text-gray-900">3. Beneficial to waive job offer requirement</strong>
-                <br />
-                The US benefits more from letting you self-petition than requiring PERM.
-              </p>
-            </div>
-          </div>
+          <section className="pt-6 border-t border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Requirements</h2>
+            
+            <p className="mb-3">First, meet EB-2 qualifications:</p>
+            <ul className="space-y-2 text-sm mb-4">
+              <li className="flex gap-2">
+                <span className="text-gray-400">•</span>
+                Master&apos;s degree or higher, OR
+              </li>
+              <li className="flex gap-2">
+                <span className="text-gray-400">•</span>
+                Bachelor&apos;s + 5 years progressive experience
+              </li>
+            </ul>
 
-          {/* I-140 Section */}
-          <StepHeader
-            id="i140"
-            title="I-140 NIW Petition"
-            duration="6-12 months (or 15 days with premium)"
-            color="emerald"
-          />
-          <p>
-            You file I-140 yourself (or with a lawyer). Your priority date is when
-            USCIS receives the petition. Premium processing is available for 15-day decisions.
-          </p>
-          <p className="text-sm text-gray-600 mt-2">
-            <strong>Evidence that works:</strong> publications, citations, patents,
-            5-8 recommendation letters from experts, media coverage, documented impact
-            of your work.
-          </p>
+            <p className="mb-3">Then prove the three-part Dhanasar test:</p>
+            <div className="space-y-3">
+              <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                <p className="text-sm">
+                  <strong className="text-gray-900">1.</strong> Your work has{" "}
+                  <strong className="text-gray-900">substantial merit and national importance</strong>
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                <p className="text-sm">
+                  <strong className="text-gray-900">2.</strong> You&apos;re{" "}
+                  <strong className="text-gray-900">well positioned</strong> to advance it
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                <p className="text-sm">
+                  <strong className="text-gray-900">3.</strong> It&apos;s{" "}
+                  <strong className="text-gray-900">beneficial to waive</strong> the job offer requirement
+                </p>
+              </div>
+            </div>
+          </section>
 
-          {/* I-485 Section */}
-          <StepHeader
-            id="i485"
-            title="I-485 Adjustment of Status"
-            duration="10-18 months (when current)"
-            color="amber"
-          />
-          <p>
-            Same as employer-sponsored path—wait for your priority date to be current,
-            then file I-485. For most countries, you can file immediately or concurrently
-            with I-140.
-          </p>
+          {/* Process */}
+          <section className="pt-6 border-t border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">The process</h2>
+            
+            <div className="space-y-4">
+              <div className="flex gap-3">
+                <div className="w-3 h-3 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <strong className="text-gray-900">I-140 NIW</strong>
+                    <span className="text-gray-500 text-sm">
+                      {processingTimes ? `${processingTimes.i140.min}-${processingTimes.i140.max} mo` : "6-9 mo"} regular ·{" "}
+                      {processingTimes?.i140.premium ?? 15} days premium
+                    </span>
+                    <Link href="/processing-times" className="text-gray-400 hover:text-gray-600 text-sm">↗</Link>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    You file yourself (or with a lawyer). Priority date is when USCIS receives it.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <div className="w-3 h-3 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <strong className="text-gray-900">I-485</strong>
+                    <span className="text-gray-500 text-sm">
+                      {processingTimes ? `${processingTimes.i485.min}-${processingTimes.i485.max} mo` : "10-18 mo"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Same as employer-sponsored. For most countries, file immediately or concurrently.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Evidence */}
+          <section className="pt-6 border-t border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Evidence that works</h2>
+            <ul className="space-y-2 text-sm">
+              <li className="flex gap-2">
+                <span className="text-emerald-500">•</span>
+                Publications and citations
+              </li>
+              <li className="flex gap-2">
+                <span className="text-emerald-500">•</span>
+                Patents (granted or pending)
+              </li>
+              <li className="flex gap-2">
+                <span className="text-emerald-500">•</span>
+                5-8 recommendation letters from experts
+              </li>
+              <li className="flex gap-2">
+                <span className="text-emerald-500">•</span>
+                Documented impact of your work
+              </li>
+            </ul>
+          </section>
 
           {/* Strategy */}
-          <h2 className="text-lg font-semibold text-gray-900 mt-10 mb-4">
-            NIW + PERM Strategy
-          </h2>
-          <p>
-            Many people file NIW while also having their employer file PERM. If PERM has
-            an earlier priority date, you can port it to your NIW case. This gives you:
-          </p>
-          <ul className="space-y-2 text-sm mt-2">
-            <li className="flex gap-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 flex-shrink-0" />
-              <span>Backup if NIW is denied</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 flex-shrink-0" />
-              <span>Flexibility if you leave employer</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 flex-shrink-0" />
-              <span>Earlier priority date if PERM was filed first</span>
-            </li>
-          </ul>
+          <section className="pt-6 border-t border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">NIW + PERM strategy</h2>
+            <p>
+              Many people file NIW while also having their employer file PERM. This gives you
+              a backup if NIW is denied, and you can port an earlier PERM priority date to NIW.
+            </p>
+          </section>
 
           {/* CTA */}
-          <div className="mt-10 p-5 rounded-xl bg-brand-50 border border-brand-100">
-            <h3 className="font-semibold text-gray-900 mb-2">
-              See your NIW timeline
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Compare the NIW path to employer-sponsored options. See how your country
-              of birth affects the timeline.
+          <section className="pt-6 mt-6 border-t border-gray-200">
+            <p className="text-gray-600 mb-4">
+              Compare NIW to employer-sponsored paths for your situation.
             </p>
             <Link
               href="/"
-              className="inline-flex items-center px-4 py-2 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 transition-colors"
+              className="inline-flex items-center px-5 py-2.5 rounded-lg bg-gray-900 text-white font-medium hover:bg-gray-800 transition-colors"
             >
-              Open Timeline Tool
+              See your timeline
               <svg className="ml-2 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </Link>
-          </div>
+          </section>
         </div>
       </article>
     </div>
