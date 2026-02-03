@@ -113,7 +113,7 @@ const guides: GuideData[] = [
     category: "eb2",
     preWaitSteps: [
       { label: "PERM", months: 17, color: "emerald" },
-      { label: "I-140", months: 9, color: "emerald" },
+      { label: "I-140", months: 0.5, color: "emerald" },
     ],
     postWaitSteps: [
       { label: "I-485", months: 18, color: "amber" },
