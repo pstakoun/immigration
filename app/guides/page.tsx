@@ -138,7 +138,7 @@ const guides: GuideData[] = [
     subtitle: "Self-petition, no employer needed",
     category: "eb2",
     preWaitSteps: [
-      { label: "I-140 NIW", months: 9, color: "emerald" },
+      { label: "I-140 NIW", months: 0.5, color: "emerald" },
     ],
     postWaitSteps: [
       { label: "I-485", months: 18, color: "amber" },
