@@ -251,7 +251,7 @@ export default function H1BToGreenCardGuide() {
                 properly and nobody qualified applied</li>
             </ul>
             <p className="text-sm text-gray-500">
-              DOL audits 20-30% of cases. If yours gets picked, expect an extra {processingTimes ? (processingTimes.permAudit.months - processingTimes.perm.months) : "6-8"} months 
+              DOL audits 20-30% of cases. If yours gets picked, expect an extra 6-12 months 
               while they request and review documentation.
             </p>
           </section>

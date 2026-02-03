@@ -179,8 +179,8 @@ export default function TNToGreenCardGuide() {
               <p className="text-sm text-emerald-800">
                 <strong>If you were born in Canada or Mexico</strong> (not just a citizen), 
                 you fall under &quot;All Other Countries&quot; in the visa bulletin. Unlike India 
-                or China, any backlog is typically measured in months rather than years—and 
-                it&apos;s often current.
+                or China (where waits can be 10+ years), the backlog is typically 1-2 years 
+                at most.
               </p>
             </div>
           )}
@@ -300,9 +300,7 @@ export default function TNToGreenCardGuide() {
                     {processingTimes ? `${processingTimes.i485.min}-${processingTimes.i485.max}` : "10-18"} months
                   </span>
                   <p className="text-sm text-gray-600">
-                    {!loading && selectedCountry === "other" 
-                      ? "Born in Canada/Mexico? Check the visa bulletin—dates for 'All Other Countries' are often current or close to it." 
-                      : "File when your priority date is current."}
+                    File when your priority date is current. {!loading && selectedCountry === "other" && "Wait times for Canada/Mexico are much shorter than India or China."}
                   </p>
                 </div>
               </div>

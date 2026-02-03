@@ -269,7 +269,7 @@ export default function PERMProcessGuide() {
               <strong className="text-amber-800">If audited:</strong>
               <span className="text-amber-700"> You&apos;ll need to submit documentation 
                 (recruitment evidence, resumes received, etc.) and wait for a second review. 
-                This typically adds {auditMonths - permMonths} more months.</span>
+                This typically adds 6-12 more months.</span>
             </div>
           </section>
 
