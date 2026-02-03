@@ -1,51 +1,106 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { Metadata } from "next";
+import { DynamicData } from "@/lib/dynamic-data";
+import { calculateNewFilerWait } from "@/lib/processing-times";
+import { CountryOfBirth } from "@/lib/filter-paths";
 
-// Timeline bar component matching the app's visual style
+// Country selector tabs
+function CountryTabs({
+  selected,
+  onChange,
+}: {
+  selected: CountryOfBirth;
+  onChange: (country: CountryOfBirth) => void;
+}) {
+  const countries: { id: CountryOfBirth; label: string }[] = [
+    { id: "other", label: "Most countries" },
+    { id: "india", label: "India" },
+    { id: "china", label: "China" },
+  ];
+  
+  return (
+    <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+      {countries.map((c) => (
+        <button
+          key={c.id}
+          onClick={() => onChange(c.id)}
+          className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+            selected === c.id
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          {c.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Timeline bar with PD wait
 function TimelineBar({
   steps,
+  pdWaitMonths,
 }: {
-  steps: { label: string; duration: string; months: number; color: string }[];
+  steps: { label: string; months: number; color: string }[];
+  pdWaitMonths: number;
 }) {
-  const totalMonths = steps.reduce((sum, s) => sum + s.months, 0);
+  const processMonths = steps.reduce((sum, s) => sum + s.months, 0);
+  const totalMonths = processMonths + pdWaitMonths;
+  
+  const colorClasses: Record<string, string> = {
+    emerald: "bg-emerald-500 text-white",
+    amber: "bg-amber-500 text-white",
+    orange: "bg-orange-500 text-white",
+  };
   
   return (
     <div className="my-6">
       <div className="flex items-stretch h-10 rounded-lg overflow-hidden border border-gray-200">
         {steps.map((step, i) => {
           const width = (step.months / totalMonths) * 100;
-          const colorClasses: Record<string, string> = {
-            emerald: "bg-emerald-500 text-white",
-            amber: "bg-amber-500 text-white",
-          };
-          
           return (
             <div
               key={i}
-              className={`${colorClasses[step.color]} flex items-center justify-center text-sm font-medium px-2 ${i > 0 ? "border-l border-white/20" : ""}`}
-              style={{ width: `${width}%`, minWidth: "60px" }}
+              className={`${colorClasses[step.color]} flex items-center justify-center text-sm font-medium px-1 ${i > 0 ? "border-l border-white/20" : ""}`}
+              style={{ width: `${Math.max(width, 8)}%`, minWidth: "50px" }}
             >
               <span className="truncate">{step.label}</span>
             </div>
           );
         })}
+        {pdWaitMonths > 0 && (
+          <div
+            className="bg-orange-500 text-white flex items-center justify-center text-sm font-medium px-1 border-l border-white/20"
+            style={{ width: `${Math.max((pdWaitMonths / totalMonths) * 100, 15)}%`, minWidth: "60px" }}
+          >
+            <span className="truncate">PD Wait</span>
+          </div>
+        )}
       </div>
-      <div className="flex mt-1">
+      <div className="flex mt-1.5 text-xs text-gray-500">
         {steps.map((step, i) => {
           const width = (step.months / totalMonths) * 100;
           return (
             <div
               key={i}
-              className="text-xs text-gray-500 text-center"
-              style={{ width: `${width}%`, minWidth: "60px" }}
+              className="text-center"
+              style={{ width: `${Math.max(width, 8)}%`, minWidth: "50px" }}
             >
-              {step.duration}
+              {step.months < 12 ? `${step.months} mo` : `${(step.months / 12).toFixed(1)} yr`}
             </div>
           );
         })}
+        {pdWaitMonths > 0 && (
+          <div
+            className="text-center text-orange-600"
+            style={{ width: `${Math.max((pdWaitMonths / totalMonths) * 100, 15)}%`, minWidth: "60px" }}
+          >
+            {pdWaitMonths >= 12 ? `~${Math.round(pdWaitMonths / 12)} yr` : `${pdWaitMonths} mo`}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -56,12 +111,10 @@ function LiveTime({
   label,
   time,
   premium,
-  source,
 }: {
   label: string;
   time: string;
   premium?: string;
-  source?: string;
 }) {
   return (
     <div className="inline-flex items-baseline gap-1.5 text-sm">
@@ -70,16 +123,12 @@ function LiveTime({
       {premium && (
         <span className="text-emerald-600">({premium} premium)</span>
       )}
-      {source && (
-        <Link href="/processing-times" className="text-gray-400 hover:text-gray-600">
-          ↗
-        </Link>
-      )}
     </div>
   );
 }
 
 export default function H1BToGreenCardGuide() {
+  const [selectedCountry, setSelectedCountry] = useState<CountryOfBirth>("other");
   const [processingTimes, setProcessingTimes] = useState<{
     perm: { months: number; processing: string };
     permAudit: { months: number; processing: string };
@@ -87,6 +136,7 @@ export default function H1BToGreenCardGuide() {
     i140: { min: number; max: number; premium: number };
     i485: { min: number; max: number };
   } | null>(null);
+  const [priorityDates, setPriorityDates] = useState<DynamicData["priorityDates"] | null>(null);
 
   useEffect(() => {
     fetch("/api/processing-times")
@@ -101,14 +151,38 @@ export default function H1BToGreenCardGuide() {
             i140: { min: pt.i140.min, max: pt.i140.max, premium: pt.i140.premiumDays },
             i485: { min: pt.i485.min, max: pt.i485.max },
           });
+          if (data.data.priorityDates) {
+            setPriorityDates(data.data.priorityDates);
+          }
         }
       })
       .catch(() => {});
   }, []);
 
-  const permMonths = processingTimes?.perm.months ?? 15;
+  const permMonths = processingTimes?.perm.months ?? 17;
   const i140Months = processingTimes?.i140.max ?? 9;
   const i485Months = processingTimes?.i485.max ?? 18;
+  const processMonths = permMonths + i140Months + i485Months;
+
+  // Calculate PD wait based on selected country
+  const pdWaitMonths = useMemo(() => {
+    if (!priorityDates) return 0;
+    const pdStr = priorityDates.eb2?.[
+      selectedCountry === "india" ? "india" : 
+      selectedCountry === "china" ? "china" : "allOther"
+    ] || "Current";
+    const waitResult = calculateNewFilerWait(pdStr, selectedCountry, "eb2");
+    return Math.round(waitResult.estimatedMonths);
+  }, [priorityDates, selectedCountry]);
+
+  const totalMonths = processMonths + pdWaitMonths;
+
+  // Format total time
+  const formatTotalTime = (months: number) => {
+    if (months < 24) return `${Math.round(months / 12 * 2) / 2}–${Math.round(months / 12 * 2 + 1) / 2} years`;
+    const years = Math.round(months / 12);
+    return `~${years} years`;
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
@@ -126,27 +200,43 @@ export default function H1BToGreenCardGuide() {
         <h1 className="text-2xl font-semibold text-gray-900 mb-2">
           H-1B to Green Card
         </h1>
-        <p className="text-gray-600 mb-2">
+        <p className="text-gray-600 mb-4">
           Employer-sponsored EB-2 or EB-3
         </p>
         
+        {/* Country selector */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
+          <span className="text-sm text-gray-500">Your country of birth:</span>
+          <CountryTabs selected={selectedCountry} onChange={setSelectedCountry} />
+        </div>
+        
         {/* Total timeline summary */}
-        <div className="flex items-baseline gap-3 mb-6">
+        <div className="flex items-baseline gap-3 mb-2">
           <span className="text-3xl font-semibold text-gray-900">
-            2–4 years
+            {formatTotalTime(totalMonths)}
           </span>
           <span className="text-gray-500">
-            processing time
+            total timeline
           </span>
         </div>
+        
+        {pdWaitMonths > 12 && (
+          <p className="text-sm text-orange-600 mb-4">
+            Includes ~{Math.round(pdWaitMonths / 12)} year priority date wait for {
+              selectedCountry === "india" ? "India" : 
+              selectedCountry === "china" ? "China" : "your country"
+            }
+          </p>
+        )}
 
-        {/* Visual timeline */}
+        {/* Visual timeline with PD wait */}
         <TimelineBar
           steps={[
-            { label: "PERM", duration: `~${permMonths} mo`, months: permMonths, color: "emerald" },
-            { label: "I-140", duration: `${i140Months} mo`, months: i140Months, color: "emerald" },
-            { label: "I-485", duration: `${i485Months} mo`, months: i485Months, color: "amber" },
+            { label: "PERM", months: permMonths, color: "emerald" },
+            { label: "I-140", months: i140Months, color: "emerald" },
+            { label: "I-485", months: i485Months, color: "amber" },
           ]}
+          pdWaitMonths={pdWaitMonths}
         />
 
         <div className="space-y-6 text-gray-700 leading-relaxed">
@@ -227,6 +317,39 @@ export default function H1BToGreenCardGuide() {
             </p>
           </section>
 
+          {/* Priority Date Wait Section - only show if significant */}
+          {pdWaitMonths > 6 && (
+            <section id="pd-wait" className="pt-6 border-t border-gray-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-3 h-3 rounded-full bg-orange-500" />
+                <h2 className="text-lg font-semibold text-gray-900">Priority Date Wait</h2>
+              </div>
+              
+              <div className="bg-orange-50 rounded-lg p-4 mb-4 border border-orange-100">
+                <div className="text-sm">
+                  <span className="text-orange-800 font-medium">
+                    ~{pdWaitMonths >= 12 ? `${Math.round(pdWaitMonths / 12)} years` : `${pdWaitMonths} months`}
+                  </span>
+                  <span className="text-orange-700 ml-2">
+                    estimated wait for {selectedCountry === "india" ? "India" : selectedCountry === "china" ? "China" : "your country"}
+                  </span>
+                  <Link href="/processing-times" className="text-orange-400 hover:text-orange-600 ml-2">↗</Link>
+                </div>
+              </div>
+
+              <p className="mb-3">
+                After I-140 approval, you wait for your priority date to become current in the 
+                visa bulletin. This is the longest part of the process for applicants from 
+                {selectedCountry === "india" ? " India" : selectedCountry === "china" ? " China" : " backlogged countries"}.
+              </p>
+              <p className="text-sm text-gray-600">
+                <strong className="text-gray-900">While waiting:</strong> You can change employers 
+                (after 180 days), your H-1B can be extended beyond 6 years, and your priority date 
+                is portable.
+              </p>
+            </section>
+          )}
+
           {/* I-485 Section */}
           <section id="i485" className="pt-6 border-t border-gray-100">
             <div className="flex items-center gap-3 mb-3">
@@ -239,8 +362,8 @@ export default function H1BToGreenCardGuide() {
                 <LiveTime
                   label="Processing"
                   time={processingTimes ? `${processingTimes.i485.min}-${processingTimes.i485.max} months` : "10-18 months"}
-                  source="/processing-times"
                 />
+                <Link href="/processing-times" className="text-gray-400 hover:text-gray-600 ml-2">↗</Link>
               </div>
             </div>
 
@@ -262,14 +385,14 @@ export default function H1BToGreenCardGuide() {
                 <p className="text-sm text-gray-600 mb-2">
                   Master&apos;s degree or bachelor&apos;s + 5 years experience
                 </p>
-                <p className="text-xs text-emerald-600">Shorter backlog for India/China</p>
+                <p className="text-xs text-gray-500">Higher qualification requirement</p>
               </div>
               <div className="p-4 rounded-lg border border-gray-200">
                 <h3 className="font-semibold text-gray-900 mb-2">EB-3</h3>
                 <p className="text-sm text-gray-600 mb-2">
                   Bachelor&apos;s degree or 2 years skilled experience
                 </p>
-                <p className="text-xs text-gray-500">Longer backlog</p>
+                <p className="text-xs text-gray-500">Lower qualification requirement</p>
               </div>
             </div>
           </section>
@@ -305,7 +428,7 @@ export default function H1BToGreenCardGuide() {
           {/* CTA */}
           <section className="pt-6 mt-6 border-t border-gray-200">
             <p className="text-gray-600 mb-4">
-              These timelines vary based on your country of birth and current status.
+              Get a personalized timeline based on your specific situation.
             </p>
             <Link
               href="/"
