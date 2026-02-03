@@ -6,14 +6,7 @@ import { DynamicData } from "@/lib/dynamic-data";
 import { calculateNewFilerWait } from "@/lib/processing-times";
 import { CountryOfBirth } from "@/lib/filter-paths";
 
-// Country selector tabs
-function CountryTabs({
-  selected,
-  onChange,
-}: {
-  selected: CountryOfBirth;
-  onChange: (country: CountryOfBirth) => void;
-}) {
+function CountryTabs({ selected, onChange }: { selected: CountryOfBirth; onChange: (country: CountryOfBirth) => void }) {
   const countries: { id: CountryOfBirth; label: string }[] = [
     { id: "other", label: "Most countries" },
     { id: "india", label: "India" },
@@ -27,9 +20,7 @@ function CountryTabs({
           key={c.id}
           onClick={() => onChange(c.id)}
           className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-            selected === c.id
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-600 hover:text-gray-900"
+            selected === c.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
           }`}
         >
           {c.label}
@@ -39,14 +30,8 @@ function CountryTabs({
   );
 }
 
-// Timeline bar
-function TimelineBar({
-  steps,
-}: {
-  steps: { label: string; months: number; color: string }[];
-}) {
+function TimelineBar({ steps }: { steps: { label: string; months: number; color: string }[] }) {
   const totalMonths = steps.reduce((sum, s) => sum + s.months, 0);
-  
   const colorClasses: Record<string, string> = {
     emerald: "bg-emerald-500 text-white",
     amber: "bg-amber-500 text-white",
@@ -73,11 +58,8 @@ function TimelineBar({
         {steps.map((step, i) => {
           const width = (step.months / totalMonths) * 100;
           return (
-            <div
-              key={i}
-              className={`text-center ${step.color === "orange" ? "text-orange-600" : ""}`}
-              style={{ width: `${Math.max(width, 8)}%`, minWidth: "45px" }}
-            >
+            <div key={i} className={`text-center ${step.color === "orange" ? "text-orange-600" : ""}`}
+              style={{ width: `${Math.max(width, 8)}%`, minWidth: "45px" }}>
               {step.months >= 12 ? `${(step.months / 12).toFixed(step.months >= 24 ? 0 : 1)} yr` : `${step.months} mo`}
             </div>
           );
@@ -135,9 +117,7 @@ export default function H1BToGreenCardGuide() {
             i140: { min: pt.i140.min, max: pt.i140.max, premium: pt.i140.premiumDays },
             i485: { min: pt.i485.min, max: pt.i485.max },
           });
-          if (data.data.priorityDates) {
-            setPriorityDates(data.data.priorityDates);
-          }
+          if (data.data.priorityDates) setPriorityDates(data.data.priorityDates);
         }
       })
       .catch(() => {})
@@ -151,11 +131,9 @@ export default function H1BToGreenCardGuide() {
   const pdWaitMonths = useMemo(() => {
     if (!priorityDates) return 0;
     const pdStr = priorityDates.eb2?.[
-      selectedCountry === "india" ? "india" : 
-      selectedCountry === "china" ? "china" : "allOther"
+      selectedCountry === "india" ? "india" : selectedCountry === "china" ? "china" : "allOther"
     ] || "Current";
-    const waitResult = calculateNewFilerWait(pdStr, selectedCountry, "eb2");
-    return Math.round(waitResult.estimatedMonths);
+    return Math.round(calculateNewFilerWait(pdStr, selectedCountry, "eb2").estimatedMonths);
   }, [priorityDates, selectedCountry]);
 
   const timelineSteps = useMemo(() => {
@@ -163,9 +141,7 @@ export default function H1BToGreenCardGuide() {
       { label: "PERM", months: permMonths, color: "emerald" },
       { label: "I-140", months: i140Months, color: "emerald" },
     ];
-    if (pdWaitMonths > 0) {
-      steps.push({ label: "PD Wait", months: pdWaitMonths, color: "orange" });
-    }
+    if (pdWaitMonths > 0) steps.push({ label: "PD Wait", months: pdWaitMonths, color: "orange" });
     steps.push({ label: "I-485", months: i485Months, color: "amber" });
     return steps;
   }, [permMonths, i140Months, pdWaitMonths, i485Months]);
@@ -208,14 +184,12 @@ export default function H1BToGreenCardGuide() {
 
         <div className="space-y-6 text-gray-700 leading-relaxed">
           <p>
-            The standard employer-sponsored green card has three main steps: PERM labor certification 
-            (proving no Americans want the job), I-140 petition (proving you qualify), and I-485 
-            adjustment (actually getting the green card). Your place in the visa queue is set by 
-            your <strong className="text-gray-900">priority date</strong>, which is when DOL 
-            receives your PERM application.
+            The employer-sponsored green card has three steps: PERM labor certification, 
+            I-140 petition, and I-485 adjustment of status. Your <strong className="text-gray-900">priority date</strong> is 
+            when DOL receives your PERM application. This date determines your place in the 
+            visa queue.
           </p>
 
-          {/* PERM Section */}
           <section id="perm" className="pt-6 border-t border-gray-100">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-3 h-3 rounded-full bg-emerald-500" />
@@ -239,24 +213,21 @@ export default function H1BToGreenCardGuide() {
             </div>
 
             <p className="mb-3">
-              Before filing anything with USCIS, your employer has to prove they tried to hire 
-              an American for the role. This takes a while:
+              Your employer proves no qualified US workers are available for the position.
             </p>
             <ul className="space-y-2 text-sm text-gray-600 mb-3">
-              <li><strong className="text-gray-900">Prevailing wage request</strong> — DOL determines the minimum 
-                salary for your job title and location ({processingTimes ? `${processingTimes.pwd.months} months right now` : "around 6 months"})</li>
-              <li><strong className="text-gray-900">Recruitment</strong> — Job postings, ads, and a 30-day 
-                &quot;quiet period&quot; afterward (2-3 months total)</li>
-              <li><strong className="text-gray-900">DOL review</strong> — They check if recruitment was done 
-                properly and nobody qualified applied</li>
+              <li><strong className="text-gray-900">Prevailing wage:</strong> DOL sets minimum salary 
+                ({processingTimes ? `~${processingTimes.pwd.months} months` : "~6 months"})</li>
+              <li><strong className="text-gray-900">Recruitment:</strong> Job postings and ads, then 
+                a 30-day quiet period (2-3 months)</li>
+              <li><strong className="text-gray-900">DOL review:</strong> They check recruitment was done 
+                properly</li>
             </ul>
             <p className="text-sm text-gray-500">
-              DOL audits 20-30% of cases. If yours gets picked, expect an extra 6-12 months 
-              while they request and review documentation.
+              DOL audits 20-30% of cases. If audited, add 6-12 months.
             </p>
           </section>
 
-          {/* I-140 Section */}
           <section id="i140" className="pt-6 border-t border-gray-100">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-3 h-3 rounded-full bg-emerald-500" />
@@ -273,18 +244,16 @@ export default function H1BToGreenCardGuide() {
             </div>
 
             <p className="mb-3">
-              Once PERM clears, your employer files I-140 with USCIS. This proves you have the 
-              qualifications for the job. Almost everyone pays extra for premium processing to 
-              get a decision in 15 business days instead of waiting months.
+              Your employer files I-140 to prove you have the qualifications. Most 
+              employers use premium processing for a 15-day decision.
             </p>
             <p className="text-sm text-gray-600">
-              <strong className="text-gray-900">The 180-day rule:</strong> After your I-140 has been 
-              approved for 180 days, you can switch jobs and keep your priority date. This is huge 
-              for people with long waits—you&apos;re no longer tied to one employer.
+              <strong className="text-gray-900">180-day rule:</strong> After your I-140 
+              has been approved for 180 days, you can change employers and keep your 
+              priority date.
             </p>
           </section>
 
-          {/* Priority Date Wait Section */}
           {!loading && pdWaitMonths > 6 && (
             <section id="pd-wait" className="pt-6 border-t border-gray-100">
               <div className="flex items-center gap-3 mb-3">
@@ -305,19 +274,18 @@ export default function H1BToGreenCardGuide() {
               </div>
 
               <p className="mb-3">
-                With an approved I-140, you wait for your priority date to become &quot;current&quot; in 
-                the monthly visa bulletin. Only then can you file I-485. The wait depends entirely 
-                on your country of birth and how fast the dates move.
+                With an approved I-140, you wait for your priority date to become 
+                &quot;current&quot; in the monthly visa bulletin. Only then can you 
+                file I-485.
               </p>
               <p className="text-sm text-gray-600">
-                <strong className="text-gray-900">While you wait:</strong> Your H-1B can be extended 
-                past the normal 6-year limit. You can change jobs (keeping your priority date). Some 
-                people file for EB-1 or NIW in parallel to potentially skip the line.
+                <strong className="text-gray-900">While waiting:</strong> Your H-1B 
+                can be extended past 6 years. You can change jobs and keep your priority 
+                date. Some people file EB-1 or NIW petitions in parallel.
               </p>
             </section>
           )}
 
-          {/* I-485 Section */}
           <section id="i485" className="pt-6 border-t border-gray-100">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-3 h-3 rounded-full bg-amber-500" />
@@ -332,79 +300,85 @@ export default function H1BToGreenCardGuide() {
             </div>
 
             <p className="mb-3">
-              The home stretch. You file I-485 along with I-765 (work permit) and I-131 
-              (travel permit). The combo EAD/AP card usually arrives within a few months, 
-              which means you can work for any employer and travel freely while waiting 
-              for the green card itself.
+              File I-485 with I-765 (work permit) and I-131 (travel permit). The combo 
+              EAD/AP card arrives in a few months, which lets you work for any employer 
+              and travel while the green card is pending.
             </p>
             <p className="text-sm text-gray-600">
-              Most cases include an interview at your local USCIS office. They verify your 
-              documents and ask basic questions about your application.
+              Most cases include an interview at your local USCIS office.
             </p>
           </section>
 
-          {/* EB-2 vs EB-3 */}
           <section className="pt-6 border-t border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">EB-2 vs EB-3: Which category?</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">EB-2 vs EB-3</h2>
             <div className="grid sm:grid-cols-2 gap-4 mb-4">
               <div className="p-4 rounded-lg border border-gray-200">
                 <h3 className="font-semibold text-gray-900 mb-2">EB-2</h3>
                 <p className="text-sm text-gray-600">
-                  Advanced degree (master&apos;s or higher) OR a bachelor&apos;s with 5+ years 
-                  of progressive experience in the field
+                  Master&apos;s degree or higher. Or bachelor&apos;s plus 5 years 
+                  progressive experience.
                 </p>
               </div>
               <div className="p-4 rounded-lg border border-gray-200">
                 <h3 className="font-semibold text-gray-900 mb-2">EB-3</h3>
                 <p className="text-sm text-gray-600">
-                  Bachelor&apos;s degree OR 2+ years of training/experience for skilled positions
+                  Bachelor&apos;s degree. Or 2+ years training/experience for 
+                  skilled positions.
                 </p>
               </div>
             </div>
             <p className="text-sm text-gray-600">
-              <strong className="text-gray-900">Downgrade option:</strong> If EB-2 has a longer 
-              wait than EB-3 for your country (it happens), you can &quot;downgrade&quot; your 
-              case to EB-3 and keep your original priority date. Some people file both categories 
-              simultaneously.
+              <strong className="text-gray-900">Downgrade:</strong> If EB-2 has a 
+              longer wait than EB-3, you can downgrade and keep your priority date.
             </p>
           </section>
 
-          {/* Tips */}
           <section className="pt-6 border-t border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Things to know</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">H-4 dependents</h2>
+            <p className="mb-3">
+              Your spouse and children under 21 can file I-485 with you if your 
+              priority date is current. They get their own EAD and AP while waiting.
+            </p>
+            <p className="text-sm text-gray-500">
+              If your I-140 is approved and you&apos;re past the 6-year H-1B mark, 
+              your H-4 spouse can also get an EAD to work.
+            </p>
+          </section>
+
+          <section className="pt-6 border-t border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Key rules</h2>
             <ul className="space-y-3 text-sm">
               <li className="flex gap-3">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 flex-shrink-0" />
                 <span>
-                  <strong className="text-gray-900">H-1B extensions:</strong> Normally capped 
-                  at 6 years. You can extend in 1-year increments if your PERM has been 
-                  pending for 365+ days. If your I-140 is approved and there&apos;s a visa 
-                  backlog, you can get 3-year extensions.
+                  <strong className="text-gray-900">H-1B extensions:</strong> Normally 
+                  capped at 6 years. You get 1-year extensions if PERM has been pending 
+                  365+ days. You get 3-year extensions if I-140 is approved and there&apos;s 
+                  a backlog.
                 </span>
               </li>
               <li className="flex gap-3">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 flex-shrink-0" />
                 <span>
-                  <strong className="text-gray-900">Concurrent filing:</strong> If your priority 
-                  date is already current when I-140 is filed, submit I-485 at the same time. 
-                  No need to wait for I-140 approval.
+                  <strong className="text-gray-900">Concurrent filing:</strong> If your 
+                  priority date is already current when I-140 is filed, submit I-485 
+                  at the same time.
                 </span>
               </li>
               <li className="flex gap-3">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 flex-shrink-0" />
                 <span>
-                  <strong className="text-gray-900">Job changes:</strong> You can switch 
-                  employers after I-485 has been pending for 180 days, as long as the new job 
-                  is in a &quot;same or similar&quot; occupation.
+                  <strong className="text-gray-900">Job changes:</strong> After I-485 
+                  has been pending for 180 days, you can switch employers if the new 
+                  job is similar to the original.
                 </span>
               </li>
             </ul>
           </section>
 
-          {/* CTA */}
           <section className="pt-6 mt-6 border-t border-gray-200">
             <p className="text-gray-600 mb-4">
-              Enter your details to see a timeline specific to your situation.
+              Enter your details for a timeline specific to your situation.
             </p>
             <Link
               href="/"

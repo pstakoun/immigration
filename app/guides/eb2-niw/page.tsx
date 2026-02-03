@@ -146,7 +146,7 @@ export default function EB2NIWGuide() {
 
       <article className="max-w-2xl">
         <h1 className="text-2xl font-semibold text-gray-900 mb-2">EB-2 NIW</h1>
-        <p className="text-gray-600 mb-4">National Interest Waiver — petition for yourself</p>
+        <p className="text-gray-600 mb-4">National Interest Waiver</p>
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
           <span className="text-sm text-gray-500">Your country of birth:</span>
@@ -164,79 +164,70 @@ export default function EB2NIWGuide() {
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
-          No employer sponsorship needed
+          No employer needed
         </div>
 
         {loading ? <TimelineBarSkeleton /> : <TimelineBar steps={timelineSteps} />}
 
         <div className="space-y-6 text-gray-700 leading-relaxed">
           <p>
-            NIW is a self-petition route—you don&apos;t need an employer to sponsor you, and 
-            you skip the entire PERM labor certification process. You&apos;re essentially 
-            arguing that your work is important enough to the US that they should waive 
-            the usual job offer requirement.
+            NIW lets you petition for yourself. No employer sponsor, no PERM labor 
+            certification. You argue that your work benefits the US enough that they 
+            should waive the normal job offer requirement.
           </p>
           
           <p>
-            It&apos;s not for everyone. You need a strong track record of accomplishment in 
-            your field, and you need to make a convincing case that your future work will 
-            benefit the country. But for researchers, engineers, entrepreneurs, and others 
-            with demonstrable achievements, it can be faster than the employer-sponsored path.
+            This works well for researchers, engineers, entrepreneurs, and others 
+            with a track record of impact. Not everyone qualifies. You need demonstrable 
+            achievements and a plan for future work.
           </p>
 
-          {/* Basic requirements */}
           <section className="pt-6 border-t border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Who qualifies</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Requirements</h2>
             
-            <p className="mb-3">First, you need to meet EB-2 education requirements:</p>
+            <p className="mb-3">You need to meet EB-2 education requirements:</p>
             <ul className="space-y-2 text-sm mb-4">
               <li className="flex gap-2">
                 <span className="text-gray-400">•</span>
-                A master&apos;s degree or PhD, OR
+                Master&apos;s degree or PhD, OR
               </li>
               <li className="flex gap-2">
                 <span className="text-gray-400">•</span>
-                A bachelor&apos;s plus 5 years of progressive experience in your field
+                Bachelor&apos;s plus 5 years progressive experience
               </li>
             </ul>
 
             <p className="mb-3">
-              Then you need to pass the three-prong test from the 2016 <em>Matter of Dhanasar</em> 
-              decision. USCIS will evaluate:
+              Then prove the three-prong Dhanasar test (from a 2016 AAO decision):
             </p>
             
             <div className="space-y-3">
               <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
                 <p className="text-sm">
-                  <strong className="text-gray-900">1. Substantial merit and national importance.</strong>{" "}
-                  Your work has to matter beyond just your employer or local area. &quot;National 
-                  importance&quot; is interpreted broadly—it doesn&apos;t mean you need government 
-                  contracts or national security work. Technology, healthcare, education, 
-                  and business innovation all count.
+                  <strong className="text-gray-900">1. Substantial merit and national importance.</strong> Your 
+                  work matters beyond a single employer or locality. &quot;National importance&quot; is 
+                  interpreted broadly: tech, healthcare, education, and business all count.
                 </p>
               </div>
               <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
                 <p className="text-sm">
-                  <strong className="text-gray-900">2. Well positioned to advance the endeavor.</strong>{" "}
-                  You have the background, skills, and plan to actually make progress in 
-                  your proposed work. Education, experience, achievements, and future 
-                  commitments all help here.
+                  <strong className="text-gray-900">2. Well positioned to advance the endeavor.</strong> You 
+                  have the skills, background, and plan to make progress. Education, achievements, 
+                  and future commitments help here.
                 </p>
               </div>
               <div className="p-3 rounded-lg bg-gray-50 border border-gray-200">
                 <p className="text-sm">
-                  <strong className="text-gray-900">3. On balance, beneficial to waive the job offer.</strong>{" "}
-                  Would requiring a traditional labor certification process be a net negative? 
-                  For entrepreneurs, researchers, and people in fast-moving fields, this 
-                  is often easy to argue.
+                  <strong className="text-gray-900">3. Beneficial to waive the job offer.</strong> Would 
+                  requiring a labor certification be a net negative? For entrepreneurs 
+                  and people in fast-moving fields, this is often easy to show.
                 </p>
               </div>
             </div>
           </section>
 
-          {/* Process */}
           <section className="pt-6 border-t border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">How it works</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">The process</h2>
             
             <div className="space-y-4">
               <div className="flex gap-3">
@@ -245,16 +236,14 @@ export default function EB2NIWGuide() {
                   <div className="flex items-baseline flex-wrap gap-x-2">
                     <strong className="text-gray-900">File I-140 (NIW)</strong>
                     <span className="text-gray-500 text-sm">
-                      {processingTimes ? `${processingTimes.i140.min}-${processingTimes.i140.max} mo` : "6-9 mo"} regular, {" "}
-                      {processingTimes?.i140.premium ?? 15} days premium
+                      {processingTimes ? `${processingTimes.i140.min}-${processingTimes.i140.max} mo` : "6-9 mo"} regular, {processingTimes?.i140.premium ?? 15} days premium
                     </span>
                     <Link href="/processing-times" className="text-gray-400 hover:text-gray-600 text-sm">↗</Link>
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
-                    You file this yourself (or with a lawyer). Your priority date is the day 
-                    USCIS receives the petition. The bulk of the work is in preparing your 
-                    case—reference letters, evidence of impact, and a detailed cover letter 
-                    making your argument.
+                    You file this yourself or with a lawyer. Your priority date is when USCIS 
+                    receives the petition. Most of the work is preparing your evidence and 
+                    argument.
                   </p>
                 </div>
               </div>
@@ -270,8 +259,7 @@ export default function EB2NIWGuide() {
                       </span>
                     </div>
                     <p className="text-sm text-gray-600 mt-1">
-                      NIW uses the same EB-2 queue as employer-sponsored cases. If you&apos;re 
-                      from India or China, there&apos;s a wait.
+                      NIW uses the EB-2 queue. India and China have waits.
                     </p>
                   </div>
                 </div>
@@ -287,84 +275,83 @@ export default function EB2NIWGuide() {
                     </span>
                   </div>
                   <p className="text-sm text-gray-600 mt-1">
-                    File when your date becomes current. {!loading && selectedCountry === "other" && "Wait times for most countries are far shorter than India or China."}
+                    File when your date is current.
                   </p>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* What makes a strong case */}
           <section className="pt-6 border-t border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Building your case</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Evidence that helps</h2>
             
-            <p className="mb-3">
-              Most successful NIW petitions include a combination of these elements:
-            </p>
-            
-            <ul className="space-y-2 text-sm mb-4">
+            <ul className="space-y-2 text-sm">
               <li className="flex gap-2">
                 <span className="text-emerald-500">•</span>
-                <strong className="text-gray-900">Letters of recommendation</strong> (typically 5-8) 
-                from recognized experts in your field, ideally people you haven&apos;t worked 
-                with directly
+                <strong className="text-gray-900">Recommendation letters</strong> from 
+                experts in your field (5-8 is typical), especially from people who 
+                don&apos;t know you directly
               </li>
               <li className="flex gap-2">
                 <span className="text-emerald-500">•</span>
                 <strong className="text-gray-900">Publications and citations</strong> showing 
-                your work is recognized and used by others
+                your work is used by others
               </li>
               <li className="flex gap-2">
                 <span className="text-emerald-500">•</span>
-                <strong className="text-gray-900">Patents</strong> (granted or pending) demonstrating 
-                innovation
+                <strong className="text-gray-900">Patents</strong> (granted or pending)
               </li>
               <li className="flex gap-2">
                 <span className="text-emerald-500">•</span>
-                <strong className="text-gray-900">Press coverage or awards</strong> showing 
-                external recognition
+                <strong className="text-gray-900">Media coverage or awards</strong>
               </li>
               <li className="flex gap-2">
                 <span className="text-emerald-500">•</span>
-                <strong className="text-gray-900">Documented business impact</strong>—revenue, 
-                users, contracts, partnerships
+                <strong className="text-gray-900">Business impact</strong> like revenue, 
+                users, contracts
               </li>
             </ul>
             
-            <p className="text-sm text-gray-500">
-              The petition letter is critical. It needs to connect your evidence to the 
-              three Dhanasar prongs in a clear, convincing way. Many people hire lawyers 
-              specifically for their experience writing these arguments.
+            <p className="text-sm text-gray-500 mt-4">
+              The petition letter matters. It needs to connect your evidence to the 
+              three Dhanasar prongs clearly.
             </p>
           </section>
 
-          {/* Dual filing strategy */}
+          <section className="pt-6 border-t border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Common fields</h2>
+            <p className="mb-3">
+              NIW works across many fields: STEM research, medicine, business, 
+              education, arts. Recent years have seen more approvals for entrepreneurs 
+              and people in AI/ML, biotech, and clean energy.
+            </p>
+            <p className="text-sm text-gray-500">
+              The key is demonstrating that your work has impact beyond a single employer.
+            </p>
+          </section>
+
           <section className="pt-6 border-t border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">NIW + PERM strategy</h2>
             <p className="mb-3">
-              A common approach: file NIW yourself while your employer files PERM in parallel. 
-              This gives you two shots at approval. If the PERM-based I-140 is approved first 
-              with an earlier priority date, you can port that date to your NIW case.
+              Many people file NIW while their employer files PERM in parallel. This 
+              gives you two paths to approval. If the PERM-based I-140 is approved 
+              first with an earlier priority date, you can use that date for NIW.
             </p>
             <p className="text-sm text-gray-500">
-              This is especially useful for people from backlogged countries who want to 
-              lock in the earliest possible priority date while also having the flexibility 
-              of a self-petition.
+              Useful if you want the flexibility of self-sponsorship but also want 
+              the earliest possible priority date.
             </p>
           </section>
 
-          {/* RFE note */}
           <section className="pt-6 border-t border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">What if you get an RFE?</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">RFEs</h2>
             <p>
-              Requests for Evidence are common—USCIS might want more documentation or 
-              clarification on your qualifications. It&apos;s not a denial, just a request 
-              for more information. You typically get 87 days to respond. The key is to 
-              directly address whatever they asked for with clear evidence.
+              Requests for Evidence are common. USCIS may want more documentation or 
+              clarification. You get about 87 days to respond. Address exactly what 
+              they asked for with clear evidence.
             </p>
           </section>
 
-          {/* CTA */}
           <section className="pt-6 mt-6 border-t border-gray-200">
             <p className="text-gray-600 mb-4">
               Compare NIW to employer-sponsored routes for your situation.

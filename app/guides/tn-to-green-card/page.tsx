@@ -150,7 +150,7 @@ export default function TNToGreenCardGuide() {
 
       <article className="max-w-2xl">
         <h1 className="text-2xl font-semibold text-gray-900 mb-2">TN to Green Card</h1>
-        <p className="text-gray-600 mb-4">Canadian and Mexican professionals under NAFTA/USMCA</p>
+        <p className="text-gray-600 mb-4">Canadian and Mexican professionals under USMCA</p>
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
           <span className="text-sm text-gray-500">Your country of birth:</span>
@@ -168,89 +168,88 @@ export default function TNToGreenCardGuide() {
 
         <div className="space-y-6 text-gray-700 leading-relaxed">
           <p>
-            TN is a non-immigrant visa, meaning you&apos;re technically supposed to go home 
-            eventually. The tricky part is that applying for a green card signals you 
-            want to stay permanently—that&apos;s called &quot;immigrant intent,&quot; and it 
-            conflicts with TN&apos;s requirements.
+            TN is a non-immigrant visa. You&apos;re supposed to maintain ties to your home 
+            country and have no intent to stay permanently. Applying for a green card 
+            shows permanent intent, which creates a conflict.
           </p>
           
-          {!loading && selectedCountry === "other" && (
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
-              <p className="text-sm text-emerald-800">
-                <strong>If you were born in Canada or Mexico</strong> (not just a citizen), 
-                you fall under &quot;All Other Countries&quot; in the visa bulletin. Unlike India 
-                or China (where waits can be 10+ years), the backlog is typically 1-2 years 
-                at most.
-              </p>
-            </div>
-          )}
+          <p>
+            This conflict is called &quot;dual intent&quot; and it&apos;s the main complication 
+            for TN holders pursuing green cards. The good news: thousands of people do it 
+            successfully every year.
+          </p>
 
-          {/* Dual Intent */}
           <section className="pt-6 border-t border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">The dual intent problem</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Why dual intent matters</h2>
             
             <p className="mb-4">
-              The risk shows up in two places: when you renew your TN at the border, and 
-              when you travel internationally during the green card process. A border officer 
-              who sees pending immigrant paperwork might question your non-immigrant intent.
+              CBP officers at the border have discretion. If they see evidence of immigrant 
+              intent (pending green card paperwork), they might question whether you still 
+              qualify for TN status. This matters when:
             </p>
             
-            <p className="mb-4 text-sm text-gray-600">
-              That said, thousands of people successfully get green cards from TN status every 
-              year. The key is understanding when immigrant intent matters and when it doesn&apos;t.
+            <ul className="space-y-2 text-sm text-gray-600 mb-4">
+              <li>• Renewing TN at a port of entry or consulate</li>
+              <li>• Re-entering the US after international travel</li>
+              <li>• Applying for TN extension within the US (lower risk, but still possible)</li>
+            </ul>
+            
+            <p className="text-sm text-gray-600">
+              The legal standard is whether you have <em>present intent</em> to abandon 
+              your TN status. Having a green card application in progress doesn&apos;t 
+              automatically disqualify you, but it can raise questions.
             </p>
+          </section>
+
+          <section className="pt-6 border-t border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Two approaches</h2>
             
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="p-4 rounded-lg border border-gray-200">
                 <h3 className="font-semibold text-gray-900 mb-2">Stay on TN</h3>
-                <p className="text-sm text-gray-600">
-                  Start the green card process while on TN. Works well if you can avoid 
-                  international travel or renewing at the border. Many people do this successfully.
+                <p className="text-sm text-gray-600 mb-2">
+                  Start the green card process while on TN. Minimize border crossings until 
+                  you file I-485 and get Advance Parole.
+                </p>
+                <p className="text-sm text-gray-500">
+                  Works well for people who rarely travel internationally.
                 </p>
               </div>
               <div className="p-4 rounded-lg border border-emerald-200 bg-emerald-50">
-                <h3 className="font-semibold text-gray-900 mb-2">Switch to H-1B first</h3>
-                <p className="text-sm text-gray-600">
-                  H-1B explicitly allows dual intent. If you can get one (lottery or cap-exempt), 
-                  it removes the travel risk entirely. Adds a few months but gives peace of mind.
+                <h3 className="font-semibold text-gray-900 mb-2">Switch to H-1B</h3>
+                <p className="text-sm text-gray-600 mb-2">
+                  H-1B allows dual intent explicitly. No conflict with green card applications.
+                </p>
+                <p className="text-sm text-gray-500">
+                  Requires lottery win or cap-exempt employer (universities, research).
                 </p>
               </div>
             </div>
           </section>
 
-          {/* When does intent matter */}
           <section className="pt-6 border-t border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">When intent actually matters</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Intent at each stage</h2>
             
             <ul className="space-y-3 text-sm">
               <li className="flex gap-3">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 flex-shrink-0" />
                 <span>
-                  <strong className="text-gray-900">Filing PERM and I-140:</strong> Doesn&apos;t 
-                  automatically create intent problems. These are employer filings, and having 
-                  them pending doesn&apos;t mean you&apos;ve abandoned your TN status.
+                  <strong className="text-gray-900">PERM and I-140:</strong> These are 
+                  employer filings. Having them pending or approved doesn&apos;t mean 
+                  you&apos;ve committed to staying. Lower risk.
                 </span>
               </li>
               <li className="flex gap-3">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0" />
                 <span>
-                  <strong className="text-gray-900">Filing I-485:</strong> This is when you&apos;re 
-                  clearly declaring intent to stay. Once filed, you&apos;ll need Advance Parole 
-                  to travel.
-                </span>
-              </li>
-              <li className="flex gap-3">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0" />
-                <span>
-                  <strong className="text-gray-900">Border crossings:</strong> The risk point 
-                  for TN holders. An officer might deny entry if they believe you&apos;ve 
-                  abandoned non-immigrant intent, though this is relatively rare.
+                  <strong className="text-gray-900">I-485:</strong> Filing adjustment of 
+                  status is a clear statement of immigrant intent. After this point, 
+                  get Advance Parole before any international travel.
                 </span>
               </li>
             </ul>
           </section>
 
-          {/* The actual process */}
           <section className="pt-6 border-t border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">The process</h2>
             
@@ -261,8 +260,8 @@ export default function TNToGreenCardGuide() {
                   <strong className="text-gray-900">PERM</strong>
                   <span className="text-gray-500 ml-2">~{permMonths} months</span>
                   <p className="text-sm text-gray-600">
-                    Identical to any other employer-sponsored case. Your employer files it; 
-                    you wait.
+                    Same process as any employer-sponsored case. Your employer handles 
+                    the labor certification.
                   </p>
                 </div>
               </div>
@@ -272,7 +271,9 @@ export default function TNToGreenCardGuide() {
                 <div>
                   <strong className="text-gray-900">I-140</strong>
                   <span className="text-gray-500 ml-2">{processingTimes?.i140.premium ?? 15} days with premium</span>
-                  <p className="text-sm text-gray-600">Almost everyone uses premium processing.</p>
+                  <p className="text-sm text-gray-600">
+                    Most employers pay for premium processing.
+                  </p>
                 </div>
               </div>
               
@@ -285,8 +286,8 @@ export default function TNToGreenCardGuide() {
                       ~{pdWaitMonths >= 12 ? `${Math.round(pdWaitMonths / 12)} years` : `${pdWaitMonths} months`}
                     </span>
                     <p className="text-sm text-gray-600">
-                      You&apos;ll wait for your date to become current. During this time, 
-                      your TN status continues as normal.
+                      Wait for your date to become current. Your TN status continues 
+                      as normal during this time.
                     </p>
                   </div>
                 </div>
@@ -300,28 +301,43 @@ export default function TNToGreenCardGuide() {
                     {processingTimes ? `${processingTimes.i485.min}-${processingTimes.i485.max}` : "10-18"} months
                   </span>
                   <p className="text-sm text-gray-600">
-                    File when your priority date is current. {!loading && selectedCountry === "other" && "Wait times for Canada/Mexico are much shorter than India or China."}
+                    File when your priority date is current.
                   </p>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Travel considerations */}
           <section className="pt-6 border-t border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Traveling during the process</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Travel after I-485</h2>
             <p className="mb-3">
               Once you file I-485, don&apos;t leave the US without Advance Parole (AP). 
-              If you travel and return using AP, you&apos;re no longer in TN status—you&apos;re 
-              considered a &quot;parolee&quot; waiting for your green card.
+              Returning on AP abandons your TN status. You become a &quot;parolee&quot; 
+              for the duration of your adjustment application.
+            </p>
+            <p className="text-sm text-gray-600 mb-3">
+              This is different from H-1B holders, who can choose to re-enter on their 
+              H-1B or AP. TN holders don&apos;t have that option.
             </p>
             <p className="text-sm text-gray-500">
-              Your TD dependents follow the same rules. They should also apply for AP 
-              if they want to travel after I-485 is filed.
+              TD dependents face the same situation. They should also apply for AP 
+              if they need to travel.
             </p>
           </section>
 
-          {/* CTA */}
+          <section className="pt-6 border-t border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">If something goes wrong</h2>
+            <p className="mb-3">
+              If your TN renewal is denied at the border due to suspected immigrant intent, 
+              you may be able to apply for TN extension from within the US using Form I-129. 
+              This avoids the border crossing issue.
+            </p>
+            <p className="text-sm text-gray-500">
+              If your green card is denied while you&apos;re on AP (not TN), you&apos;ll 
+              need to leave the US or find another status.
+            </p>
+          </section>
+
           <section className="pt-6 mt-6 border-t border-gray-200">
             <p className="text-gray-600 mb-4">Build a timeline based on your situation.</p>
             <Link

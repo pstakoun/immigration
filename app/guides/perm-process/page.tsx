@@ -100,7 +100,7 @@ export default function PERMProcessGuide() {
 
       <article className="max-w-2xl">
         <h1 className="text-2xl font-semibold text-gray-900 mb-2">PERM Labor Certification</h1>
-        <p className="text-gray-600 mb-4">The first step in employer-sponsored green cards</p>
+        <p className="text-gray-600 mb-4">First step in employer-sponsored green cards</p>
         
         <div className="flex items-baseline gap-3 mb-2">
           {loading ? <div className="h-9 w-32 bg-gray-200 rounded animate-pulse" /> : (
@@ -109,7 +109,7 @@ export default function PERMProcessGuide() {
           <span className="text-gray-500">typical duration</span>
         </div>
         
-        <p className="text-sm text-amber-600 mb-4">Add 6-12 months if audited (affects 20-30% of cases)</p>
+        <p className="text-sm text-amber-600 mb-4">Add 6-12 months if audited (20-30% of cases)</p>
 
         {loading ? (
           <TimelineBarSkeleton />
@@ -123,19 +123,16 @@ export default function PERMProcessGuide() {
 
         <div className="space-y-6 text-gray-700 leading-relaxed">
           <p>
-            PERM is the Department of Labor&apos;s way of making sure employers aren&apos;t 
-            hiring foreign workers when qualified Americans are available. Your employer has 
-            to demonstrate they tried to fill the position domestically and couldn&apos;t 
-            find anyone.
+            PERM proves that no qualified US workers are available for your position. 
+            Your employer runs recruitment, documents the results, and files with the 
+            Department of Labor.
           </p>
           
           <p>
-            The date your PERM is filed becomes your <strong className="text-gray-900">priority 
-            date</strong>—your place in the green card queue. That&apos;s why PERM timing 
-            matters, especially for people from India and China with long backlogs.
+            The filing date becomes your <strong className="text-gray-900">priority date</strong>. 
+            This determines your place in the green card queue.
           </p>
 
-          {/* Live processing times */}
           <section className="p-4 rounded-lg bg-gray-50 border border-gray-200">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold text-gray-900">Current DOL processing</h3>
@@ -152,47 +149,44 @@ export default function PERMProcessGuide() {
                 <div>
                   <div className="text-gray-500">Prevailing Wage</div>
                   <div className="font-medium text-gray-900">{processingTimes?.pwd.processing}</div>
-                  <div className="text-gray-500">~{pwdMonths} mo wait</div>
+                  <div className="text-gray-500">~{pwdMonths} mo</div>
                 </div>
                 <div>
                   <div className="text-gray-500">PERM (no audit)</div>
                   <div className="font-medium text-gray-900">{processingTimes?.perm.processing}</div>
-                  <div className="text-gray-500">~{permMonths} mo wait</div>
+                  <div className="text-gray-500">~{permMonths} mo</div>
                 </div>
                 <div>
                   <div className="text-gray-500">PERM (audited)</div>
                   <div className="font-medium text-amber-600">{processingTimes?.permAudit.processing}</div>
-                  <div className="text-amber-600">~{auditMonths} mo wait</div>
+                  <div className="text-amber-600">~{auditMonths} mo</div>
                 </div>
               </div>
             )}
           </section>
 
-          {/* PWD */}
           <section className="pt-6 border-t border-gray-100">
             <div className="flex gap-3 mb-3">
               <div className="w-3 h-3 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Prevailing Wage Determination</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Prevailing Wage</h2>
                 <span className="text-sm text-gray-500">~{pwdMonths} months</span>
               </div>
             </div>
             <p className="mb-3">
-              Before anything else, DOL determines the minimum salary for your position. 
-              This is based on your job title, duties, requirements, and work location.
+              DOL determines the minimum salary for your position based on job title, 
+              duties, requirements, and location.
             </p>
             <p className="text-sm text-gray-600 mb-3">
-              The determination comes with a wage level (1-4). Higher levels mean higher 
-              salary requirements, but they also make it harder for US workers to qualify—which 
-              actually helps your case. Most PERM applications use level 2 or 3.
+              Wage levels range from 1-4. Higher levels mean higher salaries but 
+              also fewer US workers who qualify. Most PERM applications use level 2 or 3.
             </p>
             <p className="text-sm text-gray-500">
-              Your employer doesn&apos;t have to pay the prevailing wage immediately—just 
-              commit to paying it once you get the green card and the position becomes permanent.
+              Your employer commits to paying the prevailing wage when you get the 
+              green card, not immediately.
             </p>
           </section>
 
-          {/* Recruitment */}
           <section className="pt-6 border-t border-gray-100">
             <div className="flex gap-3 mb-3">
               <div className="w-3 h-3 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
@@ -201,128 +195,125 @@ export default function PERMProcessGuide() {
                 <span className="text-sm text-gray-500">2-3 months</span>
               </div>
             </div>
-            <p className="mb-3">Your employer runs a series of job postings:</p>
+            <p className="mb-3">Your employer posts the job through several channels:</p>
             <ul className="space-y-1 text-sm text-gray-600 mb-3">
-              <li><strong className="text-gray-900">State workforce agency posting</strong> — at least 30 days</li>
-              <li><strong className="text-gray-900">Internal posting</strong> — at least 10 consecutive business days</li>
-              <li><strong className="text-gray-900">Two print advertisements</strong> — in a newspaper of general 
-                circulation (Sunday editions for professional positions requiring a degree)</li>
-              <li><strong className="text-gray-900">For professional positions:</strong> three additional recruitment 
-                methods (job fairs, employer website, professional organizations, etc.)</li>
+              <li>• State workforce agency: at least 30 days</li>
+              <li>• Internal posting: at least 10 business days</li>
+              <li>• Two newspaper ads (Sunday editions for professional positions)</li>
+              <li>• Three additional methods for professional positions</li>
             </ul>
             <p className="text-sm text-gray-500">
-              After recruitment ends, there&apos;s a mandatory 30-day &quot;quiet period&quot; 
-              before filing. This gives DOL time to ensure no late applicants emerge.
+              After recruitment, there&apos;s a mandatory 30-day quiet period before filing.
             </p>
           </section>
 
-          {/* DOL Review */}
           <section className="pt-6 border-t border-gray-100">
             <div className="flex gap-3 mb-3">
               <div className="w-3 h-3 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">DOL Review</h2>
-                <span className="text-sm text-gray-500">~{permMonths} months (if no audit)</span>
+                <span className="text-sm text-gray-500">~{permMonths} months (no audit)</span>
               </div>
             </div>
             <p className="mb-3">
-              Your employer files the ETA-9089 form electronically. DOL reviews it and 
-              either approves, denies, or selects for audit.
+              Your employer files Form ETA-9089. DOL reviews it and either approves, 
+              denies, or selects for audit.
             </p>
             <p className="text-sm text-gray-500">
-              The review is mostly automated. If everything looks normal and matches 
-              standard patterns, it often goes through without issue. Red flags trigger 
-              audits.
+              The review is largely automated. Standard cases often go through without 
+              issues. Red flags trigger audits.
             </p>
           </section>
 
-          {/* Audits */}
           <section className="pt-6 border-t border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Audit risk</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">Audits</h2>
             <p className="mb-3">
-              DOL audits 20-30% of cases depending on the year. Some are random, but 
-              certain factors increase your odds:
+              DOL audits 20-30% of cases. Some are random. Some are triggered by:
             </p>
             <ul className="space-y-2 text-sm mb-4">
               <li className="flex gap-2">
                 <span className="text-amber-500">•</span>
-                <span><strong className="text-gray-900">Tailored requirements</strong> — job requirements 
-                  that seem designed for a specific person (you) rather than the role itself</span>
+                Job requirements that seem tailored to a specific person
               </li>
               <li className="flex gap-2">
                 <span className="text-amber-500">•</span>
-                <span><strong className="text-gray-900">Foreign language requirements</strong> — unless 
-                  there&apos;s a clear business need, this raises questions</span>
+                Foreign language requirements without clear business need
               </li>
               <li className="flex gap-2">
                 <span className="text-amber-500">•</span>
-                <span><strong className="text-gray-900">Travel requirements</strong> — especially 
-                  to specific countries</span>
+                Travel requirements to specific countries
               </li>
               <li className="flex gap-2">
                 <span className="text-amber-500">•</span>
-                <span><strong className="text-gray-900">Unusual combinations</strong> — requirements 
-                  that don&apos;t typically go together for the job title</span>
+                Unusual skill combinations for the job title
               </li>
             </ul>
             <div className="p-3 rounded-lg bg-amber-50 border border-amber-100 text-sm">
-              <strong className="text-amber-800">If audited:</strong>
-              <span className="text-amber-700"> You&apos;ll need to submit documentation 
-                (recruitment evidence, resumes received, etc.) and wait for a second review. 
-                This typically adds 6-12 more months.</span>
+              <strong className="text-amber-800">If audited:</strong>{" "}
+              <span className="text-amber-700">Submit documentation (recruitment evidence, 
+                resumes received) and wait for a second review. Adds 6-12 months.</span>
             </div>
           </section>
 
-          {/* What happens after */}
           <section className="pt-6 border-t border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">After PERM is approved</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">After approval</h2>
             <p className="mb-3">
               The certification is valid for <strong className="text-gray-900">180 days</strong>. 
-              Your employer needs to file the I-140 petition within that window—no extensions.
+              Your employer must file I-140 within that window.
             </p>
             <p className="text-sm text-gray-600 mb-3">
-              Your priority date is locked in from the day DOL received the PERM application, 
-              not the approval date. This matters because that&apos;s your place in the 
-              green card queue.
+              Your priority date is the day DOL received the PERM application, not the 
+              approval date.
             </p>
             <p className="text-sm text-gray-500">
-              If PERM is denied, you can appeal, but many employers choose to refile with 
-              adjustments instead. A new filing means a new priority date, though.
+              If PERM is denied, you can appeal or refile with adjustments. Refiling 
+              means a new priority date.
             </p>
           </section>
 
-          {/* Tips */}
           <section className="pt-6 border-t border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Things to know</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">Rules</h2>
             <ul className="space-y-3 text-sm">
               <li className="flex gap-3">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 flex-shrink-0" />
                 <span>
-                  <strong className="text-gray-900">You can&apos;t pay for PERM</strong> — the 
-                  employer is required to cover all costs. You paying would suggest the job 
-                  isn&apos;t a genuine opening.
+                  <strong className="text-gray-900">Cost:</strong> Your employer pays 
+                  for PERM. You cannot pay any part of it.
                 </span>
               </li>
               <li className="flex gap-3">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 flex-shrink-0" />
                 <span>
-                  <strong className="text-gray-900">H-1B extensions</strong> — once PERM has 
-                  been pending for over 365 days, you can extend your H-1B beyond the normal 
-                  6-year limit in 1-year increments.
+                  <strong className="text-gray-900">H-1B extensions:</strong> Once PERM 
+                  has been pending for 365+ days, you can extend H-1B beyond 6 years 
+                  in 1-year increments.
                 </span>
               </li>
               <li className="flex gap-3">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-2 flex-shrink-0" />
                 <span>
-                  <strong className="text-gray-900">Job changes</strong> — changing employers 
-                  during PERM means starting over. The new company files a new PERM, new 
-                  priority date.
+                  <strong className="text-gray-900">Job changes:</strong> Changing 
+                  employers during PERM means starting over with a new filing and 
+                  new priority date.
                 </span>
               </li>
             </ul>
           </section>
 
-          {/* CTA */}
+          <section className="pt-6 border-t border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">If a US worker applies</h2>
+            <p className="mb-3">
+              If a qualified US worker applies during recruitment and your employer 
+              cannot reject them for a lawful reason, the PERM fails. Your employer 
+              either hires that person or cancels the PERM.
+            </p>
+            <p className="text-sm text-gray-500">
+              This is why job requirements matter. Requirements that are too narrow 
+              get flagged as tailored. Requirements that are too broad mean more 
+              qualified applicants.
+            </p>
+          </section>
+
           <section className="pt-6 mt-6 border-t border-gray-200">
             <p className="text-gray-600 mb-4">See how PERM fits into your complete green card timeline.</p>
             <div className="flex flex-wrap gap-3">
