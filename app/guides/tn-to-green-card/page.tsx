@@ -115,7 +115,9 @@ export default function TNToGreenCardGuide() {
       .finally(() => setLoading(false));
   }, []);
 
-  const permMonths = processingTimes?.perm.months ?? 17;
+  // Full PERM timeline: PWD (~6mo) + Recruitment (~3mo) + DOL Review
+  const dolReviewMonths = processingTimes?.perm.months ?? 17;
+  const permMonths = 6 + 3 + dolReviewMonths; // ~26 months total
   const i140Months = 0.5; // Premium processing (15 days)
   const i485Months = processingTimes?.i485.max ?? 18;
 

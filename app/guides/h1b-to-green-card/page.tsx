@@ -129,7 +129,10 @@ export default function H1BToGreenCardGuide() {
       .finally(() => setLoading(false));
   }, []);
 
-  const permMonths = processingTimes?.perm.months ?? 17;
+  // Full PERM timeline: PWD + Recruitment (3mo) + DOL Review
+  const pwdMonths = processingTimes?.pwd.months ?? 6;
+  const dolReviewMonths = processingTimes?.perm.months ?? 17;
+  const permMonths = pwdMonths + 3 + dolReviewMonths; // ~26 months total
   const i140Months = 0.5; // Premium processing (15 days) - most employers use this
   const i485Months = processingTimes?.i485.max ?? 18;
 
@@ -253,9 +256,10 @@ export default function H1BToGreenCardGuide() {
               employers use premium processing for a 15-day decision.
             </p>
             <p className="text-sm text-gray-600">
-              <strong className="text-gray-900">180-day rule:</strong> After your I-140 
-              has been approved for 180 days, you can change employers and keep your 
-              priority date.
+              <strong className="text-gray-900">Portability:</strong> Once your I-140 
+              is approved, you can change employers and port your priority date to a 
+              new petition. After 180 days of approval, your priority date is protected 
+              even if the original employer withdraws the I-140.
             </p>
           </section>
 
@@ -359,8 +363,8 @@ export default function H1BToGreenCardGuide() {
                 <span>
                   <strong className="text-gray-900">H-1B extensions:</strong> Normally 
                   capped at 6 years. You get 1-year extensions if PERM has been pending 
-                  365+ days. You get 3-year extensions if I-140 is approved and there&apos;s 
-                  a backlog.
+                  365+ days. You get 3-year extensions if I-140 is approved and your 
+                  priority date is not yet current.
                 </span>
               </li>
               <li className="flex gap-3">

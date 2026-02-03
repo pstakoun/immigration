@@ -112,7 +112,7 @@ const guides: GuideData[] = [
     subtitle: "Employer-sponsored EB-2/EB-3",
     category: "eb2",
     preWaitSteps: [
-      { label: "PERM", months: 17, color: "emerald" },
+      { label: "PERM", months: 26, color: "emerald" },
       { label: "I-140", months: 0.5, color: "emerald" },
     ],
     postWaitSteps: [
@@ -125,7 +125,7 @@ const guides: GuideData[] = [
     subtitle: "Canadian & Mexican professionals",
     category: "eb2",
     preWaitSteps: [
-      { label: "PERM", months: 17, color: "emerald" },
+      { label: "PERM", months: 26, color: "emerald" },
       { label: "I-140", months: 0.5, color: "emerald" },
     ],
     postWaitSteps: [
