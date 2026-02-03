@@ -136,7 +136,7 @@ export default function H1BToGreenCardGuide() {
             2–4 years
           </span>
           <span className="text-gray-500">
-            for most countries · longer for India/China
+            processing time
           </span>
         </div>
 

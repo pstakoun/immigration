@@ -98,7 +98,7 @@ export default function TNToGreenCardGuide() {
         
         <div className="flex items-baseline gap-3 mb-6">
           <span className="text-3xl font-semibold text-gray-900">2–3 years</span>
-          <span className="text-gray-500">no backlog for Canada/Mexico</span>
+          <span className="text-gray-500">processing time</span>
         </div>
 
         <TimelineBar

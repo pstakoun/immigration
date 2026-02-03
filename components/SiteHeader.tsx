@@ -49,13 +49,13 @@ export default function SiteHeader() {
           </Link>
         </div>
 
-        {/* Open App link - only show on non-home pages */}
+        {/* CTA link - only show on non-home pages */}
         {!isHome && (
           <Link
             href="/"
             className="text-sm text-brand-600 hover:text-brand-700 font-medium transition-colors"
           >
-            Open App →
+            See your timeline →
           </Link>
         )}
       </div>
