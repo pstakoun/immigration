@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import Link from "next/link";
 import TimelineChart from "@/components/TimelineChart";
 import MobileTimelineView from "@/components/MobileTimelineView";
 import PathDetail from "@/components/PathDetail";
@@ -469,8 +470,8 @@ export default function Home() {
               Stateside
             </span>
             <span className="text-sm text-gray-300 hidden sm:inline">|</span>
-            <a href="/guides" className="text-sm text-gray-500 hover:text-gray-900 hidden sm:inline transition-colors">Guides</a>
-            <a href="/processing-times" className="text-sm text-gray-500 hover:text-gray-900 hidden sm:inline transition-colors">Processing Times</a>
+            <Link href="/guides" className="text-sm text-gray-500 hover:text-gray-900 hidden sm:inline transition-colors">Guides</Link>
+            <Link href="/processing-times" className="text-sm text-gray-500 hover:text-gray-900 hidden sm:inline transition-colors">Processing Times</Link>
           </div>
 
           {/* Progress indicator - desktop only when tracking */}

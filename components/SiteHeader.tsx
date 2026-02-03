@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 export default function SiteHeader() {
   const pathname = usePathname();
   const isHome = pathname === "/";
+  const isGuides = pathname.startsWith("/guides");
+  const isProcessingTimes = pathname === "/processing-times";
 
   return (
     <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-3">
@@ -30,22 +32,31 @@ export default function SiteHeader() {
                 />
               </svg>
             </div>
-            <span className="text-xl font-semibold text-gray-900 tracking-tight">
+            <span className="text-xl font-semibold text-gray-900 tracking-tight hidden sm:inline">
               Stateside
             </span>
           </Link>
-          <span className="text-sm text-gray-300 hidden sm:inline">|</span>
+          <span className="text-sm text-gray-300">|</span>
           <Link
             href="/guides"
-            className="text-sm text-gray-500 hover:text-gray-900 hidden sm:inline transition-colors"
+            className={`text-sm transition-colors ${
+              isGuides 
+                ? "text-gray-900 font-medium" 
+                : "text-gray-500 hover:text-gray-900"
+            }`}
           >
             Guides
           </Link>
           <Link
             href="/processing-times"
-            className="text-sm text-gray-500 hover:text-gray-900 hidden sm:inline transition-colors"
+            className={`text-sm transition-colors ${
+              isProcessingTimes 
+                ? "text-gray-900 font-medium" 
+                : "text-gray-500 hover:text-gray-900"
+            }`}
           >
-            Processing Times
+            <span className="hidden sm:inline">Processing Times</span>
+            <span className="sm:hidden">Times</span>
           </Link>
         </div>
 
@@ -55,7 +66,8 @@ export default function SiteHeader() {
             href="/"
             className="text-sm text-brand-500 hover:text-brand-600 font-medium transition-colors"
           >
-            See your timeline →
+            <span className="hidden sm:inline">See your timeline →</span>
+            <span className="sm:hidden">Timeline →</span>
           </Link>
         )}
       </div>

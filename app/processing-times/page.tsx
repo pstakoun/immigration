@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { DynamicData } from "@/lib/dynamic-data";
 
 interface ProcessingData {
@@ -347,28 +348,30 @@ export default function ProcessingTimesPage() {
 
       {/* CTA */}
       <div className="border-t border-gray-200 pt-8">
-        <p className="text-gray-600 mb-3">
-          See how these processing times affect your specific immigration path.
-        </p>
-        <a
-          href="/"
-          className="inline-flex items-center text-brand-600 hover:text-brand-700 font-medium transition-colors"
-        >
-          See your timeline
-          <svg
-            className="ml-1 w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <p className="text-gray-600">
+            See how these times affect your specific immigration path.
+          </p>
+          <Link
+            href="/"
+            className="flex-shrink-0 inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 transition-colors"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </a>
+            See your timeline
+            <svg
+              className="ml-2 w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </Link>
+        </div>
       </div>
     </div>
   );
