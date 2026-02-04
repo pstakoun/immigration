@@ -237,7 +237,8 @@ export interface HistoricalBulletinData {
 // Historical visa bulletin Final Action dates (from State Dept archives)
 // This data is used to calculate ACTUAL velocity dynamically
 // Format: { bulletinMonth: "Month Year", finalActionDate: "Mon YYYY" or "Current" }
-const HISTORICAL_BULLETIN_DATA: HistoricalBulletinData = {
+// EXPORTED for use in processing times page trends visualization
+export const HISTORICAL_BULLETIN_DATA: HistoricalBulletinData = {
   eb1: {
     india: [
       { bulletinMonth: "January 2020", finalActionDate: "Current" },
