@@ -10,9 +10,9 @@ import {
 } from "@/lib/perm-velocity";
 import { 
   parseVisaBulletinDate,
-  HistoricalTrendsChart,
+  calculateWaitTimeMonths,
   SparklineCell,
-  TrendIndicator,
+  WaitTimeDataPoint,
 } from "@/components/TrendSparkline";
 
 interface ProcessingData {
@@ -69,37 +69,16 @@ function formatWaitTime(years: number, rangeMin: number, rangeMax: number): stri
   return `${rangeMin}-${rangeMax} yr`;
 }
 
-// Convert historical bulletin data to sparkline format
-function getSparklineData(category: EBCategory, country: Country, source: "finalAction" | "filing" = "finalAction") {
+// Convert historical bulletin data to WAIT TIME format
+function getWaitTimeData(category: EBCategory, country: Country, source: "finalAction" | "filing" = "finalAction"): WaitTimeDataPoint[] {
   const countryKey = country === "other" ? "other" : country;
   const dataSource = source === "finalAction" ? HISTORICAL_BULLETIN_DATA : HISTORICAL_FILING_DATES_DATA;
   const entries = dataSource[category][countryKey];
   
   return entries.map(entry => ({
     label: entry.bulletinMonth,
-    value: parseVisaBulletinDate(entry.finalActionDate) || 0
+    waitMonths: calculateWaitTimeMonths(entry.bulletinMonth, entry.finalActionDate)
   }));
-}
-
-// Prepare all historical data for the unified chart
-function getAllHistoricalData(source: "finalAction" | "filing" = "finalAction") {
-  return {
-    eb1: {
-      india: getSparklineData("eb1", "india", source),
-      china: getSparklineData("eb1", "china", source),
-      other: getSparklineData("eb1", "other", source),
-    },
-    eb2: {
-      india: getSparklineData("eb2", "india", source),
-      china: getSparklineData("eb2", "china", source),
-      other: getSparklineData("eb2", "other", source),
-    },
-    eb3: {
-      india: getSparklineData("eb3", "india", source),
-      china: getSparklineData("eb3", "china", source),
-      other: getSparklineData("eb3", "other", source),
-    },
-  };
 }
 
 export default function ProcessingTimesPage() {
@@ -127,8 +106,6 @@ export default function ProcessingTimesPage() {
   }, []);
 
   const advancementRates = useMemo(() => getAdvancementRates(), []);
-  const finalActionHistoricalData = useMemo(() => getAllHistoricalData("finalAction"), []);
-  const filingHistoricalData = useMemo(() => getAllHistoricalData("filing"), []);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -301,10 +278,10 @@ export default function ProcessingTimesPage() {
         <h2 className="text-lg font-semibold text-gray-900 mb-2">Visa Bulletin</h2>
         <p className="text-sm text-gray-600 mb-6">
           Visa availability determines when you can file I-485 and when your green card can be approved.
-          Sparklines show 5-year trends. <span className="text-green-600">↑</span> = improving, <span className="text-red-600">↓</span> = worsening.
+          Sparklines show 5-year wait time trends: <span className="text-green-600">▼</span> = wait decreasing (good), <span className="text-red-600">▲</span> = wait increasing (bad).
         </p>
 
-        {/* Final Action Dates - with inline sparklines */}
+        {/* Final Action Dates */}
         <div className="mb-8">
           <h3 className="text-base font-medium text-gray-900 mb-3">Final Action Dates</h3>
           <p className="text-sm text-gray-500 mb-4">When your priority date is current here, your green card can be approved.</p>
@@ -317,7 +294,7 @@ export default function ProcessingTimesPage() {
                   <th className="text-left py-3 pr-3 font-medium text-gray-700">Country</th>
                   <th className="text-left py-3 pr-3 font-medium text-gray-700">Date</th>
                   <th className="text-left py-3 pr-3 font-medium text-gray-700">Est. Wait</th>
-                  <th className="text-left py-3 font-medium text-gray-700">Trend</th>
+                  <th className="text-left py-3 font-medium text-gray-700">5yr Trend</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -327,7 +304,7 @@ export default function ProcessingTimesPage() {
                       const countryLabel = country === "other" ? "ROW" : country.charAt(0).toUpperCase() + country.slice(1);
                       const priorityDate = country === "other" ? priorityDates[cat].allOther : priorityDates[cat][country];
                       const wait = waitTimeEstimates[cat][country];
-                      const sparklineData = getSparklineData(cat, country, "finalAction");
+                      const waitTimeData = getWaitTimeData(cat, country, "finalAction");
                       
                       return (
                         <tr key={`${cat}-${country}`} className={countryIdx === 0 ? "border-t-2 border-gray-200" : ""}>
@@ -344,7 +321,7 @@ export default function ProcessingTimesPage() {
                             {formatWaitTime(wait.years, wait.rangeMin, wait.rangeMax)}
                           </td>
                           <td className="py-2.5">
-                            <SparklineCell data={sparklineData} />
+                            <SparklineCell data={waitTimeData} />
                           </td>
                         </tr>
                       );
@@ -354,17 +331,9 @@ export default function ProcessingTimesPage() {
               </tbody>
             </table>
           </div>
-
-          {/* Historical Trends Chart for Final Action */}
-          <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <HistoricalTrendsChart 
-              data={finalActionHistoricalData} 
-              title="Historical:"
-            />
-          </div>
         </div>
 
-        {/* Dates for Filing - with inline sparklines */}
+        {/* Dates for Filing */}
         <div>
           <h3 className="text-base font-medium text-gray-900 mb-3">Dates for Filing</h3>
           <p className="text-sm text-gray-500 mb-4">When you can submit I-485 and get EAD/Advance Parole while waiting for approval.</p>
@@ -376,7 +345,7 @@ export default function ProcessingTimesPage() {
                   <th className="text-left py-3 pr-3 font-medium text-gray-700 w-16">Category</th>
                   <th className="text-left py-3 pr-3 font-medium text-gray-700">Country</th>
                   <th className="text-left py-3 pr-3 font-medium text-gray-700">Date</th>
-                  <th className="text-left py-3 font-medium text-gray-700">Trend</th>
+                  <th className="text-left py-3 font-medium text-gray-700">5yr Trend</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -385,7 +354,7 @@ export default function ProcessingTimesPage() {
                     {(["other", "china", "india"] as const).map((country, countryIdx) => {
                       const countryLabel = country === "other" ? "ROW" : country.charAt(0).toUpperCase() + country.slice(1);
                       const filingDate = country === "other" ? datesForFiling[cat].allOther : datesForFiling[cat][country];
-                      const sparklineData = getSparklineData(cat, country, "filing");
+                      const waitTimeData = getWaitTimeData(cat, country, "filing");
                       
                       return (
                         <tr key={`filing-${cat}-${country}`} className={countryIdx === 0 ? "border-t-2 border-gray-200" : ""}>
@@ -399,7 +368,7 @@ export default function ProcessingTimesPage() {
                             {filingDate}
                           </td>
                           <td className="py-2.5">
-                            <SparklineCell data={sparklineData} />
+                            <SparklineCell data={waitTimeData} />
                           </td>
                         </tr>
                       );
@@ -408,14 +377,6 @@ export default function ProcessingTimesPage() {
                 ))}
               </tbody>
             </table>
-          </div>
-
-          {/* Historical Trends Chart for Filing */}
-          <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <HistoricalTrendsChart 
-              data={filingHistoricalData} 
-              title="Historical:"
-            />
           </div>
         </div>
       </section>
@@ -429,9 +390,9 @@ export default function ProcessingTimesPage() {
             <strong> Dates for Filing</strong> determine when you can submit I-485 and get work/travel permits.
           </p>
           <p>
-            <strong>Trend arrows:</strong> <span className="text-green-600">↑</span> means dates are advancing (improving), 
-            <span className="text-red-600">↓</span> means retrogression (worsening), 
-            <span className="text-gray-600">→</span> means stable.
+            <strong>Wait time trends:</strong> Sparklines show how wait times have changed over 5 years. 
+            <span className="text-green-600"> ▼ = wait times decreasing (good)</span>, 
+            <span className="text-red-600"> ▲ = wait times increasing (bad)</span>.
           </p>
           <p>
             <strong>Wait estimates</strong> are for new filers starting today based on historical velocity.
