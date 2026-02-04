@@ -266,10 +266,10 @@ export default function ProcessingTimesPage() {
       {/* Visa Bulletin - Final Action Dates */}
       <section className="mb-10">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Final Action Dates
+          Final Action Dates (Green Card Approval)
         </h2>
         <p className="text-sm text-gray-600 mb-4">
-          Priority dates that are currently being approved for green cards.
+          When your priority date is current here, your I-485 can be approved and green card issued.
         </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -355,7 +355,7 @@ export default function ProcessingTimesPage() {
           Dates for Filing (I-485 Eligibility)
         </h2>
         <p className="text-sm text-gray-600 mb-4">
-          Priority dates that are currently eligible to file I-485 adjustment of status.
+          When your priority date is current here, you can file I-485 and get work/travel authorization while waiting for approval.
         </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -434,7 +434,7 @@ export default function ProcessingTimesPage() {
           </table>
         </div>
         <p className="text-xs text-gray-500 mt-3">
-          USCIS may allow I-485 filing based on these dates, which are typically more current than Final Action Dates. Check USCIS announcements for current policy.
+          USCIS authorizes I-485 filing based on these dates for employment-based categories. Filing early gets you EAD (work permit) and Advance Parole (travel document) while waiting for Final Action Date to become current.
         </p>
       </section>
 
