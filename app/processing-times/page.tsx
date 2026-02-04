@@ -345,6 +345,7 @@ export default function ProcessingTimesPage() {
                   <th className="text-left py-3 pr-3 font-medium text-gray-700 w-16">Category</th>
                   <th className="text-left py-3 pr-3 font-medium text-gray-700">Country</th>
                   <th className="text-left py-3 pr-3 font-medium text-gray-700">Date</th>
+                  <th className="text-left py-3 pr-3 font-medium text-gray-700">Est. Wait</th>
                   <th className="text-left py-3 font-medium text-gray-700">5yr Trend</th>
                 </tr>
               </thead>
@@ -354,6 +355,8 @@ export default function ProcessingTimesPage() {
                     {(["other", "china", "india"] as const).map((country, countryIdx) => {
                       const countryLabel = country === "other" ? "ROW" : country.charAt(0).toUpperCase() + country.slice(1);
                       const filingDate = country === "other" ? datesForFiling[cat].allOther : datesForFiling[cat][country];
+                      // Calculate filing wait estimate using same advancement rates
+                      const filingWait = calculateNewFilerWait(filingDate, advancementRates[cat][country]);
                       const waitTimeData = getWaitTimeData(cat, country, "filing");
                       
                       return (
@@ -366,6 +369,9 @@ export default function ProcessingTimesPage() {
                           <td className="py-2.5 pr-3 text-gray-600">{countryLabel}</td>
                           <td className={`py-2.5 pr-3 ${isPriorityDateCurrent(filingDate) ? "text-green-600 font-medium" : "text-gray-900"}`}>
                             {filingDate}
+                          </td>
+                          <td className={`py-2.5 pr-3 font-medium ${getWaitTimeColor(filingWait.years)}`}>
+                            {formatWaitTime(filingWait.years, filingWait.rangeMin, filingWait.rangeMax)}
                           </td>
                           <td className="py-2.5">
                             <SparklineCell data={waitTimeData} />
