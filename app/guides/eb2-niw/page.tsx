@@ -7,7 +7,7 @@ import { calculateNewFilerWait } from "@/lib/processing-times";
 import { CountryTabs, TimelineBar, TimelineBarSkeleton, useCountrySelection } from "@/components/GuideComponents";
 
 export default function EB2NIWGuide() {
-  const { selectedCountry, setCountry } = useCountrySelection("other");
+  const { selectedCountry, setCountry, isLoaded } = useCountrySelection("other");
   const [processingTimes, setProcessingTimes] = useState<{
     i140: { min: number; max: number; premium: number };
     i485: { min: number; max: number };
@@ -74,7 +74,7 @@ export default function EB2NIWGuide() {
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
           <span className="text-sm text-gray-500">Your country of birth:</span>
-          <CountryTabs selected={selectedCountry} onChange={setCountry} />
+          <CountryTabs selected={selectedCountry} onChange={setCountry} isLoading={!isLoaded} />
         </div>
         
         <div className="flex items-baseline gap-3 mb-2">

@@ -41,15 +41,33 @@ export function useCountrySelection(defaultCountry: CountryOfBirth = "other") {
 export function CountryTabs({
   selected,
   onChange,
+  isLoading = false,
 }: {
   selected: CountryOfBirth;
   onChange: (country: CountryOfBirth) => void;
+  isLoading?: boolean;
 }) {
   const countries: { id: CountryOfBirth; label: string }[] = [
     { id: "other", label: "Most countries" },
     { id: "india", label: "India" },
     { id: "china", label: "China" },
   ];
+
+  // Show skeleton while loading to prevent flicker
+  if (isLoading) {
+    return (
+      <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
+        {countries.map((c) => (
+          <div
+            key={c.id}
+            className="px-3 py-1.5 text-sm font-medium rounded-md text-transparent bg-gray-100"
+          >
+            {c.label}
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">

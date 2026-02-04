@@ -127,7 +127,7 @@ const guides: GuideData[] = [
 ];
 
 export default function GuidesPage() {
-  const { selectedCountry, setCountry } = useCountrySelection("other");
+  const { selectedCountry, setCountry, isLoaded } = useCountrySelection("other");
   const [priorityDates, setPriorityDates] = useState<DynamicData["priorityDates"] | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -201,7 +201,7 @@ export default function GuidesPage() {
         {/* Country selector */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <span className="text-sm text-gray-500">Show timelines for:</span>
-          <CountryTabs selected={selectedCountry} onChange={setCountry} />
+          <CountryTabs selected={selectedCountry} onChange={setCountry} isLoading={!isLoaded} />
         </div>
       </div>
 
