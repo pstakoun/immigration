@@ -263,11 +263,19 @@ export default function ProcessingTimesPage() {
         </p>
       </section>
 
-      {/* Visa Bulletin - Final Action Dates */}
+      {/* Visa Bulletin Section Header */}
       <section className="mb-10">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Final Action Dates (Green Card Approval)
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">
+          Visa Bulletin
         </h2>
+        <p className="text-sm text-gray-600 mb-6">
+          The Visa Bulletin has two charts: <span className="font-medium">Dates for Filing</span> determines when you can submit your I-485, while <span className="font-medium">Final Action Dates</span> determines when your green card can be approved.
+        </p>
+
+        {/* Final Action Dates */}
+        <h3 className="text-base font-medium text-gray-900 mb-3">
+          Final Action Dates
+        </h3>
         <p className="text-sm text-gray-600 mb-4">
           When your priority date is current here, your I-485 can be approved and green card issued.
         </p>
@@ -347,13 +355,11 @@ export default function ProcessingTimesPage() {
             </tbody>
           </table>
         </div>
-      </section>
 
-      {/* Visa Bulletin - Dates for Filing */}
-      <section className="mb-10">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Dates for Filing (I-485 Eligibility)
-        </h2>
+        {/* Dates for Filing */}
+        <h3 className="text-base font-medium text-gray-900 mb-3 mt-8">
+          Dates for Filing
+        </h3>
         <p className="text-sm text-gray-600 mb-4">
           When your priority date is current here, you can file I-485 and get work/travel authorization while waiting for approval.
         </p>
