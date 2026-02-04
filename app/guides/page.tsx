@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { DynamicData } from "@/lib/dynamic-data";
 import { calculateNewFilerWait } from "@/lib/processing-times";
-import { CountryOfBirth, EBCategory } from "@/lib/filter-paths";
+import { EBCategory } from "@/lib/filter-paths";
+import { CountryTabs, useCountrySelection } from "@/components/GuideComponents";
 
 // Timeline bar for guide cards - shows processing steps with PD wait in correct order
 // Order: PERM → I-140 → PD Wait → I-485
@@ -56,39 +57,6 @@ function GuideTimeline({
           );
         })}
       </div>
-    </div>
-  );
-}
-
-// Country selector tabs
-function CountryTabs({
-  selected,
-  onChange,
-}: {
-  selected: CountryOfBirth;
-  onChange: (country: CountryOfBirth) => void;
-}) {
-  const countries: { id: CountryOfBirth; label: string }[] = [
-    { id: "other", label: "Most countries" },
-    { id: "india", label: "India" },
-    { id: "china", label: "China" },
-  ];
-  
-  return (
-    <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
-      {countries.map((c) => (
-        <button
-          key={c.id}
-          onClick={() => onChange(c.id)}
-          className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-            selected === c.id
-              ? "bg-white text-gray-900 shadow-sm"
-              : "text-gray-600 hover:text-gray-900"
-          }`}
-        >
-          {c.label}
-        </button>
-      ))}
     </div>
   );
 }
@@ -159,7 +127,7 @@ const guides: GuideData[] = [
 ];
 
 export default function GuidesPage() {
-  const [selectedCountry, setSelectedCountry] = useState<CountryOfBirth>("other");
+  const { selectedCountry, setCountry } = useCountrySelection("other");
   const [priorityDates, setPriorityDates] = useState<DynamicData["priorityDates"] | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -233,7 +201,7 @@ export default function GuidesPage() {
         {/* Country selector */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <span className="text-sm text-gray-500">Show timelines for:</span>
-          <CountryTabs selected={selectedCountry} onChange={setSelectedCountry} />
+          <CountryTabs selected={selectedCountry} onChange={setCountry} />
         </div>
       </div>
 

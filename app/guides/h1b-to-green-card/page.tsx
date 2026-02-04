@@ -1,104 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { DynamicData } from "@/lib/dynamic-data";
 import { calculateNewFilerWait } from "@/lib/processing-times";
-import { CountryOfBirth } from "@/lib/filter-paths";
-
-function CountryTabs({ selected, onChange }: { selected: CountryOfBirth; onChange: (country: CountryOfBirth) => void }) {
-  const countries: { id: CountryOfBirth; label: string }[] = [
-    { id: "other", label: "Most countries" },
-    { id: "india", label: "India" },
-    { id: "china", label: "China" },
-  ];
-  
-  return (
-    <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
-      {countries.map((c) => (
-        <button
-          key={c.id}
-          onClick={() => onChange(c.id)}
-          className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-            selected === c.id ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"
-          }`}
-        >
-          {c.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function TimelineBar({ steps }: { steps: { label: string; months: number; color: string }[] }) {
-  const totalMonths = steps.reduce((sum, s) => sum + s.months, 0);
-  const colorClasses: Record<string, string> = {
-    emerald: "bg-emerald-500 text-white",
-    amber: "bg-amber-500 text-white",
-    orange: "bg-orange-500 text-white",
-  };
-  
-  return (
-    <div className="my-6">
-      <div className="flex items-stretch h-10 rounded-lg overflow-hidden border border-gray-200">
-        {steps.map((step, i) => {
-          const width = (step.months / totalMonths) * 100;
-          return (
-            <div
-              key={i}
-              className={`${colorClasses[step.color]} flex items-center justify-center text-sm font-medium px-1 ${i > 0 ? "border-l border-white/20" : ""}`}
-              style={{ width: `${Math.max(width, 8)}%`, minWidth: "45px" }}
-            >
-              <span className="truncate">{step.label}</span>
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex mt-1.5 text-xs text-gray-500">
-        {steps.map((step, i) => {
-          const width = (step.months / totalMonths) * 100;
-          const formatTime = (m: number) => {
-            if (m < 1) return `${Math.round(m * 30)}d`;
-            if (m >= 12) return `${(m / 12).toFixed(m >= 24 ? 0 : 1)} yr`;
-            return `${Math.round(m)} mo`;
-          };
-          return (
-            <div key={i} className={`text-center ${step.color === "orange" ? "text-orange-600" : ""}`}
-              style={{ width: `${Math.max(width, 8)}%`, minWidth: "45px" }}>
-              {formatTime(step.months)}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function TimelineBarSkeleton() {
-  return (
-    <div className="my-6 animate-pulse">
-      <div className="h-10 rounded-lg bg-gray-200" />
-      <div className="flex mt-1.5 gap-2">
-        <div className="h-3 bg-gray-100 rounded flex-1" />
-        <div className="h-3 bg-gray-100 rounded flex-1" />
-        <div className="h-3 bg-gray-100 rounded flex-1" />
-      </div>
-    </div>
-  );
-}
-
-function LiveTime({ label, time, premium }: { label: string; time: string; premium?: string }) {
-  return (
-    <div className="inline-flex items-baseline gap-1.5 text-sm">
-      <span className="text-gray-500">{label}:</span>
-      <span className="font-medium text-gray-900">{time}</span>
-      {premium && <span className="text-emerald-600">({premium} premium)</span>}
-    </div>
-  );
-}
+import { CountryTabs, TimelineBar, TimelineBarSkeleton, LiveTime, useCountrySelection } from "@/components/GuideComponents";
 
 export default function H1BToGreenCardGuide() {
-  const [selectedCountry, setSelectedCountry] = useState<CountryOfBirth>("other");
+  const { selectedCountry, setCountry } = useCountrySelection("other");
   const [processingTimes, setProcessingTimes] = useState<{
     perm: { months: number; processing: string };
     permAudit: { months: number; processing: string };
@@ -176,7 +85,7 @@ export default function H1BToGreenCardGuide() {
         
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
           <span className="text-sm text-gray-500">Your country of birth:</span>
-          <CountryTabs selected={selectedCountry} onChange={setSelectedCountry} />
+          <CountryTabs selected={selectedCountry} onChange={setCountry} />
         </div>
         
         <div className="flex items-baseline gap-3 mb-2">
