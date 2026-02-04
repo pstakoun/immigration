@@ -94,7 +94,7 @@ export default function ProcessingTimesPage() {
     );
   }
 
-  const { processingTimes, priorityDates } = data;
+  const { processingTimes, priorityDates, datesForFiling } = data;
 
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
@@ -251,7 +251,7 @@ export default function ProcessingTimesPage() {
                 <td className="py-3 pr-4 text-gray-600">
                   {processingTimes.permAudit.currentlyProcessing}
                 </td>
-                <td className="py-3 text-amber-600 font-medium">
+                <td className="py-3 text-gray-900">
                   ~{processingTimes.permAudit.months} months
                 </td>
               </tr>
@@ -263,10 +263,10 @@ export default function ProcessingTimesPage() {
         </p>
       </section>
 
-      {/* Visa Bulletin */}
+      {/* Visa Bulletin - Final Action Dates */}
       <section className="mb-10">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Visa Bulletin (Final Action Dates)
+          Final Action Dates
         </h2>
         <p className="text-sm text-gray-600 mb-4">
           Priority dates that are currently being approved for green cards.
@@ -347,6 +347,95 @@ export default function ProcessingTimesPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      {/* Visa Bulletin - Dates for Filing */}
+      <section className="mb-10">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          Dates for Filing (I-485 Eligibility)
+        </h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Priority dates that are currently eligible to file I-485 adjustment of status.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-3 pr-4 font-medium text-gray-700">
+                  Category
+                </th>
+                <th className="text-left py-3 pr-4 font-medium text-gray-700">
+                  All Other Countries
+                </th>
+                <th className="text-left py-3 pr-4 font-medium text-gray-700">
+                  China
+                </th>
+                <th className="text-left py-3 font-medium text-gray-700">
+                  India
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              <tr>
+                <td className="py-3 pr-4 font-medium text-gray-900">EB-1</td>
+                <td
+                  className={`py-3 pr-4 ${isPriorityDateCurrent(datesForFiling.eb1.allOther) ? "text-green-600 font-medium" : "text-gray-900"}`}
+                >
+                  {datesForFiling.eb1.allOther}
+                </td>
+                <td
+                  className={`py-3 pr-4 ${isPriorityDateCurrent(datesForFiling.eb1.china) ? "text-green-600 font-medium" : "text-gray-900"}`}
+                >
+                  {datesForFiling.eb1.china}
+                </td>
+                <td
+                  className={`py-3 ${isPriorityDateCurrent(datesForFiling.eb1.india) ? "text-green-600 font-medium" : "text-gray-900"}`}
+                >
+                  {datesForFiling.eb1.india}
+                </td>
+              </tr>
+              <tr>
+                <td className="py-3 pr-4 font-medium text-gray-900">EB-2</td>
+                <td
+                  className={`py-3 pr-4 ${isPriorityDateCurrent(datesForFiling.eb2.allOther) ? "text-green-600 font-medium" : "text-gray-900"}`}
+                >
+                  {datesForFiling.eb2.allOther}
+                </td>
+                <td
+                  className={`py-3 pr-4 ${isPriorityDateCurrent(datesForFiling.eb2.china) ? "text-green-600 font-medium" : "text-gray-900"}`}
+                >
+                  {datesForFiling.eb2.china}
+                </td>
+                <td
+                  className={`py-3 ${isPriorityDateCurrent(datesForFiling.eb2.india) ? "text-green-600 font-medium" : "text-gray-900"}`}
+                >
+                  {datesForFiling.eb2.india}
+                </td>
+              </tr>
+              <tr>
+                <td className="py-3 pr-4 font-medium text-gray-900">EB-3</td>
+                <td
+                  className={`py-3 pr-4 ${isPriorityDateCurrent(datesForFiling.eb3.allOther) ? "text-green-600 font-medium" : "text-gray-900"}`}
+                >
+                  {datesForFiling.eb3.allOther}
+                </td>
+                <td
+                  className={`py-3 pr-4 ${isPriorityDateCurrent(datesForFiling.eb3.china) ? "text-green-600 font-medium" : "text-gray-900"}`}
+                >
+                  {datesForFiling.eb3.china}
+                </td>
+                <td
+                  className={`py-3 ${isPriorityDateCurrent(datesForFiling.eb3.india) ? "text-green-600 font-medium" : "text-gray-900"}`}
+                >
+                  {datesForFiling.eb3.india}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs text-gray-500 mt-3">
+          USCIS may allow I-485 filing based on these dates, which are typically more current than Final Action Dates. Check USCIS announcements for current policy.
+        </p>
       </section>
 
       {/* CTA */}
