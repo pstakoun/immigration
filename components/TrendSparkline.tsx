@@ -96,10 +96,11 @@ function calculateWaitTrend(data: WaitTimeDataPoint[]): {
   const yearsOfData = Math.max(1, (validData.length - 1) / 4);
   const changePerYear = totalChange / yearsOfData;
   
-  if (changePerYear < -6) {
-    return { direction: "improving", changePerYear }; // Wait decreasing significantly
-  } else if (changePerYear > 6) {
-    return { direction: "worsening", changePerYear }; // Wait increasing significantly
+  // Thresholds: 3 months/year change is meaningful for visa bulletin trends
+  if (changePerYear < -3) {
+    return { direction: "improving", changePerYear }; // Wait decreasing
+  } else if (changePerYear > 3) {
+    return { direction: "worsening", changePerYear }; // Wait increasing
   }
   return { direction: "stable", changePerYear };
 }
