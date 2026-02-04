@@ -7,8 +7,7 @@ import {
   HISTORICAL_BULLETIN_DATA,
   getAdvancementRates,
 } from "@/lib/perm-velocity";
-import TrendSparkline, { 
-  VelocityBadge, 
+import { 
   parseVisaBulletinDate,
   HistoricalTrendsChart,
 } from "@/components/TrendSparkline";
@@ -52,12 +51,12 @@ function calculateNewFilerWait(
 }
 
 // Get color class based on wait time
-function getWaitTimeColor(years: number): { bg: string; text: string } {
-  if (years === 0) return { bg: "bg-green-50", text: "text-green-700" };
-  if (years <= 2) return { bg: "bg-green-50", text: "text-green-700" };
-  if (years <= 5) return { bg: "bg-yellow-50", text: "text-yellow-700" };
-  if (years <= 10) return { bg: "bg-orange-50", text: "text-orange-700" };
-  return { bg: "bg-red-50", text: "text-red-700" };
+function getWaitTimeColor(years: number): string {
+  if (years === 0) return "text-green-600";
+  if (years <= 2) return "text-green-600";
+  if (years <= 5) return "text-yellow-600";
+  if (years <= 10) return "text-orange-600";
+  return "text-red-600";
 }
 
 // Format wait time for display
@@ -97,6 +96,15 @@ function getAllHistoricalData() {
       other: getSparklineData("eb3", "other"),
     },
   };
+}
+
+// Format velocity for display
+function formatVelocity(monthsPerYear: number): { text: string; color: string } {
+  if (monthsPerYear >= 12) return { text: "Current", color: "text-green-600" };
+  if (monthsPerYear >= 9) return { text: `${Math.round(monthsPerYear)} mo/yr`, color: "text-green-600" };
+  if (monthsPerYear >= 6) return { text: `${Math.round(monthsPerYear)} mo/yr`, color: "text-yellow-600" };
+  if (monthsPerYear >= 3) return { text: `${Math.round(monthsPerYear)} mo/yr`, color: "text-orange-600" };
+  return { text: `${Math.round(monthsPerYear)} mo/yr`, color: "text-red-600" };
 }
 
 export default function ProcessingTimesPage() {
@@ -213,91 +221,6 @@ export default function ProcessingTimesPage() {
         </p>
       </div>
 
-      {/* Estimated Wait Times Section */}
-      <section className="mb-10">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Estimated Wait Times
-            </h2>
-            <p className="text-sm text-gray-600">
-              Approximate visa bulletin wait if you filed today
-            </p>
-          </div>
-        </div>
-        
-        <div className="grid md:grid-cols-3 gap-4">
-          {(["eb1", "eb2", "eb3"] as EBCategory[]).map((category) => (
-            <div key={category} className="border border-gray-200 rounded-lg overflow-hidden">
-              <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
-                <h3 className="font-semibold text-gray-900">{category.toUpperCase()}</h3>
-              </div>
-              <div className="divide-y divide-gray-100">
-                {(["india", "china", "other"] as Country[]).map((country) => {
-                  const wait = waitTimeEstimates[category][country];
-                  const colors = getWaitTimeColor(wait.years);
-                  const sparklineData = getSparklineData(category, country);
-                  const velocity = advancementRates[category][country];
-                  
-                  return (
-                    <div 
-                      key={country} 
-                      className={`px-4 py-3 ${colors.bg} flex items-center justify-between gap-2`}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-700 w-12">
-                            {country === "other" ? "ROW" : country.charAt(0).toUpperCase() + country.slice(1)}
-                          </span>
-                          <span className={`font-semibold text-sm ${colors.text}`}>
-                            {formatWaitTime(wait.years, wait.rangeMin, wait.rangeMax)}
-                          </span>
-                        </div>
-                        <div className="mt-1">
-                          <VelocityBadge monthsPerYear={velocity} />
-                        </div>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <TrendSparkline 
-                          data={sparklineData}
-                          width={70}
-                          height={24}
-                          strokeColor={
-                            wait.years === 0 ? "#22c55e" :
-                            wait.years <= 5 ? "#eab308" :
-                            "#ef4444"
-                          }
-                          fillColor={
-                            wait.years === 0 ? "#dcfce7" :
-                            wait.years <= 5 ? "#fef9c3" :
-                            "#fee2e2"
-                          }
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex gap-3">
-            <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div className="text-sm text-blue-800">
-              <p className="font-medium">How to read these estimates</p>
-              <p className="mt-1 text-blue-700">
-                Wait times are for new filers starting today. Velocity shows how fast the visa bulletin advances 
-                (12 mo/yr = real-time, 6 mo/yr = 2 years wait per year of backlog). Sparklines show 5-year trends.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* USCIS Forms */}
       <section className="mb-10">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">USCIS Forms</h2>
@@ -377,55 +300,69 @@ export default function ProcessingTimesPage() {
         </p>
       </section>
 
-      {/* Visa Bulletin Section - Now includes historical trends */}
+      {/* Visa Bulletin Section - Combined with Wait Times and Trends */}
       <section className="mb-10">
         <h2 className="text-lg font-semibold text-gray-900 mb-2">Visa Bulletin</h2>
         <p className="text-sm text-gray-600 mb-6">
-          The Visa Bulletin has two charts: <span className="font-medium">Dates for Filing</span> determines when you can submit your I-485, 
-          while <span className="font-medium">Final Action Dates</span> determines when your green card can be approved.
+          The Visa Bulletin determines when you can file I-485 and when your green card can be approved.
+          Wait times shown are estimates for new filers starting today.
         </p>
 
-        {/* Final Action Dates Table */}
-        <h3 className="text-base font-medium text-gray-900 mb-3">Final Action Dates</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          When your priority date is current here, your I-485 can be approved and green card issued.
-        </p>
+        {/* Combined Table: Current Dates + Wait Estimates + Velocity */}
         <div className="overflow-x-auto mb-6">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="text-left py-3 pr-4 font-medium text-gray-700">Category</th>
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">All Other Countries</th>
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">China</th>
-                <th className="text-left py-3 font-medium text-gray-700">India</th>
+                <th className="text-left py-3 pr-4 font-medium text-gray-700">Country</th>
+                <th className="text-left py-3 pr-4 font-medium text-gray-700">Final Action Date</th>
+                <th className="text-left py-3 pr-4 font-medium text-gray-700">Est. Wait</th>
+                <th className="text-left py-3 font-medium text-gray-700">Velocity</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {(["eb1", "eb2", "eb3"] as const).map((cat) => (
-                <tr key={cat}>
-                  <td className="py-3 pr-4 font-medium text-gray-900">{cat.toUpperCase().replace("EB", "EB-")}</td>
-                  <td className={`py-3 pr-4 ${isPriorityDateCurrent(priorityDates[cat].allOther) ? "text-green-600 font-medium" : "text-gray-900"}`}>
-                    {priorityDates[cat].allOther}
-                  </td>
-                  <td className={`py-3 pr-4 ${isPriorityDateCurrent(priorityDates[cat].china) ? "text-green-600 font-medium" : "text-gray-900"}`}>
-                    {priorityDates[cat].china}
-                  </td>
-                  <td className={`py-3 ${isPriorityDateCurrent(priorityDates[cat].india) ? "text-green-600 font-medium" : "text-gray-900"}`}>
-                    {priorityDates[cat].india}
-                  </td>
-                </tr>
+                <>
+                  {(["other", "china", "india"] as const).map((country, countryIdx) => {
+                    const countryLabel = country === "other" ? "ROW" : country.charAt(0).toUpperCase() + country.slice(1);
+                    const priorityDate = country === "other" ? priorityDates[cat].allOther : priorityDates[cat][country];
+                    const wait = waitTimeEstimates[cat][country];
+                    const velocity = advancementRates[cat][country];
+                    const velocityDisplay = formatVelocity(velocity);
+                    
+                    return (
+                      <tr key={`${cat}-${country}`} className={countryIdx === 0 ? "border-t-2 border-gray-200" : ""}>
+                        {countryIdx === 0 && (
+                          <td className="py-3 pr-4 font-semibold text-gray-900" rowSpan={3}>
+                            {cat.toUpperCase().replace("EB", "EB-")}
+                          </td>
+                        )}
+                        <td className="py-3 pr-4 text-gray-600">{countryLabel}</td>
+                        <td className={`py-3 pr-4 ${isPriorityDateCurrent(priorityDate) ? "text-green-600 font-medium" : "text-gray-900"}`}>
+                          {priorityDate}
+                        </td>
+                        <td className={`py-3 pr-4 font-medium ${getWaitTimeColor(wait.years)}`}>
+                          {formatWaitTime(wait.years, wait.rangeMin, wait.rangeMax)}
+                        </td>
+                        <td className={`py-3 text-sm ${velocityDisplay.color}`}>
+                          {velocityDisplay.text}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </>
               ))}
             </tbody>
           </table>
         </div>
 
-        {/* Historical Trends Chart - Integrated with Visa Bulletin */}
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 mb-8">
+        {/* Historical Trends Chart */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 mb-6">
           <h3 className="text-base font-medium text-gray-900 mb-1">
-            Historical Visa Bulletin Trends
+            Historical Trends
           </h3>
           <p className="text-sm text-gray-600 mb-4">
-            See how Final Action Dates have moved over the past 5 years (2020-2025)
+            How Final Action Dates have moved over the past 5 years
           </p>
           <HistoricalTrendsChart data={historicalData} />
         </div>
@@ -468,39 +405,22 @@ export default function ProcessingTimesPage() {
         </p>
       </section>
 
-      {/* Understanding Wait Times */}
-      <section className="mb-10 p-6 bg-gray-50 rounded-lg border border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Understanding Wait Times</h2>
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="font-medium text-gray-900 mb-2">What is Velocity?</h3>
-            <p className="text-sm text-gray-600">
-              Velocity measures how fast the visa bulletin advances. A velocity of 
-              <strong> 12 mo/yr</strong> means real-time movement. <strong>6 mo/yr</strong> means 
-              2 real years to clear 1 year of backlog.
-            </p>
-          </div>
-          <div>
-            <h3 className="font-medium text-gray-900 mb-2">Why Estimates Vary</h3>
-            <p className="text-sm text-gray-600">
-              Wait times depend on PERM filing volume, visa availability, legislative changes, 
-              and spillover from other categories. Historical patterns inform these estimates.
-            </p>
-          </div>
-          <div>
-            <h3 className="font-medium text-gray-900 mb-2">India &amp; China Backlogs</h3>
-            <p className="text-sm text-gray-600">
-              Due to the 7% per-country cap and high demand, India and China face significant backlogs. 
-              EB-2 India has a 10+ year backlog because demand far exceeds annual allocation.
-            </p>
-          </div>
-          <div>
-            <h3 className="font-medium text-gray-900 mb-2">ROW (Rest of World)</h3>
-            <p className="text-sm text-gray-600">
-              Applicants from other countries typically face shorter waits. Categories may be 
-              &quot;Current&quot; or have short backlogs. Retrogression can occur if demand increases.
-            </p>
-          </div>
+      {/* Understanding Section */}
+      <section className="mb-10 p-5 bg-blue-50 border border-blue-200 rounded-lg">
+        <h3 className="font-medium text-blue-900 mb-3">Understanding Wait Times &amp; Velocity</h3>
+        <div className="text-sm text-blue-800 space-y-2">
+          <p>
+            <strong>Velocity</strong> measures how fast the visa bulletin advances. 12 mo/yr means real-time movement; 
+            6 mo/yr means 2 real years to clear 1 year of backlog.
+          </p>
+          <p>
+            <strong>Wait estimates</strong> are for new filers starting today. If you already have an I-140, 
+            your actual wait depends on your priority date.
+          </p>
+          <p>
+            <strong>India &amp; China backlogs</strong> exist due to the 7% per-country cap and high demand. 
+            ROW (Rest of World) typically has shorter waits.
+          </p>
         </div>
       </section>
 
