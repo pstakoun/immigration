@@ -5,11 +5,14 @@ import Link from "next/link";
 import { DynamicData } from "@/lib/dynamic-data";
 import { 
   HISTORICAL_BULLETIN_DATA,
+  HISTORICAL_FILING_DATES_DATA,
   getAdvancementRates,
 } from "@/lib/perm-velocity";
 import { 
   parseVisaBulletinDate,
   HistoricalTrendsChart,
+  SparklineCell,
+  TrendIndicator,
 } from "@/components/TrendSparkline";
 
 interface ProcessingData {
@@ -67,9 +70,10 @@ function formatWaitTime(years: number, rangeMin: number, rangeMax: number): stri
 }
 
 // Convert historical bulletin data to sparkline format
-function getSparklineData(category: EBCategory, country: Country) {
+function getSparklineData(category: EBCategory, country: Country, source: "finalAction" | "filing" = "finalAction") {
   const countryKey = country === "other" ? "other" : country;
-  const entries = HISTORICAL_BULLETIN_DATA[category][countryKey];
+  const dataSource = source === "finalAction" ? HISTORICAL_BULLETIN_DATA : HISTORICAL_FILING_DATES_DATA;
+  const entries = dataSource[category][countryKey];
   
   return entries.map(entry => ({
     label: entry.bulletinMonth,
@@ -78,33 +82,24 @@ function getSparklineData(category: EBCategory, country: Country) {
 }
 
 // Prepare all historical data for the unified chart
-function getAllHistoricalData() {
+function getAllHistoricalData(source: "finalAction" | "filing" = "finalAction") {
   return {
     eb1: {
-      india: getSparklineData("eb1", "india"),
-      china: getSparklineData("eb1", "china"),
-      other: getSparklineData("eb1", "other"),
+      india: getSparklineData("eb1", "india", source),
+      china: getSparklineData("eb1", "china", source),
+      other: getSparklineData("eb1", "other", source),
     },
     eb2: {
-      india: getSparklineData("eb2", "india"),
-      china: getSparklineData("eb2", "china"),
-      other: getSparklineData("eb2", "other"),
+      india: getSparklineData("eb2", "india", source),
+      china: getSparklineData("eb2", "china", source),
+      other: getSparklineData("eb2", "other", source),
     },
     eb3: {
-      india: getSparklineData("eb3", "india"),
-      china: getSparklineData("eb3", "china"),
-      other: getSparklineData("eb3", "other"),
+      india: getSparklineData("eb3", "india", source),
+      china: getSparklineData("eb3", "china", source),
+      other: getSparklineData("eb3", "other", source),
     },
   };
-}
-
-// Format velocity for display
-function formatVelocity(monthsPerYear: number): { text: string; color: string } {
-  if (monthsPerYear >= 12) return { text: "Current", color: "text-green-600" };
-  if (monthsPerYear >= 9) return { text: `${Math.round(monthsPerYear)} mo/yr`, color: "text-green-600" };
-  if (monthsPerYear >= 6) return { text: `${Math.round(monthsPerYear)} mo/yr`, color: "text-yellow-600" };
-  if (monthsPerYear >= 3) return { text: `${Math.round(monthsPerYear)} mo/yr`, color: "text-orange-600" };
-  return { text: `${Math.round(monthsPerYear)} mo/yr`, color: "text-red-600" };
 }
 
 export default function ProcessingTimesPage() {
@@ -132,7 +127,8 @@ export default function ProcessingTimesPage() {
   }, []);
 
   const advancementRates = useMemo(() => getAdvancementRates(), []);
-  const historicalData = useMemo(() => getAllHistoricalData(), []);
+  const finalActionHistoricalData = useMemo(() => getAllHistoricalData("finalAction"), []);
+  const filingHistoricalData = useMemo(() => getAllHistoricalData("filing"), []);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -152,7 +148,7 @@ export default function ProcessingTimesPage() {
     if (premiumDays && premiumDays > 0) {
       return (
         <>
-          {timeStr} <span className="text-green-600">({premiumDays}d premium)</span>
+          {timeStr} <span className="text-green-600 text-xs">({premiumDays}d premium)</span>
         </>
       );
     }
@@ -300,126 +296,146 @@ export default function ProcessingTimesPage() {
         </p>
       </section>
 
-      {/* Visa Bulletin Section - Combined with Wait Times and Trends */}
+      {/* Visa Bulletin Section */}
       <section className="mb-10">
         <h2 className="text-lg font-semibold text-gray-900 mb-2">Visa Bulletin</h2>
         <p className="text-sm text-gray-600 mb-6">
-          The Visa Bulletin determines when you can file I-485 and when your green card can be approved.
-          Wait times shown are estimates for new filers starting today.
+          Visa availability determines when you can file I-485 and when your green card can be approved.
+          Sparklines show 5-year trends. <span className="text-green-600">↑</span> = improving, <span className="text-red-600">↓</span> = worsening.
         </p>
 
-        {/* Combined Table: Current Dates + Wait Estimates + Velocity */}
-        <div className="overflow-x-auto mb-6">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">Category</th>
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">Country</th>
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">Final Action Date</th>
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">Est. Wait</th>
-                <th className="text-left py-3 font-medium text-gray-700">Velocity</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {(["eb1", "eb2", "eb3"] as const).map((cat) => (
-                <>
-                  {(["other", "china", "india"] as const).map((country, countryIdx) => {
-                    const countryLabel = country === "other" ? "ROW" : country.charAt(0).toUpperCase() + country.slice(1);
-                    const priorityDate = country === "other" ? priorityDates[cat].allOther : priorityDates[cat][country];
-                    const wait = waitTimeEstimates[cat][country];
-                    const velocity = advancementRates[cat][country];
-                    const velocityDisplay = formatVelocity(velocity);
-                    
-                    return (
-                      <tr key={`${cat}-${country}`} className={countryIdx === 0 ? "border-t-2 border-gray-200" : ""}>
-                        {countryIdx === 0 && (
-                          <td className="py-3 pr-4 font-semibold text-gray-900" rowSpan={3}>
-                            {cat.toUpperCase().replace("EB", "EB-")}
-                          </td>
-                        )}
-                        <td className="py-3 pr-4 text-gray-600">{countryLabel}</td>
-                        <td className={`py-3 pr-4 ${isPriorityDateCurrent(priorityDate) ? "text-green-600 font-medium" : "text-gray-900"}`}>
-                          {priorityDate}
-                        </td>
-                        <td className={`py-3 pr-4 font-medium ${getWaitTimeColor(wait.years)}`}>
-                          {formatWaitTime(wait.years, wait.rangeMin, wait.rangeMax)}
-                        </td>
-                        <td className={`py-3 text-sm ${velocityDisplay.color}`}>
-                          {velocityDisplay.text}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Historical Trends Chart */}
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 mb-6">
-          <h3 className="text-base font-medium text-gray-900 mb-1">
-            Historical Trends
-          </h3>
-          <p className="text-sm text-gray-600 mb-4">
-            How Final Action Dates have moved over the past 5 years
-          </p>
-          <HistoricalTrendsChart data={historicalData} />
-        </div>
-
-        {/* Dates for Filing Table */}
-        <h3 className="text-base font-medium text-gray-900 mb-3">Dates for Filing</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          When your priority date is current here, you can file I-485 and get work/travel authorization while waiting.
-        </p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">Category</th>
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">All Other Countries</th>
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">China</th>
-                <th className="text-left py-3 font-medium text-gray-700">India</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {(["eb1", "eb2", "eb3"] as const).map((cat) => (
-                <tr key={cat}>
-                  <td className="py-3 pr-4 font-medium text-gray-900">{cat.toUpperCase().replace("EB", "EB-")}</td>
-                  <td className={`py-3 pr-4 ${isPriorityDateCurrent(datesForFiling[cat].allOther) ? "text-green-600 font-medium" : "text-gray-900"}`}>
-                    {datesForFiling[cat].allOther}
-                  </td>
-                  <td className={`py-3 pr-4 ${isPriorityDateCurrent(datesForFiling[cat].china) ? "text-green-600 font-medium" : "text-gray-900"}`}>
-                    {datesForFiling[cat].china}
-                  </td>
-                  <td className={`py-3 ${isPriorityDateCurrent(datesForFiling[cat].india) ? "text-green-600 font-medium" : "text-gray-900"}`}>
-                    {datesForFiling[cat].india}
-                  </td>
+        {/* Final Action Dates - with inline sparklines */}
+        <div className="mb-8">
+          <h3 className="text-base font-medium text-gray-900 mb-3">Final Action Dates</h3>
+          <p className="text-sm text-gray-500 mb-4">When your priority date is current here, your green card can be approved.</p>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 pr-3 font-medium text-gray-700 w-16">Category</th>
+                  <th className="text-left py-3 pr-3 font-medium text-gray-700">Country</th>
+                  <th className="text-left py-3 pr-3 font-medium text-gray-700">Date</th>
+                  <th className="text-left py-3 pr-3 font-medium text-gray-700">Est. Wait</th>
+                  <th className="text-left py-3 font-medium text-gray-700">Trend</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {(["eb1", "eb2", "eb3"] as const).map((cat) => (
+                  <>
+                    {(["other", "china", "india"] as const).map((country, countryIdx) => {
+                      const countryLabel = country === "other" ? "ROW" : country.charAt(0).toUpperCase() + country.slice(1);
+                      const priorityDate = country === "other" ? priorityDates[cat].allOther : priorityDates[cat][country];
+                      const wait = waitTimeEstimates[cat][country];
+                      const sparklineData = getSparklineData(cat, country, "finalAction");
+                      
+                      return (
+                        <tr key={`${cat}-${country}`} className={countryIdx === 0 ? "border-t-2 border-gray-200" : ""}>
+                          {countryIdx === 0 && (
+                            <td className="py-2.5 pr-3 font-semibold text-gray-900 align-top" rowSpan={3}>
+                              {cat.toUpperCase().replace("EB", "EB-")}
+                            </td>
+                          )}
+                          <td className="py-2.5 pr-3 text-gray-600">{countryLabel}</td>
+                          <td className={`py-2.5 pr-3 ${isPriorityDateCurrent(priorityDate) ? "text-green-600 font-medium" : "text-gray-900"}`}>
+                            {priorityDate}
+                          </td>
+                          <td className={`py-2.5 pr-3 font-medium ${getWaitTimeColor(wait.years)}`}>
+                            {formatWaitTime(wait.years, wait.rangeMin, wait.rangeMax)}
+                          </td>
+                          <td className="py-2.5">
+                            <SparklineCell data={sparklineData} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Historical Trends Chart for Final Action */}
+          <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <HistoricalTrendsChart 
+              data={finalActionHistoricalData} 
+              title="Historical:"
+            />
+          </div>
         </div>
-        <p className="text-xs text-gray-500 mt-3">
-          Filing early gets you EAD (work permit) and Advance Parole (travel document) while waiting for Final Action Date.
-        </p>
+
+        {/* Dates for Filing - with inline sparklines */}
+        <div>
+          <h3 className="text-base font-medium text-gray-900 mb-3">Dates for Filing</h3>
+          <p className="text-sm text-gray-500 mb-4">When you can submit I-485 and get EAD/Advance Parole while waiting for approval.</p>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 pr-3 font-medium text-gray-700 w-16">Category</th>
+                  <th className="text-left py-3 pr-3 font-medium text-gray-700">Country</th>
+                  <th className="text-left py-3 pr-3 font-medium text-gray-700">Date</th>
+                  <th className="text-left py-3 font-medium text-gray-700">Trend</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {(["eb1", "eb2", "eb3"] as const).map((cat) => (
+                  <>
+                    {(["other", "china", "india"] as const).map((country, countryIdx) => {
+                      const countryLabel = country === "other" ? "ROW" : country.charAt(0).toUpperCase() + country.slice(1);
+                      const filingDate = country === "other" ? datesForFiling[cat].allOther : datesForFiling[cat][country];
+                      const sparklineData = getSparklineData(cat, country, "filing");
+                      
+                      return (
+                        <tr key={`filing-${cat}-${country}`} className={countryIdx === 0 ? "border-t-2 border-gray-200" : ""}>
+                          {countryIdx === 0 && (
+                            <td className="py-2.5 pr-3 font-semibold text-gray-900 align-top" rowSpan={3}>
+                              {cat.toUpperCase().replace("EB", "EB-")}
+                            </td>
+                          )}
+                          <td className="py-2.5 pr-3 text-gray-600">{countryLabel}</td>
+                          <td className={`py-2.5 pr-3 ${isPriorityDateCurrent(filingDate) ? "text-green-600 font-medium" : "text-gray-900"}`}>
+                            {filingDate}
+                          </td>
+                          <td className="py-2.5">
+                            <SparklineCell data={sparklineData} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Historical Trends Chart for Filing */}
+          <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <HistoricalTrendsChart 
+              data={filingHistoricalData} 
+              title="Historical:"
+            />
+          </div>
+        </div>
       </section>
 
       {/* Understanding Section */}
       <section className="mb-10 p-5 bg-blue-50 border border-blue-200 rounded-lg">
-        <h3 className="font-medium text-blue-900 mb-3">Understanding Wait Times &amp; Velocity</h3>
+        <h3 className="font-medium text-blue-900 mb-3">Understanding the Data</h3>
         <div className="text-sm text-blue-800 space-y-2">
           <p>
-            <strong>Velocity</strong> measures how fast the visa bulletin advances. 12 mo/yr means real-time movement; 
-            6 mo/yr means 2 real years to clear 1 year of backlog.
+            <strong>Final Action Dates</strong> determine when your case can be approved. 
+            <strong> Dates for Filing</strong> determine when you can submit I-485 and get work/travel permits.
           </p>
           <p>
-            <strong>Wait estimates</strong> are for new filers starting today. If you already have an I-140, 
-            your actual wait depends on your priority date.
+            <strong>Trend arrows:</strong> <span className="text-green-600">↑</span> means dates are advancing (improving), 
+            <span className="text-red-600">↓</span> means retrogression (worsening), 
+            <span className="text-gray-600">→</span> means stable.
           </p>
           <p>
-            <strong>India &amp; China backlogs</strong> exist due to the 7% per-country cap and high demand. 
-            ROW (Rest of World) typically has shorter waits.
+            <strong>Wait estimates</strong> are for new filers starting today based on historical velocity.
+            India &amp; China face long backlogs due to the 7% per-country cap.
           </p>
         </div>
       </section>

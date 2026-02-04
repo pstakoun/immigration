@@ -7,15 +7,6 @@ interface SparklineDataPoint {
   value: number;  // months from epoch (2000) - null values become 0
 }
 
-interface TrendSparklineProps {
-  data: SparklineDataPoint[];
-  width?: number;
-  height?: number;
-  strokeColor?: string;
-  fillColor?: string;
-  className?: string;
-}
-
 // Parse date string like "Jul 2013" or "Current" to months since 2000
 export function parseVisaBulletinDate(dateStr: string): number | null {
   if (!dateStr || dateStr.toLowerCase() === "current") return null;
@@ -66,41 +57,91 @@ export function parseBulletinMonth(dateStr: string): number {
   return year * 12 + monthNum;
 }
 
-export default function TrendSparkline({
+// Calculate trend from data points
+export function calculateTrend(data: SparklineDataPoint[]): {
+  direction: "improving" | "worsening" | "stable" | "current";
+  changePerYear: number; // months of advancement per year
+} {
+  if (data.length < 2) {
+    return { direction: "stable", changePerYear: 0 };
+  }
+
+  // Filter out null/zero values (Current)
+  const validData = data.filter(d => d.value !== null && d.value !== 0);
+  
+  if (validData.length < 2) {
+    // Mostly Current - check if recent ones are still current
+    const recentCurrentCount = data.slice(-4).filter(d => d.value === null || d.value === 0).length;
+    if (recentCurrentCount >= 3) {
+      return { direction: "current", changePerYear: 12 };
+    }
+    return { direction: "stable", changePerYear: 0 };
+  }
+
+  // Compare recent (last 2 years) to older (first 2 years)
+  const recentValues = validData.slice(-4).map(d => d.value);
+  const olderValues = validData.slice(0, 4).map(d => d.value);
+  
+  const recentAvg = recentValues.reduce((a, b) => a + b, 0) / recentValues.length;
+  const olderAvg = olderValues.reduce((a, b) => a + b, 0) / olderValues.length;
+  
+  // Calculate change (positive = dates moving forward = improving)
+  const totalChange = recentAvg - olderAvg;
+  const yearsOfData = Math.max(1, (validData.length - 1) / 4); // Quarterly data
+  const changePerYear = totalChange / yearsOfData;
+  
+  let direction: "improving" | "worsening" | "stable" | "current";
+  if (changePerYear > 6) {
+    direction = "improving";
+  } else if (changePerYear < -3) {
+    direction = "worsening";
+  } else {
+    direction = "stable";
+  }
+  
+  return { direction, changePerYear };
+}
+
+// Inline Mini Sparkline for table rows - very compact
+interface InlineSparklineProps {
+  data: SparklineDataPoint[];
+  width?: number;
+  height?: number;
+  className?: string;
+}
+
+export function InlineSparkline({
   data,
-  width = 100,
-  height = 28,
-  strokeColor = "#3b82f6",
-  fillColor = "#dbeafe",
+  width = 50,
+  height = 16,
   className = "",
-}: TrendSparklineProps) {
-  const { path, areaPath, trend } = useMemo(() => {
+}: InlineSparklineProps) {
+  const { path, trend, color } = useMemo(() => {
     if (data.length < 2) {
-      return { path: "", areaPath: "", trend: "flat" as const };
+      return { path: "", trend: calculateTrend(data), color: "#9ca3af" };
     }
 
-    // Filter out null values (Current = very high value for visualization)
+    // Filter and process data
     const validData = data.map(d => ({
       ...d,
       value: d.value === null || d.value === 0 ? null : d.value
     }));
     
-    // Find min/max of non-null values
     const nonNullValues = validData.filter(d => d.value !== null).map(d => d.value as number);
     if (nonNullValues.length < 2) {
-      return { path: "", areaPath: "", trend: "flat" as const };
+      const trend = calculateTrend(data);
+      return { path: "", trend, color: "#22c55e" }; // Green for current
     }
 
     const min = Math.min(...nonNullValues);
     const max = Math.max(...nonNullValues);
     const range = max - min || 1;
 
-    // Add padding
-    const padding = 3;
+    const padding = 1;
     const chartWidth = width - padding * 2;
     const chartHeight = height - padding * 2;
 
-    // Calculate points (skip nulls - "Current" values)
+    // Build path
     const pts: { x: number; y: number }[] = [];
     let pointIndex = 0;
     const totalPoints = validData.filter(d => d.value !== null).length;
@@ -115,117 +156,124 @@ export default function TrendSparkline({
     });
 
     if (pts.length < 2) {
-      return { path: "", areaPath: "", trend: "flat" as const };
+      return { path: "", trend: calculateTrend(data), color: "#9ca3af" };
     }
 
-    // Create SVG path
     const pathStr = pts.map((p, i) => 
       i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`
     ).join(" ");
 
-    // Create area path (for fill under curve)
-    const areaPathStr = [
-      `M ${pts[0].x} ${height - padding}`,
-      ...pts.map(p => `L ${p.x} ${p.y}`),
-      `L ${pts[pts.length - 1].x} ${height - padding}`,
-      "Z"
-    ].join(" ");
+    const trend = calculateTrend(data);
+    const color = trend.direction === "improving" ? "#22c55e" : 
+                  trend.direction === "worsening" ? "#ef4444" : 
+                  trend.direction === "current" ? "#22c55e" : "#6b7280";
 
-    // Calculate trend (compare recent to older)
-    const recentValues = nonNullValues.slice(-4);
-    const olderValues = nonNullValues.slice(0, 4);
-    const recentAvg = recentValues.reduce((a, b) => a + b, 0) / recentValues.length;
-    const olderAvg = olderValues.reduce((a, b) => a + b, 0) / olderValues.length;
-    
-    // Positive change = dates moving forward = improving
-    const change = recentAvg - olderAvg;
-    const trendDir = change > 6 ? "improving" : change < -6 ? "worsening" : "flat";
-
-    return { 
-      path: pathStr, 
-      areaPath: areaPathStr, 
-      trend: trendDir,
-    };
+    return { path: pathStr, trend, color };
   }, [data, width, height]);
 
+  // For "current" categories, show a simple indicator
+  if (trend.direction === "current") {
+    return (
+      <span className={`inline-flex items-center text-green-600 ${className}`}>
+        <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+          <line x1="2" y1={height/2} x2={width-2} y2={height/2} stroke="#22c55e" strokeWidth="2" strokeDasharray="2 2" />
+        </svg>
+      </span>
+    );
+  }
+
   if (!path) {
-    return <div className={`text-gray-400 text-xs ${className}`}>—</div>;
+    return <span className={`text-gray-400 ${className}`}>—</span>;
   }
 
   return (
-    <div className={`inline-flex items-center gap-1.5 ${className}`}>
-      <svg width={width} height={height} className="overflow-visible">
-        {/* Fill under curve */}
-        <path
-          d={areaPath}
-          fill={fillColor}
-          opacity={0.5}
-        />
-        {/* Line */}
+    <span className={`inline-flex items-center ${className}`}>
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
         <path
           d={path}
           fill="none"
-          stroke={strokeColor}
+          stroke={color}
           strokeWidth={1.5}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
       </svg>
-      {/* Trend indicator */}
-      {trend === "improving" && (
-        <svg width="10" height="10" viewBox="0 0 10 10" className="text-green-600">
-          <path d="M5 1L9 6H1L5 1Z" fill="currentColor" />
-        </svg>
-      )}
-      {trend === "worsening" && (
-        <svg width="10" height="10" viewBox="0 0 10 10" className="text-red-600">
-          <path d="M5 9L1 4H9L5 9Z" fill="currentColor" />
-        </svg>
-      )}
-    </div>
-  );
-}
-
-// Velocity badge component
-interface VelocityBadgeProps {
-  monthsPerYear: number;
-  className?: string;
-}
-
-export function VelocityBadge({ monthsPerYear, className = "" }: VelocityBadgeProps) {
-  let colorClass = "bg-red-100 text-red-700";
-  let label = "Very Slow";
-  
-  if (monthsPerYear >= 12) {
-    colorClass = "bg-green-100 text-green-700";
-    label = "Current";
-  } else if (monthsPerYear >= 9) {
-    colorClass = "bg-green-100 text-green-700";
-    label = "Fast";
-  } else if (monthsPerYear >= 6) {
-    colorClass = "bg-yellow-100 text-yellow-700";
-    label = "Moderate";
-  } else if (monthsPerYear >= 3) {
-    colorClass = "bg-orange-100 text-orange-700";
-    label = "Slow";
-  }
-
-  return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${colorClass} ${className}`}>
-      {Math.round(monthsPerYear)} mo/yr
-      <span className="opacity-70">·</span>
-      {label}
     </span>
   );
 }
 
-// Unified Historical Trends Chart - shows all data in one interactive view
+// Trend indicator arrow with label
+interface TrendIndicatorProps {
+  data: SparklineDataPoint[];
+  showLabel?: boolean;
+  className?: string;
+}
+
+export function TrendIndicator({ data, showLabel = true, className = "" }: TrendIndicatorProps) {
+  const trend = useMemo(() => calculateTrend(data), [data]);
+  
+  if (trend.direction === "current") {
+    return (
+      <span className={`inline-flex items-center gap-1 text-green-600 ${className}`}>
+        <span className="text-xs">●</span>
+        {showLabel && <span className="text-xs">Current</span>}
+      </span>
+    );
+  }
+  
+  if (trend.direction === "improving") {
+    return (
+      <span className={`inline-flex items-center gap-0.5 text-green-600 ${className}`}>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+          <path d="M6 2L10 7H2L6 2Z" />
+        </svg>
+        {showLabel && <span className="text-xs">+{Math.round(trend.changePerYear)}mo/yr</span>}
+      </span>
+    );
+  }
+  
+  if (trend.direction === "worsening") {
+    return (
+      <span className={`inline-flex items-center gap-0.5 text-red-600 ${className}`}>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+          <path d="M6 10L2 5H10L6 10Z" />
+        </svg>
+        {showLabel && <span className="text-xs">{Math.round(trend.changePerYear)}mo/yr</span>}
+      </span>
+    );
+  }
+  
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-gray-500 ${className}`}>
+      <span className="text-xs">→</span>
+      {showLabel && <span className="text-xs">Stable</span>}
+    </span>
+  );
+}
+
+// Combined sparkline with trend indicator for table cells
+interface SparklineCellProps {
+  data: SparklineDataPoint[];
+  className?: string;
+}
+
+export function SparklineCell({ data, className = "" }: SparklineCellProps) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 ${className}`}>
+      <InlineSparkline data={data} width={44} height={14} />
+      <TrendIndicator data={data} showLabel={false} />
+    </span>
+  );
+}
+
+// Historical Trends Chart - shows all data in one interactive view
 interface HistoricalTrendsChartProps {
   data: {
     eb1: { india: SparklineDataPoint[]; china: SparklineDataPoint[]; other: SparklineDataPoint[] };
     eb2: { india: SparklineDataPoint[]; china: SparklineDataPoint[]; other: SparklineDataPoint[] };
     eb3: { india: SparklineDataPoint[]; china: SparklineDataPoint[]; other: SparklineDataPoint[] };
   };
+  title?: string;
   className?: string;
 }
 
@@ -250,7 +298,7 @@ const COUNTRY_COLORS: Record<Country, { stroke: string; fill: string }> = {
   other: { stroke: "#22c55e", fill: "#dcfce7" },
 };
 
-export function HistoricalTrendsChart({ data, className = "" }: HistoricalTrendsChartProps) {
+export function HistoricalTrendsChart({ data, title, className = "" }: HistoricalTrendsChartProps) {
   const [selectedCategory, setSelectedCategory] = useState<Category>("eb2");
   const [hoveredPoint, setHoveredPoint] = useState<{ country: Country; index: number; x: number; y: number; label: string; value: string } | null>(null);
 
@@ -288,7 +336,7 @@ export function HistoricalTrendsChart({ data, className = "" }: HistoricalTrends
 
   const padding = { top: 24, right: 16, bottom: 32, left: 60 };
   const width = 700;
-  const height = 240;
+  const height = 200;
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
 
@@ -328,7 +376,7 @@ export function HistoricalTrendsChart({ data, className = "" }: HistoricalTrends
   // Generate y-axis labels
   const yAxisLabels = useMemo(() => {
     const labels: { y: number; text: string }[] = [];
-    const steps = 5;
+    const steps = 4;
     for (let i = 0; i <= steps; i++) {
       const ratio = i / steps;
       const y = padding.top + chartHeight * (1 - ratio);
@@ -338,12 +386,11 @@ export function HistoricalTrendsChart({ data, className = "" }: HistoricalTrends
     return labels;
   }, [chartData, chartHeight, padding.top]);
 
-  // Generate x-axis labels (show every 4th label to avoid crowding)
+  // Generate x-axis labels
   const xAxisLabels = useMemo(() => {
-    return chartData.labels.filter((_, i) => i % 4 === 0 || i === chartData.labels.length - 1).map((label, i, arr) => {
+    return chartData.labels.filter((_, i) => i % 4 === 0 || i === chartData.labels.length - 1).map((label) => {
       const originalIndex = chartData.labels.indexOf(label);
       const x = padding.left + (originalIndex / (chartData.labels.length - 1)) * chartWidth;
-      // Shorten label: "January 2023" -> "Jan '23"
       const short = label.replace(/(\w{3})\w*\s*(\d{2})(\d{2})/, "$1 '$3");
       return { x, text: short };
     });
@@ -352,16 +399,16 @@ export function HistoricalTrendsChart({ data, className = "" }: HistoricalTrends
   return (
     <div className={`${className}`}>
       {/* Category selector tabs */}
-      <div className="flex items-center gap-1 mb-4">
-        <span className="text-sm text-gray-600 mr-2">Category:</span>
+      <div className="flex items-center gap-1 mb-3">
+        {title && <span className="text-sm text-gray-600 mr-2">{title}</span>}
         {(["eb1", "eb2", "eb3"] as Category[]).map(cat => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+            className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
               selectedCategory === cat 
                 ? "bg-brand-500 text-white" 
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             }`}
           >
             {CATEGORY_LABELS[cat]}
@@ -370,7 +417,7 @@ export function HistoricalTrendsChart({ data, className = "" }: HistoricalTrends
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 mb-3">
+      <div className="flex items-center gap-4 mb-2">
         {(["india", "china", "other"] as Country[]).map(country => (
           <div key={country} className="flex items-center gap-1.5">
             <div 
@@ -383,8 +430,8 @@ export function HistoricalTrendsChart({ data, className = "" }: HistoricalTrends
       </div>
 
       {/* Chart */}
-      <div className="relative">
-        <svg width={width} height={height} className="overflow-visible">
+      <div className="relative overflow-x-auto">
+        <svg width={width} height={height} className="min-w-full">
           {/* Grid lines */}
           {yAxisLabels.map((label, i) => (
             <g key={i}>
@@ -491,9 +538,41 @@ export function HistoricalTrendsChart({ data, className = "" }: HistoricalTrends
         </svg>
       </div>
 
-      <p className="text-xs text-gray-500 mt-2">
-        Shows Final Action Date movement over time. Higher = more recent priority dates = shorter backlog.
+      <p className="text-xs text-gray-500 mt-1">
+        Higher = more recent dates = shorter backlog
       </p>
     </div>
+  );
+}
+
+// Legacy exports for backwards compatibility
+export default function TrendSparkline(props: { data: SparklineDataPoint[]; width?: number; height?: number; strokeColor?: string; fillColor?: string; className?: string }) {
+  return <InlineSparkline data={props.data} width={props.width} height={props.height} className={props.className} />;
+}
+
+export function VelocityBadge({ monthsPerYear, className = "" }: { monthsPerYear: number; className?: string }) {
+  let colorClass = "bg-red-100 text-red-700";
+  let label = "Very Slow";
+  
+  if (monthsPerYear >= 12) {
+    colorClass = "bg-green-100 text-green-700";
+    label = "Current";
+  } else if (monthsPerYear >= 9) {
+    colorClass = "bg-green-100 text-green-700";
+    label = "Fast";
+  } else if (monthsPerYear >= 6) {
+    colorClass = "bg-yellow-100 text-yellow-700";
+    label = "Moderate";
+  } else if (monthsPerYear >= 3) {
+    colorClass = "bg-orange-100 text-orange-700";
+    label = "Slow";
+  }
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${colorClass} ${className}`}>
+      {Math.round(monthsPerYear)} mo/yr
+      <span className="opacity-70">·</span>
+      {label}
+    </span>
   );
 }
