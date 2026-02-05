@@ -856,10 +856,10 @@ function composePath(
     } else {
       // No existing PD - new filer (PD will be ~today when I-140 approved)
       
-      // Calculate FILING wait for new filer
+      // Calculate FILING wait for new filer (using Filing Date velocity)
       if (filingDatesChart) {
         filingDateStr = getPriorityDateForPath(filingDatesChart, gcCategory, filters.countryOfBirth);
-        const filingResult = calculateNewFilerWait(filingDateStr, filters.countryOfBirth, ebCategory);
+        const filingResult = calculateNewFilerWait(filingDateStr, filters.countryOfBirth, ebCategory, "filing");
         filingWaitMonths = filingResult.estimatedMonths;
         canFileConcurrently = filingWaitMonths === 0;
         filingVelocityInfo = {

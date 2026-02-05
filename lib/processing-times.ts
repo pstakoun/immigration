@@ -243,10 +243,12 @@ export function calculatePriorityDateWait(priorityDateStr: string): number {
 // Calculate estimated wait for new filers (those who don't have an I-140 yet)
 // Uses PERM velocity data for more accurate estimates
 // For new filers: their PD will be today's date, so they need to wait for today to become current
+// @param velocitySource - "finalAction" for Final Action Dates, "filing" for Dates for Filing
 export function calculateNewFilerWait(
   priorityDateStr: string,
   countryOfBirth: CountryOfBirth,
-  category?: EBCategory
+  category?: EBCategory,
+  velocitySource: "finalAction" | "filing" = "finalAction"
 ): WaitCalculationResult {
   const trimmed = priorityDateStr.trim().toLowerCase();
   if (trimmed === "current" || trimmed === "c") {
@@ -279,12 +281,13 @@ export function calculateNewFilerWait(
     year: today.getFullYear(),
   };
   
-  // Use velocity-based calculation
+  // Use velocity-based calculation with appropriate velocity source
   const velocityResult = calculateVelocityBasedWait(
     todayPD,
     priorityDateStr,
     effectiveCategory,
-    countryOfBirth
+    countryOfBirth,
+    velocitySource
   );
   
   return {

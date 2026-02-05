@@ -595,17 +595,22 @@ export function getFilingAdvancementRates(): Record<EBCategory, Record<"india" |
 /**
  * Calculate the velocity ratio for a category/country combination
  * Uses dynamically calculated historical bulletin movement rates
+ * @param velocitySource - "finalAction" for Final Action Dates, "filing" for Dates for Filing
  */
 export function calculateVelocity(
   category: EBCategory,
-  countryOfBirth: CountryOfBirth
+  countryOfBirth: CountryOfBirth,
+  velocitySource: "finalAction" | "filing" = "finalAction"
 ): VelocityData {
   // Get dynamically calculated advancement rate from historical data
   const countryKey = (countryOfBirth === "india" || countryOfBirth === "china") 
     ? countryOfBirth 
     : "other";
   
-  const advancementRates = getAdvancementRates();
+  // Use the appropriate velocity data source
+  const advancementRates = velocitySource === "filing" 
+    ? getFilingAdvancementRates() 
+    : getAdvancementRates();
   const bulletinAdvancementMonthsPerYear = advancementRates[category][countryKey];
   
   // Calculate velocity ratio (12 months / actual advancement = how many years per year of backlog)
@@ -648,12 +653,14 @@ export function calculateVelocity(
 /**
  * Calculate estimated wait time based on PERM velocity data
  * This replaces the simplistic formula in processing-times.ts
+ * @param velocitySource - "finalAction" for Final Action Dates, "filing" for Dates for Filing
  */
 export function calculateVelocityBasedWait(
   userPriorityDate: { month: number; year: number },
   visaBulletinCutoff: string,
   category: EBCategory,
-  countryOfBirth: CountryOfBirth
+  countryOfBirth: CountryOfBirth,
+  velocitySource: "finalAction" | "filing" = "finalAction"
 ): {
   estimatedMonths: number;
   confidence: number;
@@ -724,8 +731,8 @@ export function calculateVelocityBasedWait(
     (userDate.getFullYear() - bulletinDate.getFullYear()) * 12 +
     (userDate.getMonth() - bulletinDate.getMonth());
   
-  // Get velocity data (base calculations)
-  const velocityData = calculateVelocity(category, countryOfBirth);
+  // Get velocity data (base calculations) using the appropriate source
+  const velocityData = calculateVelocity(category, countryOfBirth, velocitySource);
   
   // Calculate estimated wait
   let estimatedMonths = Math.round(monthsBehind * velocityData.waitMultiplier);
