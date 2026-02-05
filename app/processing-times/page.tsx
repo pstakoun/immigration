@@ -441,23 +441,6 @@ export default function ProcessingTimesPage() {
         </div>
       </section>
 
-      {/* Understanding Section */}
-      <section className="mb-10 p-5 bg-gray-50 border border-gray-200 rounded-lg">
-        <h3 className="font-medium text-gray-900 mb-3">Understanding the Data</h3>
-        <div className="text-sm text-gray-600 space-y-2">
-          <p>
-            <strong>Final Action Dates</strong> determine when your green card can be approved. 
-            <strong>Dates for Filing</strong> determine when you can submit I-485 and receive EAD/AP while waiting.
-          </p>
-          <p>
-            <strong>Est. Wait</strong> is based on current backlog and historical movement. Actual times vary with policy changes.
-          </p>
-          <p>
-            <strong>Movement</strong> shows how many months the cutoff date advances per year on average.
-          </p>
-        </div>
-      </section>
-
       {/* CTA */}
       <div className="border-t border-gray-200 pt-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
