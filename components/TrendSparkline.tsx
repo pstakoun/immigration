@@ -28,14 +28,16 @@ export function parseVisaBulletinDate(dateStr: string): number | null {
 
 /**
  * Get text color based on velocity (months advanced per year)
- * green (fast) → teal → amber → orange → red (slow)
+ * Uses blue/slate tones to differentiate from wait time colors
+ * This is informational (how fast things move) vs judgmental (is my wait good/bad)
  */
 function getVelocityColor(monthsPerYear: number): string {
-  if (monthsPerYear >= 10) return "text-green-600";
-  if (monthsPerYear >= 6) return "text-teal-600";
-  if (monthsPerYear >= 4) return "text-amber-600";
-  if (monthsPerYear >= 2) return "text-orange-600";
-  return "text-red-600";
+  // Blue scale: darker = faster movement, lighter = slower
+  if (monthsPerYear >= 11) return "text-blue-600";    // Fast: 11-12 mo/yr
+  if (monthsPerYear >= 10) return "text-blue-500";    // Good: 10 mo/yr
+  if (monthsPerYear >= 9) return "text-slate-600";    // Moderate: 9 mo/yr
+  if (monthsPerYear >= 6) return "text-slate-500";    // Slow: 6-8 mo/yr
+  return "text-slate-400";                             // Very slow: <6 mo/yr
 }
 
 /**
@@ -57,7 +59,7 @@ export function VelocitySparkline({
     ? data.slice(-3).reduce((sum, d) => sum + d.monthsPerYear, 0) / Math.min(3, data.length)
     : 0);
   
-  // Current - no backlog
+  // Current - no backlog (use green to match wait time "Current" color)
   if (currentIsCurrent || displayVelocity >= 12) {
     return (
       <span className={`text-sm font-medium text-green-600 ${className}`}>

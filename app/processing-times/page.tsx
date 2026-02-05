@@ -53,11 +53,17 @@ function calculateNewFilerWait(
 }
 
 // Get color class based on wait time
+// Thresholds calibrated for current EB category wait times:
+// - Green: <2 years (fast, realistic timeline)
+// - Yellow: 2-4 years (moderate wait)
+// - Orange-500: 4-8 years (significant wait)
+// - Orange-600: 8-15 years (long wait)
+// - Red: 15+ years (extreme backlog)
 function getWaitTimeColor(years: number): string {
   if (years === 0) return "text-green-600";
-  if (years <= 1) return "text-green-600";
-  if (years <= 3) return "text-yellow-600";
-  if (years <= 7) return "text-orange-500";
+  if (years < 2) return "text-green-600";
+  if (years <= 4) return "text-yellow-600";
+  if (years <= 8) return "text-orange-500";
   if (years <= 15) return "text-orange-600";
   return "text-red-600";
 }
