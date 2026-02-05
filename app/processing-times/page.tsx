@@ -454,17 +454,9 @@ export default function ProcessingTimesPage() {
             Actual wait times vary based on policy changes and visa availability.
           </p>
           <p>
-            <strong>Movement</strong> shows how fast the cutoff date advances each year. Colors indicate speed:
-          </p>
-          <ul className="list-none space-y-1 ml-4">
-            <li><span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-green-100 text-green-700">10+</span> — fast movement</li>
-            <li><span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-teal-50 text-teal-700">6-9</span> — good movement</li>
-            <li><span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700">4-5</span> — moderate</li>
-            <li><span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-orange-100 text-orange-700">2-3</span> — slow</li>
-            <li><span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-red-100 text-red-700">&lt;2</span> — very slow</li>
-          </ul>
-          <p className="mt-2">
-            Arrows show year-over-year trend: <span className="text-green-600 font-medium">↑</span> speeding up, <span className="text-amber-600 font-medium">↓</span> slowing down.
+            <strong>Movement</strong> shows months advanced per year. Badge color indicates speed (green = fast, red = slow).
+            The dot shows trend: <span className="inline-block w-2 h-2 rounded-full bg-green-500 align-middle"></span> speeding up, 
+            <span className="inline-block w-2 h-2 rounded-full bg-amber-500 align-middle"></span> slowing down.
           </p>
         </div>
       </section>

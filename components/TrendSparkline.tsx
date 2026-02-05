@@ -144,14 +144,14 @@ interface MovementBadgeProps {
 }
 
 /**
- * MovementBadge - Clean heatmap-style velocity badge
+ * MovementBadge - Heatmap velocity badge with separate trend dot
  * 
  * Design:
- * - Single compact badge with color = speed (heatmap)
- * - Small arrow inside badge shows trend direction
- * - No extra text, numbers for change, or clutter
+ * - Badge shows velocity with unit: "8 mo/yr"
+ * - Color = speed (heatmap)
+ * - Small colored dot shows trend (green = speeding up, amber = slowing)
  * 
- * Examples: [8 ↑] green, [3 ↓] orange, [5] yellow
+ * Examples: [8 mo/yr] ● (green dot), [3 mo/yr] ● (amber dot)
  */
 export function MovementBadge({ 
   velocity,
@@ -173,17 +173,20 @@ export function MovementBadge({
   const colors = getVelocityColors(velocity);
   const roundedVelocity = Math.round(velocity);
   
-  // Determine arrow
-  let arrow = "";
+  // Trend dot color
+  let trendDot = null;
   if (trend.direction === "improving") {
-    arrow = " ↑";
+    trendDot = <span className="w-2 h-2 rounded-full bg-green-500" title="Speeding up" />;
   } else if (trend.direction === "worsening") {
-    arrow = " ↓";
+    trendDot = <span className="w-2 h-2 rounded-full bg-amber-500" title="Slowing down" />;
   }
   
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium ${colors.bg} ${colors.text} ${className}`}>
-      {roundedVelocity}{arrow}
+    <span className={`inline-flex items-center gap-2 ${className}`}>
+      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium ${colors.bg} ${colors.text}`}>
+        {roundedVelocity} mo/yr
+      </span>
+      {trendDot}
     </span>
   );
 }
@@ -239,7 +242,7 @@ export function VelocityBadge({
   
   return (
     <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium ${colors.bg} ${colors.text} ${className}`}>
-      {Math.round(monthsPerYear)}
+      {Math.round(monthsPerYear)} mo/yr
     </span>
   );
 }
