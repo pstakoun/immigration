@@ -454,14 +454,18 @@ export default function ProcessingTimesPage() {
             Actual wait times vary based on policy changes and visa availability.
           </p>
           <p>
-            <strong>Movement</strong> shows the current pace (months advanced per year) compared to 1 year ago:
+            <strong>Movement</strong> shows how fast the cutoff date advances each year. Colors indicate speed:
           </p>
           <ul className="list-none space-y-1 ml-4">
-            <li><span className="font-medium">3 mo/yr</span> <span className="text-amber-600">↓ vs 5 last year</span> — slowed from 5 to 3 months/year</li>
-            <li><span className="font-medium">5 mo/yr</span> <span className="text-green-600">↑ vs 3 last year</span> — sped up from 3 to 5 months/year</li>
-            <li><span className="font-medium">3 mo/yr</span> <span className="text-gray-500">(stable)</span> — consistent pace</li>
-            <li><span className="text-green-600 font-medium">● Current</span> — no backlog, no wait</li>
+            <li><span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-green-100 text-green-700">10+</span> — fast movement</li>
+            <li><span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-teal-50 text-teal-700">6-9</span> — good movement</li>
+            <li><span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700">4-5</span> — moderate</li>
+            <li><span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-orange-100 text-orange-700">2-3</span> — slow</li>
+            <li><span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-red-100 text-red-700">&lt;2</span> — very slow</li>
           </ul>
+          <p className="mt-2">
+            Arrows show year-over-year trend: <span className="text-green-600 font-medium">↑</span> speeding up, <span className="text-amber-600 font-medium">↓</span> slowing down.
+          </p>
         </div>
       </section>
 
