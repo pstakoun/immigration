@@ -454,12 +454,12 @@ export default function ProcessingTimesPage() {
             Actual wait times vary based on policy changes and visa availability.
           </p>
           <p>
-            <strong>Movement</strong> shows how many months the cutoff advances per year, with comparison to recent history:
+            <strong>Movement</strong> shows the current pace (months advanced per year) compared to 1 year ago:
           </p>
           <ul className="list-none space-y-1 ml-4">
-            <li><span className="font-medium">3 mo/yr</span> <span className="text-amber-600">↓ was 5</span> — slowed from 5 to 3 months/year</li>
-            <li><span className="font-medium">5 mo/yr</span> <span className="text-green-600">↑ was 3</span> — sped up from 3 to 5 months/year</li>
-            <li><span className="font-medium">3 mo/yr</span> <span className="text-gray-500">(steady)</span> — consistent pace</li>
+            <li><span className="font-medium">3 mo/yr</span> <span className="text-amber-600">↓ vs 5 last year</span> — slowed from 5 to 3 months/year</li>
+            <li><span className="font-medium">5 mo/yr</span> <span className="text-green-600">↑ vs 3 last year</span> — sped up from 3 to 5 months/year</li>
+            <li><span className="font-medium">3 mo/yr</span> <span className="text-gray-500">(stable)</span> — consistent pace</li>
             <li><span className="text-green-600 font-medium">● Current</span> — no backlog, no wait</li>
           </ul>
         </div>

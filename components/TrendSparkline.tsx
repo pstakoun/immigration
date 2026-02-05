@@ -60,7 +60,8 @@ export interface TrendInfo {
 }
 
 /**
- * Calculate the trend - is the line moving faster, slower, or about the same?
+ * Calculate the trend comparing current year to 1 year ago
+ * Clear time reference: "now vs 1 year ago"
  */
 export function calculateTrend(data: VelocityDataPoint[]): TrendInfo {
   if (data.length < 2) {
@@ -84,19 +85,18 @@ export function calculateTrend(data: VelocityDataPoint[]): TrendInfo {
     };
   }
 
-  // Compare recent (last ~2 years) to older (~2 years before that)
-  const midpoint = Math.floor(data.length / 2);
-  const recentData = data.slice(midpoint);
-  const olderData = data.slice(0, midpoint);
+  // Get current (most recent) and 1 year ago
+  // Data is ordered oldest to newest, so last entry is most recent
+  const currentVelocity = data[data.length - 1].monthsPerYear;
   
-  const recentAvg = recentData.reduce((sum, d) => sum + d.monthsPerYear, 0) / recentData.length;
-  const olderAvg = olderData.reduce((sum, d) => sum + d.monthsPerYear, 0) / olderData.length;
+  // Find velocity from ~1 year ago (or closest we have)
+  // If we have 5 years of data, 1 year ago would be index -2 from end
+  const oneYearAgoIndex = Math.max(0, data.length - 2);
+  const previousVelocity = data[oneYearAgoIndex].monthsPerYear;
   
-  const velocityChange = recentAvg - olderAvg;
+  const velocityChange = currentVelocity - previousVelocity;
   
-  // Determine direction based on velocity change
-  // Positive change = velocity increasing = wait times improving
-  // Negative change = velocity decreasing = wait times worsening
+  // Determine direction
   let direction: TrendInfo["direction"];
   if (velocityChange > 1) {
     direction = "improving";
@@ -109,8 +109,8 @@ export function calculateTrend(data: VelocityDataPoint[]): TrendInfo {
   return {
     direction,
     velocityChange,
-    currentVelocity: recentAvg,
-    previousVelocity: olderAvg
+    currentVelocity,
+    previousVelocity
   };
 }
 
@@ -173,15 +173,15 @@ export function TrendBadge({
     arrow = "→";
   }
   
-  // Show concrete comparison: "3 mo/yr (was 5)" or "3 mo/yr (steady)"
+  // Show concrete comparison with clear time reference: "3 mo/yr (vs 5 last year)"
   return (
     <span className={`inline-flex items-center gap-1.5 text-sm ${className}`}>
       <span className="font-medium text-gray-900">{currVelocity} mo/yr</span>
       {trend.direction === "stable" ? (
-        <span className="text-gray-400">(steady)</span>
+        <span className="text-gray-400">(stable)</span>
       ) : (
         <span className={changeColor}>
-          {arrow} was {prevVelocity}
+          {arrow} vs {prevVelocity} last year
         </span>
       )}
     </span>
@@ -218,7 +218,7 @@ export function SimpleTrendIndicator({
     return (
       <span className={`inline-flex items-center gap-1.5 text-sm ${className}`}>
         <span className="font-medium text-gray-900">{curr} mo/yr</span>
-        <span className="text-green-600">↑ was {prev}</span>
+        <span className="text-green-600">↑ vs {prev} last year</span>
       </span>
     );
   }
@@ -227,7 +227,7 @@ export function SimpleTrendIndicator({
     return (
       <span className={`inline-flex items-center gap-1.5 text-sm ${className}`}>
         <span className="font-medium text-gray-900">{curr} mo/yr</span>
-        <span className="text-amber-600">↓ was {prev}</span>
+        <span className="text-amber-600">↓ vs {prev} last year</span>
       </span>
     );
   }
@@ -235,7 +235,7 @@ export function SimpleTrendIndicator({
   return (
     <span className={`inline-flex items-center gap-1.5 text-sm ${className}`}>
       <span className="font-medium text-gray-900">{curr} mo/yr</span>
-      <span className="text-gray-400">(steady)</span>
+      <span className="text-gray-400">(stable)</span>
     </span>
   );
 }
