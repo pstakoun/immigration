@@ -11,7 +11,6 @@ import {
 import { 
   parseVisaBulletinDate,
   VelocitySparkline,
-  VelocityBadge,
   VelocityDataPoint,
 } from "@/components/TrendSparkline";
 
@@ -330,8 +329,7 @@ export default function ProcessingTimesPage() {
       <section className="mb-10">
         <h2 className="text-lg font-semibold text-gray-900 mb-2">Visa Bulletin</h2>
         <p className="text-sm text-gray-600 mb-6">
-          Visa availability determines when you can file I-485 and when your green card can be approved.
-          Velocity shows how fast dates advance. Sparklines show velocity trends: <span className="text-green-600 font-medium">↑</span> speeding up, <span className="text-red-600 font-medium">↓</span> slowing down.
+          Priority dates determine when you can file I-485 and when your green card can be approved.
         </p>
 
         {/* Final Action Dates */}
@@ -343,12 +341,11 @@ export default function ProcessingTimesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 pr-3 font-medium text-gray-700 w-16">Category</th>
-                  <th className="text-left py-3 pr-3 font-medium text-gray-700">Country</th>
-                  <th className="text-left py-3 pr-3 font-medium text-gray-700">Date</th>
-                  <th className="text-left py-3 pr-3 font-medium text-gray-700">Velocity</th>
-                  <th className="text-left py-3 pr-3 font-medium text-gray-700">Est. Wait</th>
-                  <th className="text-left py-3 font-medium text-gray-700">Trend</th>
+                  <th className="text-left py-3 pr-4 font-medium text-gray-700 w-16">Category</th>
+                  <th className="text-left py-3 pr-4 font-medium text-gray-700">Country</th>
+                  <th className="text-left py-3 pr-4 font-medium text-gray-700">Cutoff Date</th>
+                  <th className="text-left py-3 pr-4 font-medium text-gray-700">Est. Wait</th>
+                  <th className="text-left py-3 font-medium text-gray-700">Outlook</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -358,25 +355,21 @@ export default function ProcessingTimesPage() {
                       const countryLabel = country === "other" ? "ROW" : country.charAt(0).toUpperCase() + country.slice(1);
                       const priorityDate = country === "other" ? priorityDates[cat].allOther : priorityDates[cat][country];
                       const wait = waitTimeEstimates[cat][country];
-                      const velocity = advancementRates[cat][country];
                       const velocityData = getVelocityData(cat, country, "finalAction");
                       const isCurrent = isPriorityDateCurrent(priorityDate);
                       
                       return (
                         <tr key={`${cat}-${country}`} className={countryIdx === 0 ? "border-t-2 border-gray-200" : ""}>
                           {countryIdx === 0 && (
-                            <td className="py-2.5 pr-3 font-semibold text-gray-900 align-top" rowSpan={3}>
+                            <td className="py-2.5 pr-4 font-semibold text-gray-900 align-top" rowSpan={3}>
                               {cat.toUpperCase().replace("EB", "EB-")}
                             </td>
                           )}
-                          <td className="py-2.5 pr-3 text-gray-600">{countryLabel}</td>
-                          <td className={`py-2.5 pr-3 ${isCurrent ? "text-green-600 font-medium" : "text-gray-900"}`}>
+                          <td className="py-2.5 pr-4 text-gray-600">{countryLabel}</td>
+                          <td className={`py-2.5 pr-4 ${isCurrent ? "text-green-600 font-medium" : "text-gray-900"}`}>
                             {priorityDate}
                           </td>
-                          <td className="py-2.5 pr-3">
-                            <VelocityBadge monthsPerYear={velocity} isCurrent={isCurrent} />
-                          </td>
-                          <td className={`py-2.5 pr-3 ${getWaitTimeColor(wait.years)}`}>
+                          <td className={`py-2.5 pr-4 font-medium ${getWaitTimeColor(wait.years)}`}>
                             {formatWaitTime(wait.years, wait.rangeMin, wait.rangeMax)}
                           </td>
                           <td className="py-2.5">
@@ -401,12 +394,11 @@ export default function ProcessingTimesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 pr-3 font-medium text-gray-700 w-16">Category</th>
-                  <th className="text-left py-3 pr-3 font-medium text-gray-700">Country</th>
-                  <th className="text-left py-3 pr-3 font-medium text-gray-700">Date</th>
-                  <th className="text-left py-3 pr-3 font-medium text-gray-700">Velocity</th>
-                  <th className="text-left py-3 pr-3 font-medium text-gray-700">Est. Wait</th>
-                  <th className="text-left py-3 font-medium text-gray-700">Trend</th>
+                  <th className="text-left py-3 pr-4 font-medium text-gray-700 w-16">Category</th>
+                  <th className="text-left py-3 pr-4 font-medium text-gray-700">Country</th>
+                  <th className="text-left py-3 pr-4 font-medium text-gray-700">Cutoff Date</th>
+                  <th className="text-left py-3 pr-4 font-medium text-gray-700">Est. Wait</th>
+                  <th className="text-left py-3 font-medium text-gray-700">Outlook</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -423,18 +415,15 @@ export default function ProcessingTimesPage() {
                       return (
                         <tr key={`filing-${cat}-${country}`} className={countryIdx === 0 ? "border-t-2 border-gray-200" : ""}>
                           {countryIdx === 0 && (
-                            <td className="py-2.5 pr-3 font-semibold text-gray-900 align-top" rowSpan={3}>
+                            <td className="py-2.5 pr-4 font-semibold text-gray-900 align-top" rowSpan={3}>
                               {cat.toUpperCase().replace("EB", "EB-")}
                             </td>
                           )}
-                          <td className="py-2.5 pr-3 text-gray-600">{countryLabel}</td>
-                          <td className={`py-2.5 pr-3 ${isCurrent ? "text-green-600 font-medium" : "text-gray-900"}`}>
+                          <td className="py-2.5 pr-4 text-gray-600">{countryLabel}</td>
+                          <td className={`py-2.5 pr-4 ${isCurrent ? "text-green-600 font-medium" : "text-gray-900"}`}>
                             {filingDate}
                           </td>
-                          <td className="py-2.5 pr-3">
-                            <VelocityBadge monthsPerYear={velocity} isCurrent={isCurrent} />
-                          </td>
-                          <td className={`py-2.5 pr-3 ${getWaitTimeColor(filingWait.years)}`}>
+                          <td className={`py-2.5 pr-4 font-medium ${getWaitTimeColor(filingWait.years)}`}>
                             {formatWaitTime(filingWait.years, filingWait.rangeMin, filingWait.rangeMax)}
                           </td>
                           <td className="py-2.5">
@@ -460,14 +449,14 @@ export default function ProcessingTimesPage() {
             <strong> Dates for Filing</strong> determine when you can submit I-485 and get work/travel permits.
           </p>
           <p>
-            <strong>Velocity</strong> shows how many months the cutoff advances per year. Higher = faster progress.
-            <strong> Est. Wait</strong> is based on current backlog ÷ velocity.
+            <strong>Est. Wait</strong> is a rough estimate based on current backlog and historical movement patterns.
+            Actual wait times can vary significantly based on policy changes and visa availability.
           </p>
           <p>
-            <strong>Trends:</strong> Sparklines show velocity over 5 years. 
-            <span className="text-green-600"> ↑ = speeding up (good)</span>, 
-            <span className="text-red-600"> ↓ = slowing down (bad)</span>, 
-            <span className="text-gray-600"> → = stable</span>.
+            <strong>Outlook</strong> shows the trend over the past few years:
+            <span className="inline-flex items-center gap-1 mx-1 text-green-600 font-medium">↑ Faster</span> = improving,
+            <span className="inline-flex items-center gap-1 mx-1 text-amber-600 font-medium">↓ Slower</span> = processing has slowed,
+            <span className="inline-flex items-center gap-1 mx-1 text-gray-500 font-medium">→ Steady</span> = consistent pace.
           </p>
         </div>
       </section>

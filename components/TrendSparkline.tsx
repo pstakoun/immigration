@@ -49,19 +49,22 @@ export function parseBulletinMonth(dateStr: string): number {
 }
 
 // Calculate velocity trend from velocity data
-// For velocity: INCREASING = improving (good), DECREASING = worsening (bad)
-function calculateVelocityTrend(data: VelocityDataPoint[]): {
+// Returns: direction, the actual change in mo/yr, and velocities for comparison
+export function calculateVelocityTrend(data: VelocityDataPoint[]): {
   direction: "improving" | "worsening" | "stable" | "current";
-  change: number;
+  change: number; // Change in mo/yr (positive = speeding up)
+  recentVelocity: number;
+  olderVelocity: number;
 } {
   if (data.length < 2) {
-    return { direction: "stable", change: 0 };
+    const velocity = data.length > 0 ? data[0].monthsPerYear : 0;
+    return { direction: "stable", change: 0, recentVelocity: velocity, olderVelocity: velocity };
   }
 
   // Check if mostly current (high velocity = 12+ mo/yr)
   const currentCount = data.filter(d => d.monthsPerYear >= 12).length;
   if (currentCount >= data.length * 0.7) {
-    return { direction: "current", change: 0 };
+    return { direction: "current", change: 0, recentVelocity: 12, olderVelocity: 12 };
   }
 
   // Compare recent to older velocities
@@ -76,139 +79,186 @@ function calculateVelocityTrend(data: VelocityDataPoint[]): {
   
   // Threshold: 1 month/year change is meaningful
   if (change > 1) {
-    return { direction: "improving", change }; // Velocity increasing = good
+    return { direction: "improving", change, recentVelocity: recentAvg, olderVelocity: olderAvg };
   } else if (change < -1) {
-    return { direction: "worsening", change }; // Velocity decreasing = bad
+    return { direction: "worsening", change, recentVelocity: recentAvg, olderVelocity: olderAvg };
   }
-  return { direction: "stable", change };
+  return { direction: "stable", change: 0, recentVelocity: recentAvg, olderVelocity: olderAvg };
 }
 
-// Sparkline component showing velocity over time
-// UP = faster (good), DOWN = slower (bad) - intuitive!
-interface VelocitySparklineProps {
-  data: VelocityDataPoint[];
-  currentIsCurrent?: boolean;
+// =============================================================================
+// NEW SIMPLIFIED COMPONENTS - No sparklines, just clear indicators
+// =============================================================================
+
+interface ProgressIndicatorProps {
+  velocity: number;      // Current velocity in mo/yr
+  data: VelocityDataPoint[]; // Historical data for trend calculation
+  isCurrent?: boolean;   // Is the category currently "Current"?
   className?: string;
 }
 
-export function VelocitySparkline({ data, currentIsCurrent = false, className = "" }: VelocitySparklineProps) {
-  const { path, trend, color } = useMemo(() => {
-    // If currently current, show green indicator
-    if (currentIsCurrent) {
-      return { 
-        path: "", 
-        trend: { direction: "current" as const, change: 0 }, 
-        color: "#22c55e" 
-      };
-    }
-    
-    const trend = calculateVelocityTrend(data);
-    
-    if (data.length < 2) {
-      return { path: "", trend, color: "#9ca3af" };
-    }
-
-    // Check if mostly current
-    const currentCount = data.filter(d => d.monthsPerYear >= 12).length;
-    if (currentCount >= data.length * 0.7) {
-      return { path: "", trend: { direction: "current" as const, change: 0 }, color: "#22c55e" };
-    }
-
-    const velocities = data.map(d => d.monthsPerYear);
-    const min = Math.min(...velocities);
-    const max = Math.max(...velocities);
-    const range = max - min || 1;
-
-    const width = 44;
-    const height = 14;
-    const padding = 1;
-    const chartWidth = width - padding * 2;
-    const chartHeight = height - padding * 2;
-
-    // Build path - HIGH velocity = TOP (good), LOW velocity = BOTTOM (bad)
-    // This is INTUITIVE: up = faster = better!
-    const pts: { x: number; y: number }[] = [];
-    data.forEach((d, i) => {
-      const x = padding + (i / (data.length - 1)) * chartWidth;
-      const normalizedVelocity = (d.monthsPerYear - min) / range;
-      const y = padding + (1 - normalizedVelocity) * chartHeight; // High velocity = top
-      pts.push({ x, y });
-    });
-
-    const pathStr = pts.map((p, i) => 
-      i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`
-    ).join(" ");
-
-    // Color: improving (velocity up) = green, worsening (velocity down) = red
-    const color = trend.direction === "improving" ? "#22c55e" : 
-                  trend.direction === "worsening" ? "#ef4444" : "#6b7280";
-
-    return { path: pathStr, trend, color };
-  }, [data, currentIsCurrent]);
-
-  // If currently current, show simple green indicator
-  if (currentIsCurrent) {
+/**
+ * ProgressIndicator - Shows velocity and trend in a clear, scannable format
+ * 
+ * Examples:
+ * - "Current" (green) - category is current
+ * - "5 mo/yr ↑" (green) - speeding up
+ * - "3 mo/yr →" (gray) - stable
+ * - "2 mo/yr ↓" (red) - slowing down
+ */
+export function ProgressIndicator({ 
+  velocity, 
+  data, 
+  isCurrent = false, 
+  className = "" 
+}: ProgressIndicatorProps) {
+  const trend = useMemo(() => calculateVelocityTrend(data), [data]);
+  
+  // If category is current, show simple green indicator
+  if (isCurrent || velocity >= 12) {
     return (
-      <span className={`inline-flex items-center gap-1.5 ${className}`}>
-        <span className="text-green-600 text-xs font-medium">●</span>
-        <span className="text-green-600 text-xs">Current</span>
+      <span className={`inline-flex items-center gap-1 ${className}`}>
+        <span className="text-green-600 font-medium">Current</span>
       </span>
     );
   }
-
-  // Trend indicator arrow - UP = good (green), DOWN = bad (red)
-  const TrendArrow = () => {
-    if (trend.direction === "improving") {
-      return (
-        <span className="inline-flex items-center text-green-600" title="Velocity increasing (good)">
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-            <path d="M5 2L9 7H1L5 2Z" />
-          </svg>
-        </span>
-      );
-    }
-    if (trend.direction === "worsening") {
-      return (
-        <span className="inline-flex items-center text-red-600" title="Velocity decreasing (bad)">
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-            <path d="M5 8L1 3h8L5 8Z" />
-          </svg>
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center text-gray-500" title="Stable">
-        <span className="text-xs">→</span>
-      </span>
-    );
-  };
-
-  // If we have a sparkline path, show it with the trend arrow
-  if (path) {
-    return (
-      <span className={`inline-flex items-center gap-1.5 ${className}`}>
-        <svg width={44} height={14} viewBox="0 0 44 14">
-          <path
-            d={path}
-            fill="none"
-            stroke={color}
-            strokeWidth={1.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        <TrendArrow />
-      </span>
-    );
+  
+  // Determine colors and arrow based on trend
+  let arrow: string;
+  let colorClass: string;
+  let bgClass: string;
+  
+  if (trend.direction === "improving") {
+    arrow = "↑";
+    colorClass = "text-green-700";
+    bgClass = "bg-green-50";
+  } else if (trend.direction === "worsening") {
+    arrow = "↓";
+    colorClass = "text-red-700";
+    bgClass = "bg-red-50";
+  } else {
+    arrow = "→";
+    colorClass = "text-gray-600";
+    bgClass = "bg-gray-50";
   }
-
-  // No sparkline but we have a trend direction
+  
   return (
     <span className={`inline-flex items-center gap-1.5 ${className}`}>
-      <TrendArrow />
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm font-medium ${colorClass} ${bgClass}`}>
+        <span>{velocity.toFixed(0)} mo/yr</span>
+        <span>{arrow}</span>
+      </span>
     </span>
   );
 }
+
+/**
+ * OutlookBadge - Simple text indicator showing if conditions are improving/worsening
+ * 
+ * Uses neutral language to avoid being overly alarming while still informative
+ */
+export function OutlookBadge({ 
+  data, 
+  isCurrent = false,
+  className = "" 
+}: { 
+  data: VelocityDataPoint[]; 
+  isCurrent?: boolean;
+  className?: string;
+}) {
+  const trend = useMemo(() => calculateVelocityTrend(data), [data]);
+  
+  if (isCurrent || trend.direction === "current") {
+    return (
+      <span className={`inline-flex items-center gap-1.5 text-green-600 ${className}`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+        <span className="text-sm font-medium">Current</span>
+      </span>
+    );
+  }
+  
+  if (trend.direction === "improving") {
+    return (
+      <span className={`inline-flex items-center gap-1 text-green-600 ${className}`}>
+        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+        </svg>
+        <span className="text-sm font-medium">Faster</span>
+      </span>
+    );
+  }
+  
+  if (trend.direction === "worsening") {
+    return (
+      <span className={`inline-flex items-center gap-1 text-amber-600 ${className}`}>
+        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z" clipRule="evenodd" />
+        </svg>
+        <span className="text-sm font-medium">Slower</span>
+      </span>
+    );
+  }
+  
+  return (
+    <span className={`inline-flex items-center gap-1 text-gray-500 ${className}`}>
+      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+      </svg>
+      <span className="text-sm font-medium">Steady</span>
+    </span>
+  );
+}
+
+/**
+ * WaitTimeCell - Shows estimated wait with color coding
+ */
+export function WaitTimeCell({
+  years,
+  rangeMin,
+  rangeMax,
+  isCurrent = false,
+  className = ""
+}: {
+  years: number;
+  rangeMin?: number;
+  rangeMax?: number;
+  isCurrent?: boolean;
+  className?: string;
+}) {
+  if (isCurrent || years === 0) {
+    return <span className={`font-medium text-green-600 ${className}`}>Current</span>;
+  }
+  
+  // Color based on wait time
+  let colorClass: string;
+  if (years <= 2) {
+    colorClass = "text-green-600";
+  } else if (years <= 5) {
+    colorClass = "text-yellow-600";
+  } else if (years <= 10) {
+    colorClass = "text-orange-500";
+  } else if (years <= 20) {
+    colorClass = "text-orange-600";
+  } else {
+    colorClass = "text-red-600";
+  }
+  
+  // Format the wait time
+  let text: string;
+  if (rangeMin !== undefined && rangeMax !== undefined && rangeMin !== rangeMax) {
+    text = `${rangeMin}-${rangeMax} yr`;
+  } else if (years >= 50) {
+    text = "50+ yr";
+  } else {
+    text = `~${years} yr`;
+  }
+  
+  return <span className={`font-medium ${colorClass} ${className}`}>{text}</span>;
+}
+
+// =============================================================================
+// LEGACY EXPORTS - Keep for backward compatibility during transition
+// =============================================================================
 
 // Velocity badge showing current speed
 export function VelocityBadge({ 
@@ -220,16 +270,12 @@ export function VelocityBadge({
   isCurrent?: boolean;
   className?: string;
 }) {
-  // If the date is "Current", show that consistently
-  if (isCurrent) {
+  if (isCurrent || monthsPerYear >= 12) {
     return <span className={`font-medium text-green-600 ${className}`}>Current</span>;
   }
   
   let colorClass: string;
-  
-  if (monthsPerYear >= 12) {
-    colorClass = "text-green-600";
-  } else if (monthsPerYear >= 6) {
+  if (monthsPerYear >= 6) {
     colorClass = "text-yellow-600";
   } else if (monthsPerYear >= 3) {
     colorClass = "text-orange-500";
@@ -237,15 +283,24 @@ export function VelocityBadge({
     colorClass = "text-red-600";
   }
 
-  if (monthsPerYear >= 12) {
-    return <span className={`font-medium ${colorClass} ${className}`}>Current</span>;
-  }
-
   return (
     <span className={`font-medium ${colorClass} ${className}`}>
       {monthsPerYear.toFixed(0)} mo/yr
     </span>
   );
+}
+
+// Legacy VelocitySparkline - now just renders OutlookBadge
+export function VelocitySparkline({ 
+  data, 
+  currentIsCurrent = false, 
+  className = "" 
+}: { 
+  data: VelocityDataPoint[]; 
+  currentIsCurrent?: boolean; 
+  className?: string;
+}) {
+  return <OutlookBadge data={data} isCurrent={currentIsCurrent} className={className} />;
 }
 
 // Keep these exports for backward compatibility
@@ -267,13 +322,12 @@ export function calculateWaitTimeMonths(bulletinMonth: string, priorityDate: str
   return Math.max(0, bulletinMonths - priorityMonths);
 }
 
-// Legacy SparklineCell - redirect to VelocitySparkline
+// Legacy SparklineCell
 export function SparklineCell({ data, currentIsCurrent = false, className = "" }: { 
   data: WaitTimeDataPoint[] | VelocityDataPoint[]; 
   currentIsCurrent?: boolean;
   className?: string;
 }) {
-  // Convert if needed
   const velocityData = data as VelocityDataPoint[];
-  return <VelocitySparkline data={velocityData} currentIsCurrent={currentIsCurrent} className={className} />;
+  return <OutlookBadge data={velocityData} isCurrent={currentIsCurrent} className={className} />;
 }
