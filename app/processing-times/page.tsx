@@ -345,7 +345,10 @@ export default function ProcessingTimesPage() {
                   <th className="text-left py-3 pr-4 font-medium text-gray-700">Country</th>
                   <th className="text-left py-3 pr-4 font-medium text-gray-700">Cutoff Date</th>
                   <th className="text-left py-3 pr-4 font-medium text-gray-700">Est. Wait</th>
-                  <th className="text-left py-3 font-medium text-gray-700">Outlook</th>
+                  <th className="text-left py-3 font-medium text-gray-700">
+                    <span className="block">If You Wait</span>
+                    <span className="text-xs font-normal text-gray-500">1yr delay cost</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -355,25 +358,26 @@ export default function ProcessingTimesPage() {
                       const countryLabel = country === "other" ? "ROW" : country.charAt(0).toUpperCase() + country.slice(1);
                       const priorityDate = country === "other" ? priorityDates[cat].allOther : priorityDates[cat][country];
                       const wait = waitTimeEstimates[cat][country];
+                      const velocity = advancementRates[cat][country];
                       const velocityData = getVelocityData(cat, country, "finalAction");
                       const isCurrent = isPriorityDateCurrent(priorityDate);
                       
                       return (
                         <tr key={`${cat}-${country}`} className={countryIdx === 0 ? "border-t-2 border-gray-200" : ""}>
                           {countryIdx === 0 && (
-                            <td className="py-2.5 pr-4 font-semibold text-gray-900 align-top" rowSpan={3}>
+                            <td className="py-3 pr-4 font-semibold text-gray-900 align-top" rowSpan={3}>
                               {cat.toUpperCase().replace("EB", "EB-")}
                             </td>
                           )}
-                          <td className="py-2.5 pr-4 text-gray-600">{countryLabel}</td>
-                          <td className={`py-2.5 pr-4 ${isCurrent ? "text-green-600 font-medium" : "text-gray-900"}`}>
+                          <td className="py-3 pr-4 text-gray-600">{countryLabel}</td>
+                          <td className={`py-3 pr-4 ${isCurrent ? "text-green-600 font-medium" : "text-gray-900"}`}>
                             {priorityDate}
                           </td>
-                          <td className={`py-2.5 pr-4 font-medium ${getWaitTimeColor(wait.years)}`}>
+                          <td className={`py-3 pr-4 font-medium ${getWaitTimeColor(wait.years)}`}>
                             {formatWaitTime(wait.years, wait.rangeMin, wait.rangeMax)}
                           </td>
-                          <td className="py-2.5">
-                            <VelocitySparkline data={velocityData} currentIsCurrent={isCurrent} />
+                          <td className="py-3">
+                            <VelocitySparkline data={velocityData} velocity={velocity} currentIsCurrent={isCurrent} />
                           </td>
                         </tr>
                       );
@@ -398,7 +402,10 @@ export default function ProcessingTimesPage() {
                   <th className="text-left py-3 pr-4 font-medium text-gray-700">Country</th>
                   <th className="text-left py-3 pr-4 font-medium text-gray-700">Cutoff Date</th>
                   <th className="text-left py-3 pr-4 font-medium text-gray-700">Est. Wait</th>
-                  <th className="text-left py-3 font-medium text-gray-700">Outlook</th>
+                  <th className="text-left py-3 font-medium text-gray-700">
+                    <span className="block">If You Wait</span>
+                    <span className="text-xs font-normal text-gray-500">1yr delay cost</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -415,19 +422,19 @@ export default function ProcessingTimesPage() {
                       return (
                         <tr key={`filing-${cat}-${country}`} className={countryIdx === 0 ? "border-t-2 border-gray-200" : ""}>
                           {countryIdx === 0 && (
-                            <td className="py-2.5 pr-4 font-semibold text-gray-900 align-top" rowSpan={3}>
+                            <td className="py-3 pr-4 font-semibold text-gray-900 align-top" rowSpan={3}>
                               {cat.toUpperCase().replace("EB", "EB-")}
                             </td>
                           )}
-                          <td className="py-2.5 pr-4 text-gray-600">{countryLabel}</td>
-                          <td className={`py-2.5 pr-4 ${isCurrent ? "text-green-600 font-medium" : "text-gray-900"}`}>
+                          <td className="py-3 pr-4 text-gray-600">{countryLabel}</td>
+                          <td className={`py-3 pr-4 ${isCurrent ? "text-green-600 font-medium" : "text-gray-900"}`}>
                             {filingDate}
                           </td>
-                          <td className={`py-2.5 pr-4 font-medium ${getWaitTimeColor(filingWait.years)}`}>
+                          <td className={`py-3 pr-4 font-medium ${getWaitTimeColor(filingWait.years)}`}>
                             {formatWaitTime(filingWait.years, filingWait.rangeMin, filingWait.rangeMax)}
                           </td>
-                          <td className="py-2.5">
-                            <VelocitySparkline data={velocityData} currentIsCurrent={isCurrent} />
+                          <td className="py-3">
+                            <VelocitySparkline data={velocityData} velocity={velocity} currentIsCurrent={isCurrent} />
                           </td>
                         </tr>
                       );
@@ -449,14 +456,13 @@ export default function ProcessingTimesPage() {
             <strong> Dates for Filing</strong> determine when you can submit I-485 and get work/travel permits.
           </p>
           <p>
-            <strong>Est. Wait</strong> is a rough estimate based on current backlog and historical movement patterns.
-            Actual wait times can vary significantly based on policy changes and visa availability.
+            <strong>Est. Wait</strong> is a rough estimate based on current backlog and how fast the cutoff date advances.
+            Actual wait times can vary based on policy changes, visa availability, and USCIS processing speeds.
           </p>
           <p>
-            <strong>Outlook</strong> shows the trend over the past few years:
-            <span className="inline-flex items-center gap-1 mx-1 text-green-600 font-medium">↑ Faster</span> = improving,
-            <span className="inline-flex items-center gap-1 mx-1 text-amber-600 font-medium">↓ Slower</span> = processing has slowed,
-            <span className="inline-flex items-center gap-1 mx-1 text-gray-500 font-medium">→ Steady</span> = consistent pace.
+            <strong>If You Wait (1yr delay cost)</strong> shows how much longer you&apos;ll wait if you delay filing by 1 year.
+            For example, <span className="font-semibold text-red-600">+3 yr</span> means waiting 1 year to file adds ~3 years to your total wait.
+            <span className="font-semibold text-green-600 ml-1">No penalty</span> means the category is current with no delay cost.
           </p>
         </div>
       </section>

@@ -48,11 +48,261 @@ export function parseBulletinMonth(dateStr: string): number {
   return year * 12 + monthNum;
 }
 
-// Calculate velocity trend from velocity data
-// Returns: direction, the actual change in mo/yr, and velocities for comparison
+// =============================================================================
+// DELAY COST CALCULATION
+// =============================================================================
+
+/**
+ * Calculate the "delay cost" - how much longer you'll wait if you delay filing by 1 year
+ * 
+ * Formula: If velocity = V months/year, and you wait 1 year:
+ * - The cutoff advances by V months
+ * - But you age by 12 months  
+ * - Net: you fall behind by (12 - V) months
+ * - Additional wait = (12 - V) / V years
+ * 
+ * Examples:
+ * - Velocity 3 mo/yr: delay 1yr = add 3 years to wait
+ * - Velocity 6 mo/yr: delay 1yr = add 1 year to wait
+ * - Velocity 12 mo/yr: delay 1yr = add 0 years (current)
+ */
+export function calculateDelayCost(velocity: number): number {
+  if (velocity >= 12) return 0; // Current - no penalty
+  if (velocity <= 0) return 99; // Completely stuck
+  
+  // Cost = (12 - velocity) / velocity
+  // This is how many years get added to your wait for each year you delay
+  const cost = (12 - velocity) / velocity;
+  return Math.round(cost * 10) / 10; // Round to 1 decimal
+}
+
+/**
+ * Calculate how wait time has changed compared to 1 year ago
+ * Uses historical velocity data to estimate
+ */
+export function calculateYearOverYearChange(
+  data: VelocityDataPoint[],
+  currentVelocity: number
+): { change: number; direction: "better" | "worse" | "same" } {
+  if (data.length < 2) {
+    return { change: 0, direction: "same" };
+  }
+  
+  // Get velocity from ~1 year ago (look at older entries)
+  const olderEntries = data.slice(0, Math.ceil(data.length / 2));
+  const recentEntries = data.slice(-Math.ceil(data.length / 2));
+  
+  const olderAvg = olderEntries.reduce((sum, d) => sum + d.monthsPerYear, 0) / olderEntries.length;
+  const recentAvg = recentEntries.reduce((sum, d) => sum + d.monthsPerYear, 0) / recentEntries.length;
+  
+  // Calculate delay cost then vs now
+  const oldDelayCost = calculateDelayCost(olderAvg);
+  const newDelayCost = calculateDelayCost(recentAvg);
+  
+  const change = newDelayCost - oldDelayCost;
+  
+  if (change > 0.5) {
+    return { change, direction: "worse" }; // Delay cost increased
+  } else if (change < -0.5) {
+    return { change: Math.abs(change), direction: "better" }; // Delay cost decreased
+  }
+  return { change: 0, direction: "same" };
+}
+
+// =============================================================================
+// COMPONENTS
+// =============================================================================
+
+interface DelayCostBadgeProps {
+  velocity: number;
+  isCurrent?: boolean;
+  showTrend?: boolean;
+  data?: VelocityDataPoint[];
+  className?: string;
+}
+
+/**
+ * DelayCostBadge - Shows the cost of waiting 1 year to file
+ * 
+ * This answers: "If I wait 1 year to file, how much longer will I wait?"
+ * 
+ * Examples:
+ * - "No penalty" (green) - Category is current
+ * - "+1 yr" (yellow) - Waiting 1 year adds 1 year to your wait
+ * - "+3 yr" (red) - Waiting 1 year adds 3 years to your wait
+ */
+export function DelayCostBadge({ 
+  velocity, 
+  isCurrent = false,
+  showTrend = false,
+  data = [],
+  className = "" 
+}: DelayCostBadgeProps) {
+  const delayCost = calculateDelayCost(velocity);
+  const trend = useMemo(() => 
+    showTrend && data.length > 0 ? calculateYearOverYearChange(data, velocity) : null,
+  [showTrend, data, velocity]);
+  
+  // Current - no delay penalty
+  if (isCurrent || velocity >= 12) {
+    return (
+      <div className={`inline-flex flex-col ${className}`}>
+        <span className="inline-flex items-center gap-1.5 text-green-600">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+          <span className="text-sm font-medium">No penalty</span>
+        </span>
+        <span className="text-xs text-gray-400 mt-0.5">File anytime</span>
+      </div>
+    );
+  }
+  
+  // Determine color based on severity
+  let colorClass: string;
+  let bgClass: string;
+  let urgencyText: string;
+  
+  if (delayCost <= 1) {
+    colorClass = "text-yellow-700";
+    bgClass = "bg-yellow-50 border-yellow-200";
+    urgencyText = "Low urgency";
+  } else if (delayCost <= 2) {
+    colorClass = "text-orange-700";
+    bgClass = "bg-orange-50 border-orange-200";
+    urgencyText = "Moderate urgency";
+  } else if (delayCost <= 4) {
+    colorClass = "text-red-600";
+    bgClass = "bg-red-50 border-red-200";
+    urgencyText = "High urgency";
+  } else {
+    colorClass = "text-red-700";
+    bgClass = "bg-red-100 border-red-300";
+    urgencyText = "Critical";
+  }
+  
+  return (
+    <div className={`inline-flex flex-col ${className}`}>
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-sm font-semibold ${colorClass} ${bgClass}`}>
+        +{delayCost.toFixed(0)} yr
+        {trend && trend.direction !== "same" && (
+          <span className={`text-xs ${trend.direction === "worse" ? "text-red-500" : "text-green-500"}`}>
+            {trend.direction === "worse" ? "↑" : "↓"}
+          </span>
+        )}
+      </span>
+      <span className="text-xs text-gray-500 mt-0.5">{urgencyText}</span>
+    </div>
+  );
+}
+
+/**
+ * WaitTimeComparison - Shows wait time with year-over-year context
+ */
+export function WaitTimeComparison({
+  currentWait,
+  velocity,
+  data,
+  isCurrent = false,
+  className = ""
+}: {
+  currentWait: { years: number; rangeMin: number; rangeMax: number };
+  velocity: number;
+  data: VelocityDataPoint[];
+  isCurrent?: boolean;
+  className?: string;
+}) {
+  if (isCurrent || currentWait.years === 0) {
+    return <span className={`font-medium text-green-600 ${className}`}>Current</span>;
+  }
+  
+  // Estimate what wait time was 1 year ago based on historical velocity
+  // This is approximate but gives users context
+  const yoyChange = calculateYearOverYearChange(data, velocity);
+  
+  // Color based on wait time
+  let colorClass: string;
+  if (currentWait.years <= 2) {
+    colorClass = "text-green-600";
+  } else if (currentWait.years <= 5) {
+    colorClass = "text-yellow-600";
+  } else if (currentWait.years <= 10) {
+    colorClass = "text-orange-500";
+  } else if (currentWait.years <= 20) {
+    colorClass = "text-orange-600";
+  } else {
+    colorClass = "text-red-600";
+  }
+  
+  // Format the wait time
+  let waitText: string;
+  if (currentWait.rangeMin !== currentWait.rangeMax && currentWait.years >= 2) {
+    waitText = `${currentWait.rangeMin}-${currentWait.rangeMax} yr`;
+  } else if (currentWait.years >= 50) {
+    waitText = "50+ yr";
+  } else {
+    waitText = `~${currentWait.years} yr`;
+  }
+  
+  return (
+    <div className={`inline-flex flex-col ${className}`}>
+      <span className={`font-semibold ${colorClass}`}>{waitText}</span>
+      {yoyChange.direction !== "same" && (
+        <span className={`text-xs ${yoyChange.direction === "worse" ? "text-red-500" : "text-green-500"}`}>
+          {yoyChange.direction === "worse" ? "↑" : "↓"} vs last year
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * VelocityIndicator - Shows how fast the line is moving with context
+ */
+export function VelocityIndicator({
+  velocity,
+  isCurrent = false,
+  className = ""
+}: {
+  velocity: number;
+  isCurrent?: boolean;
+  className?: string;
+}) {
+  if (isCurrent || velocity >= 12) {
+    return <span className={`text-sm text-green-600 font-medium ${className}`}>Current</span>;
+  }
+  
+  // Categorize the velocity
+  let description: string;
+  let colorClass: string;
+  
+  if (velocity >= 6) {
+    description = "Fast";
+    colorClass = "text-green-600";
+  } else if (velocity >= 4) {
+    description = "Moderate";
+    colorClass = "text-yellow-600";
+  } else if (velocity >= 2) {
+    description = "Slow";
+    colorClass = "text-orange-500";
+  } else {
+    description = "Very slow";
+    colorClass = "text-red-600";
+  }
+  
+  return (
+    <span className={`text-sm ${colorClass} ${className}`}>
+      <span className="font-medium">{velocity.toFixed(0)} mo/yr</span>
+      <span className="text-gray-400 ml-1">({description})</span>
+    </span>
+  );
+}
+
+// =============================================================================
+// LEGACY EXPORTS - Keep for backward compatibility
+// =============================================================================
+
 export function calculateVelocityTrend(data: VelocityDataPoint[]): {
   direction: "improving" | "worsening" | "stable" | "current";
-  change: number; // Change in mo/yr (positive = speeding up)
+  change: number;
   recentVelocity: number;
   olderVelocity: number;
 } {
@@ -61,23 +311,19 @@ export function calculateVelocityTrend(data: VelocityDataPoint[]): {
     return { direction: "stable", change: 0, recentVelocity: velocity, olderVelocity: velocity };
   }
 
-  // Check if mostly current (high velocity = 12+ mo/yr)
   const currentCount = data.filter(d => d.monthsPerYear >= 12).length;
   if (currentCount >= data.length * 0.7) {
     return { direction: "current", change: 0, recentVelocity: 12, olderVelocity: 12 };
   }
 
-  // Compare recent to older velocities
   const recentValues = data.slice(-3).map(d => d.monthsPerYear);
   const olderValues = data.slice(0, 3).map(d => d.monthsPerYear);
   
   const recentAvg = recentValues.reduce((a, b) => a + b, 0) / recentValues.length;
   const olderAvg = olderValues.reduce((a, b) => a + b, 0) / olderValues.length;
   
-  // Change in velocity (positive = speeding up = GOOD)
   const change = recentAvg - olderAvg;
   
-  // Threshold: 1 month/year change is meaningful
   if (change > 1) {
     return { direction: "improving", change, recentVelocity: recentAvg, olderVelocity: olderAvg };
   } else if (change < -1) {
@@ -86,181 +332,35 @@ export function calculateVelocityTrend(data: VelocityDataPoint[]): {
   return { direction: "stable", change: 0, recentVelocity: recentAvg, olderVelocity: olderAvg };
 }
 
-// =============================================================================
-// NEW SIMPLIFIED COMPONENTS - No sparklines, just clear indicators
-// =============================================================================
-
-interface ProgressIndicatorProps {
-  velocity: number;      // Current velocity in mo/yr
-  data: VelocityDataPoint[]; // Historical data for trend calculation
-  isCurrent?: boolean;   // Is the category currently "Current"?
-  className?: string;
-}
-
-/**
- * ProgressIndicator - Shows velocity and trend in a clear, scannable format
- * 
- * Examples:
- * - "Current" (green) - category is current
- * - "5 mo/yr ↑" (green) - speeding up
- * - "3 mo/yr →" (gray) - stable
- * - "2 mo/yr ↓" (red) - slowing down
- */
-export function ProgressIndicator({ 
-  velocity, 
+// Legacy VelocitySparkline - now renders DelayCostBadge
+export function VelocitySparkline({ 
   data, 
-  isCurrent = false, 
-  className = "" 
-}: ProgressIndicatorProps) {
-  const trend = useMemo(() => calculateVelocityTrend(data), [data]);
-  
-  // If category is current, show simple green indicator
-  if (isCurrent || velocity >= 12) {
-    return (
-      <span className={`inline-flex items-center gap-1 ${className}`}>
-        <span className="text-green-600 font-medium">Current</span>
-      </span>
-    );
-  }
-  
-  // Determine colors and arrow based on trend
-  let arrow: string;
-  let colorClass: string;
-  let bgClass: string;
-  
-  if (trend.direction === "improving") {
-    arrow = "↑";
-    colorClass = "text-green-700";
-    bgClass = "bg-green-50";
-  } else if (trend.direction === "worsening") {
-    arrow = "↓";
-    colorClass = "text-red-700";
-    bgClass = "bg-red-50";
-  } else {
-    arrow = "→";
-    colorClass = "text-gray-600";
-    bgClass = "bg-gray-50";
-  }
-  
-  return (
-    <span className={`inline-flex items-center gap-1.5 ${className}`}>
-      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm font-medium ${colorClass} ${bgClass}`}>
-        <span>{velocity.toFixed(0)} mo/yr</span>
-        <span>{arrow}</span>
-      </span>
-    </span>
-  );
-}
-
-/**
- * OutlookBadge - Simple text indicator showing if conditions are improving/worsening
- * 
- * Uses neutral language to avoid being overly alarming while still informative
- */
-export function OutlookBadge({ 
-  data, 
-  isCurrent = false,
+  currentIsCurrent = false,
+  velocity = 0,
   className = "" 
 }: { 
   data: VelocityDataPoint[]; 
-  isCurrent?: boolean;
+  currentIsCurrent?: boolean;
+  velocity?: number;
   className?: string;
 }) {
-  const trend = useMemo(() => calculateVelocityTrend(data), [data]);
-  
-  if (isCurrent || trend.direction === "current") {
-    return (
-      <span className={`inline-flex items-center gap-1.5 text-green-600 ${className}`}>
-        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-        <span className="text-sm font-medium">Current</span>
-      </span>
-    );
-  }
-  
-  if (trend.direction === "improving") {
-    return (
-      <span className={`inline-flex items-center gap-1 text-green-600 ${className}`}>
-        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-        </svg>
-        <span className="text-sm font-medium">Faster</span>
-      </span>
-    );
-  }
-  
-  if (trend.direction === "worsening") {
-    return (
-      <span className={`inline-flex items-center gap-1 text-amber-600 ${className}`}>
-        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z" clipRule="evenodd" />
-        </svg>
-        <span className="text-sm font-medium">Slower</span>
-      </span>
-    );
-  }
+  // Calculate velocity from data if not provided
+  const calculatedVelocity = velocity || (data.length > 0 
+    ? data.slice(-3).reduce((sum, d) => sum + d.monthsPerYear, 0) / Math.min(3, data.length)
+    : 0);
   
   return (
-    <span className={`inline-flex items-center gap-1 text-gray-500 ${className}`}>
-      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-        <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-      </svg>
-      <span className="text-sm font-medium">Steady</span>
-    </span>
+    <DelayCostBadge 
+      velocity={calculatedVelocity} 
+      isCurrent={currentIsCurrent}
+      showTrend={true}
+      data={data}
+      className={className} 
+    />
   );
 }
 
-/**
- * WaitTimeCell - Shows estimated wait with color coding
- */
-export function WaitTimeCell({
-  years,
-  rangeMin,
-  rangeMax,
-  isCurrent = false,
-  className = ""
-}: {
-  years: number;
-  rangeMin?: number;
-  rangeMax?: number;
-  isCurrent?: boolean;
-  className?: string;
-}) {
-  if (isCurrent || years === 0) {
-    return <span className={`font-medium text-green-600 ${className}`}>Current</span>;
-  }
-  
-  // Color based on wait time
-  let colorClass: string;
-  if (years <= 2) {
-    colorClass = "text-green-600";
-  } else if (years <= 5) {
-    colorClass = "text-yellow-600";
-  } else if (years <= 10) {
-    colorClass = "text-orange-500";
-  } else if (years <= 20) {
-    colorClass = "text-orange-600";
-  } else {
-    colorClass = "text-red-600";
-  }
-  
-  // Format the wait time
-  let text: string;
-  if (rangeMin !== undefined && rangeMax !== undefined && rangeMin !== rangeMax) {
-    text = `${rangeMin}-${rangeMax} yr`;
-  } else if (years >= 50) {
-    text = "50+ yr";
-  } else {
-    text = `~${years} yr`;
-  }
-  
-  return <span className={`font-medium ${colorClass} ${className}`}>{text}</span>;
-}
-
-// =============================================================================
-// LEGACY EXPORTS - Keep for backward compatibility during transition
-// =============================================================================
-
-// Velocity badge showing current speed
+// Legacy exports
 export function VelocityBadge({ 
   monthsPerYear, 
   isCurrent = false,
@@ -270,40 +370,9 @@ export function VelocityBadge({
   isCurrent?: boolean;
   className?: string;
 }) {
-  if (isCurrent || monthsPerYear >= 12) {
-    return <span className={`font-medium text-green-600 ${className}`}>Current</span>;
-  }
-  
-  let colorClass: string;
-  if (monthsPerYear >= 6) {
-    colorClass = "text-yellow-600";
-  } else if (monthsPerYear >= 3) {
-    colorClass = "text-orange-500";
-  } else {
-    colorClass = "text-red-600";
-  }
-
-  return (
-    <span className={`font-medium ${colorClass} ${className}`}>
-      {monthsPerYear.toFixed(0)} mo/yr
-    </span>
-  );
+  return <VelocityIndicator velocity={monthsPerYear} isCurrent={isCurrent} className={className} />;
 }
 
-// Legacy VelocitySparkline - now just renders OutlookBadge
-export function VelocitySparkline({ 
-  data, 
-  currentIsCurrent = false, 
-  className = "" 
-}: { 
-  data: VelocityDataPoint[]; 
-  currentIsCurrent?: boolean; 
-  className?: string;
-}) {
-  return <OutlookBadge data={data} isCurrent={currentIsCurrent} className={className} />;
-}
-
-// Keep these exports for backward compatibility
 export interface WaitTimeDataPoint {
   label: string;
   waitMonths: number;
@@ -322,12 +391,38 @@ export function calculateWaitTimeMonths(bulletinMonth: string, priorityDate: str
   return Math.max(0, bulletinMonths - priorityMonths);
 }
 
-// Legacy SparklineCell
 export function SparklineCell({ data, currentIsCurrent = false, className = "" }: { 
   data: WaitTimeDataPoint[] | VelocityDataPoint[]; 
   currentIsCurrent?: boolean;
   className?: string;
 }) {
   const velocityData = data as VelocityDataPoint[];
-  return <OutlookBadge data={velocityData} isCurrent={currentIsCurrent} className={className} />;
+  return <VelocitySparkline data={velocityData} currentIsCurrent={currentIsCurrent} className={className} />;
+}
+
+// New named export for OutlookBadge (legacy compatibility)
+export function OutlookBadge({ 
+  data, 
+  isCurrent = false,
+  velocity = 0,
+  className = "" 
+}: { 
+  data: VelocityDataPoint[]; 
+  isCurrent?: boolean;
+  velocity?: number;
+  className?: string;
+}) {
+  const calculatedVelocity = velocity || (data.length > 0 
+    ? data.slice(-3).reduce((sum, d) => sum + d.monthsPerYear, 0) / Math.min(3, data.length)
+    : 0);
+  
+  return (
+    <DelayCostBadge 
+      velocity={calculatedVelocity} 
+      isCurrent={isCurrent}
+      showTrend={true}
+      data={data}
+      className={className} 
+    />
+  );
 }
