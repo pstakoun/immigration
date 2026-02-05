@@ -126,13 +126,14 @@ interface TrendBadgeProps {
 }
 
 /**
- * TrendBadge - Shows the trend clearly without creating urgency
+ * TrendBadge - Shows velocity with concrete historical comparison
  * 
- * Focus: Information and understanding, not pressure to act
+ * Focus: Clear, factual information
  * 
  * Shows:
- * - Current velocity (how fast the line moves)
- * - Whether it's trending faster, slower, or steady
+ * - Current velocity
+ * - What it was before (concrete comparison)
+ * - Direction indicator
  */
 export function TrendBadge({ 
   data, 
@@ -152,56 +153,43 @@ export function TrendBadge({
     );
   }
   
-  // Build the display
-  const speedLabel = velocity >= 6 ? "Fast" : velocity >= 3 ? "Moderate" : "Slow";
+  // Format the previous velocity for comparison
+  const prevVelocity = Math.round(trend.previousVelocity);
+  const currVelocity = Math.round(velocity);
+  const change = currVelocity - prevVelocity;
   
-  // Determine trend indicator
-  let trendIcon: React.ReactNode;
-  let trendLabel: string;
-  let trendColor: string;
+  // Determine color based on direction
+  let changeColor: string;
+  let arrow: string;
   
   if (trend.direction === "improving") {
-    trendIcon = (
-      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
-      </svg>
-    );
-    trendLabel = "speeding up";
-    trendColor = "text-green-600";
+    changeColor = "text-green-600";
+    arrow = "↑";
   } else if (trend.direction === "worsening") {
-    trendIcon = (
-      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-      </svg>
-    );
-    trendLabel = "slowing";
-    trendColor = "text-amber-600";
+    changeColor = "text-amber-600";
+    arrow = "↓";
   } else {
-    trendIcon = (
-      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-      </svg>
-    );
-    trendLabel = "steady";
-    trendColor = "text-gray-500";
+    changeColor = "text-gray-500";
+    arrow = "→";
   }
   
+  // Show concrete comparison: "3 mo/yr (was 5)" or "3 mo/yr (steady)"
   return (
-    <div className={`inline-flex flex-col gap-0.5 ${className}`}>
-      <span className="text-sm text-gray-700">
-        <span className="font-medium">{velocity.toFixed(0)} mo/yr</span>
-        <span className="text-gray-400 ml-1">({speedLabel})</span>
-      </span>
-      <span className={`inline-flex items-center gap-1 text-xs ${trendColor}`}>
-        {trendIcon}
-        <span>{trendLabel}</span>
-      </span>
-    </div>
+    <span className={`inline-flex items-center gap-1.5 text-sm ${className}`}>
+      <span className="font-medium text-gray-900">{currVelocity} mo/yr</span>
+      {trend.direction === "stable" ? (
+        <span className="text-gray-400">(steady)</span>
+      ) : (
+        <span className={changeColor}>
+          {arrow} was {prevVelocity}
+        </span>
+      )}
+    </span>
   );
 }
 
 /**
- * SimpleTrendIndicator - Even simpler version showing just the trend
+ * SimpleTrendIndicator - Shows trend with concrete numbers
  */
 export function SimpleTrendIndicator({
   data,
@@ -223,34 +211,31 @@ export function SimpleTrendIndicator({
     );
   }
   
+  const curr = Math.round(trend.currentVelocity);
+  const prev = Math.round(trend.previousVelocity);
+  
   if (trend.direction === "improving") {
     return (
-      <span className={`inline-flex items-center gap-1.5 text-green-600 ${className}`}>
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
-        </svg>
-        <span className="text-sm font-medium">Speeding up</span>
+      <span className={`inline-flex items-center gap-1.5 text-sm ${className}`}>
+        <span className="font-medium text-gray-900">{curr} mo/yr</span>
+        <span className="text-green-600">↑ was {prev}</span>
       </span>
     );
   }
   
   if (trend.direction === "worsening") {
     return (
-      <span className={`inline-flex items-center gap-1.5 text-amber-600 ${className}`}>
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-        </svg>
-        <span className="text-sm font-medium">Slowing</span>
+      <span className={`inline-flex items-center gap-1.5 text-sm ${className}`}>
+        <span className="font-medium text-gray-900">{curr} mo/yr</span>
+        <span className="text-amber-600">↓ was {prev}</span>
       </span>
     );
   }
   
   return (
-    <span className={`inline-flex items-center gap-1.5 text-gray-500 ${className}`}>
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-      </svg>
-      <span className="text-sm font-medium">Steady</span>
+    <span className={`inline-flex items-center gap-1.5 text-sm ${className}`}>
+      <span className="font-medium text-gray-900">{curr} mo/yr</span>
+      <span className="text-gray-400">(steady)</span>
     </span>
   );
 }
@@ -299,12 +284,9 @@ export function VelocityBadge({
     return <span className={`text-sm text-green-600 font-medium ${className}`}>Current</span>;
   }
   
-  const speedLabel = monthsPerYear >= 6 ? "Fast" : monthsPerYear >= 3 ? "Moderate" : "Slow";
-  
   return (
-    <span className={`text-sm text-gray-700 ${className}`}>
-      <span className="font-medium">{monthsPerYear.toFixed(0)} mo/yr</span>
-      <span className="text-gray-400 ml-1">({speedLabel})</span>
+    <span className={`text-sm font-medium text-gray-900 ${className}`}>
+      {monthsPerYear.toFixed(0)} mo/yr
     </span>
   );
 }
