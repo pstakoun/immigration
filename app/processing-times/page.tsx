@@ -442,21 +442,18 @@ export default function ProcessingTimesPage() {
       </section>
 
       {/* Understanding Section */}
-      <section className="mb-10 p-5 bg-blue-50 border border-blue-200 rounded-lg">
-        <h3 className="font-medium text-blue-900 mb-3">Understanding the Data</h3>
-        <div className="text-sm text-blue-800 space-y-2">
+      <section className="mb-10 p-5 bg-gray-50 border border-gray-200 rounded-lg">
+        <h3 className="font-medium text-gray-900 mb-3">Understanding the Data</h3>
+        <div className="text-sm text-gray-600 space-y-2">
           <p>
-            <strong>Final Action Dates</strong> determine when your case can be approved. 
-            <strong> Dates for Filing</strong> determine when you can submit I-485 and get work/travel permits.
+            <strong>Final Action Dates</strong> determine when your green card can be approved. 
+            <strong>Dates for Filing</strong> determine when you can submit I-485 and receive EAD/AP while waiting.
           </p>
           <p>
-            <strong>Est. Wait</strong> is a rough estimate based on current backlog and historical movement patterns.
-            Actual wait times vary based on policy changes and visa availability.
+            <strong>Est. Wait</strong> is based on current backlog and historical movement. Actual times vary with policy changes.
           </p>
           <p>
-            <strong>Movement</strong> shows how many months the cutoff advances per year. 
-            Color indicates speed: <span className="text-green-600 font-medium">green</span> = fast, 
-            <span className="text-orange-600 font-medium">orange</span>/<span className="text-red-600 font-medium">red</span> = slow.
+            <strong>Movement</strong> shows how many months the cutoff date advances per year on average.
           </p>
         </div>
       </section>

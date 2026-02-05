@@ -1,7 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
-
 // Velocity data point - tracks advancement rate at each bulletin period
 export interface VelocityDataPoint {
   label: string;        // Period label (e.g., "2023")
@@ -28,33 +26,9 @@ export function parseVisaBulletinDate(dateStr: string): number | null {
   return (year - 2000) * 12 + monthNum;
 }
 
-// Parse bulletin month like "January 2023" to months since 2000
-export function parseBulletinMonth(dateStr: string): number {
-  const months: Record<string, number> = {
-    january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
-    july: 6, august: 7, september: 8, october: 9, november: 10, december: 11,
-    jan: 0, feb: 1, mar: 2, apr: 3, jun: 5,
-    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
-  };
-  
-  const match = dateStr.match(/([a-z]+)\s*(\d{4})/i);
-  if (!match) return 0;
-  
-  const monthNum = months[match[1].toLowerCase()];
-  const year = parseInt(match[2], 10);
-  
-  if (monthNum === undefined || isNaN(year)) return 0;
-  
-  return year * 12 + monthNum;
-}
-
-// =============================================================================
-// VELOCITY COLOR SCALE (Heatmap)
-// =============================================================================
-
 /**
  * Get text color based on velocity (months advanced per year)
- * Heatmap scale: green (fast) → teal → amber → orange → red (slow)
+ * green (fast) → teal → amber → orange → red (slow)
  */
 function getVelocityColor(monthsPerYear: number): string {
   if (monthsPerYear >= 10) return "text-green-600";
@@ -64,115 +38,9 @@ function getVelocityColor(monthsPerYear: number): string {
   return "text-red-600";
 }
 
-// =============================================================================
-// TREND CALCULATION
-// =============================================================================
-
-export interface TrendInfo {
-  direction: "improving" | "worsening" | "stable" | "current";
-  change: number; // Absolute change in mo/yr (positive = faster)
-  currentVelocity: number;
-  previousVelocity: number;
-}
-
 /**
- * Calculate the trend comparing current year to 1 year ago
+ * VelocitySparkline - Displays velocity as colored text
  */
-export function calculateTrend(data: VelocityDataPoint[]): TrendInfo {
-  if (data.length < 2) {
-    const velocity = data.length > 0 ? data[0].monthsPerYear : 0;
-    return { 
-      direction: "stable", 
-      change: 0, 
-      currentVelocity: velocity,
-      previousVelocity: velocity 
-    };
-  }
-
-  // Check if mostly current
-  const currentCount = data.filter(d => d.monthsPerYear >= 12).length;
-  if (currentCount >= data.length * 0.7) {
-    return { 
-      direction: "current", 
-      change: 0, 
-      currentVelocity: 12,
-      previousVelocity: 12 
-    };
-  }
-
-  // Get current (most recent) and 1 year ago
-  const currentVelocity = data[data.length - 1].monthsPerYear;
-  const oneYearAgoIndex = Math.max(0, data.length - 2);
-  const previousVelocity = data[oneYearAgoIndex].monthsPerYear;
-  
-  const change = currentVelocity - previousVelocity;
-  
-  let direction: TrendInfo["direction"];
-  if (change > 1) {
-    direction = "improving";
-  } else if (change < -1) {
-    direction = "worsening";
-  } else {
-    direction = "stable";
-  }
-  
-  return {
-    direction,
-    change,
-    currentVelocity,
-    previousVelocity
-  };
-}
-
-// =============================================================================
-// COMPONENTS
-// =============================================================================
-
-interface MovementBadgeProps {
-  velocity: number;
-  data: VelocityDataPoint[];
-  isCurrent?: boolean;
-  className?: string;
-}
-
-/**
- * MovementBadge - Simple colored text showing velocity
- * 
- * Design:
- * - Just text: "8 mo/yr"
- * - Text color = speed (green = fast, red = slow)
- * - No backgrounds, no dots, no arrows
- */
-export function MovementBadge({ 
-  velocity,
-  data,
-  isCurrent = false,
-  className = "" 
-}: MovementBadgeProps) {
-  // Current - no backlog
-  if (isCurrent || velocity >= 12) {
-    return (
-      <span className={`text-sm font-medium text-green-600 ${className}`}>
-        Current
-      </span>
-    );
-  }
-  
-  const color = getVelocityColor(velocity);
-  const roundedVelocity = Math.round(velocity);
-  
-  return (
-    <span className={`text-sm font-medium ${color} ${className}`}>
-      {roundedVelocity} mo/yr
-    </span>
-  );
-}
-
-// =============================================================================
-// LEGACY EXPORTS - For backward compatibility
-// =============================================================================
-
-// VelocitySparkline now shows MovementBadge
 export function VelocitySparkline({ 
   data, 
   velocity = 0,
@@ -184,30 +52,13 @@ export function VelocitySparkline({
   currentIsCurrent?: boolean;
   className?: string;
 }) {
-  const calculatedVelocity = velocity || (data.length > 0 
+  // Calculate velocity from data if not provided
+  const displayVelocity = velocity || (data.length > 0 
     ? data.slice(-3).reduce((sum, d) => sum + d.monthsPerYear, 0) / Math.min(3, data.length)
     : 0);
   
-  return (
-    <MovementBadge 
-      data={data} 
-      velocity={calculatedVelocity}
-      isCurrent={currentIsCurrent}
-      className={className} 
-    />
-  );
-}
-
-export function VelocityBadge({ 
-  monthsPerYear, 
-  isCurrent = false,
-  className = "" 
-}: { 
-  monthsPerYear: number; 
-  isCurrent?: boolean;
-  className?: string;
-}) {
-  if (isCurrent || monthsPerYear >= 12) {
+  // Current - no backlog
+  if (currentIsCurrent || displayVelocity >= 12) {
     return (
       <span className={`text-sm font-medium text-green-600 ${className}`}>
         Current
@@ -215,111 +66,12 @@ export function VelocityBadge({
     );
   }
   
-  const color = getVelocityColor(monthsPerYear);
+  const color = getVelocityColor(displayVelocity);
+  const rounded = Math.round(displayVelocity);
   
   return (
     <span className={`text-sm font-medium ${color} ${className}`}>
-      {Math.round(monthsPerYear)} mo/yr
+      {rounded} mo/yr
     </span>
-  );
-}
-
-// Simplified exports for any remaining usage
-export function TrendBadge({ 
-  data, 
-  velocity,
-  isCurrent = false,
-  className = "" 
-}: { 
-  data: VelocityDataPoint[];
-  velocity: number;
-  isCurrent?: boolean;
-  className?: string;
-}) {
-  return (
-    <MovementBadge 
-      data={data} 
-      velocity={velocity}
-      isCurrent={isCurrent}
-      className={className} 
-    />
-  );
-}
-
-export function SimpleTrendIndicator({
-  data,
-  isCurrent = false,
-  className = ""
-}: {
-  data: VelocityDataPoint[];
-  isCurrent?: boolean;
-  className?: string;
-}) {
-  const trend = calculateTrend(data);
-  const velocity = trend.currentVelocity;
-  
-  return (
-    <MovementBadge 
-      data={data} 
-      velocity={velocity}
-      isCurrent={isCurrent}
-      className={className} 
-    />
-  );
-}
-
-export interface WaitTimeDataPoint {
-  label: string;
-  waitMonths: number;
-}
-
-export function calculateWaitTimeMonths(bulletinMonth: string, priorityDate: string): number {
-  if (!priorityDate || priorityDate.toLowerCase() === "current") {
-    return 0;
-  }
-  
-  const bulletinMonths = parseBulletinMonth(bulletinMonth);
-  const priorityMonths = parseVisaBulletinDate(priorityDate);
-  
-  if (priorityMonths === null) return 0;
-  
-  return Math.max(0, bulletinMonths - priorityMonths);
-}
-
-export function SparklineCell({ data, currentIsCurrent = false, className = "" }: { 
-  data: WaitTimeDataPoint[] | VelocityDataPoint[]; 
-  currentIsCurrent?: boolean;
-  className?: string;
-}) {
-  const velocityData = data as VelocityDataPoint[];
-  return <SimpleTrendIndicator data={velocityData} isCurrent={currentIsCurrent} className={className} />;
-}
-
-export function calculateVelocityTrend(data: VelocityDataPoint[]) {
-  return calculateTrend(data);
-}
-
-export function OutlookBadge({ 
-  data, 
-  isCurrent = false,
-  velocity = 0,
-  className = "" 
-}: { 
-  data: VelocityDataPoint[]; 
-  isCurrent?: boolean;
-  velocity?: number;
-  className?: string;
-}) {
-  const calculatedVelocity = velocity || (data.length > 0 
-    ? data.slice(-3).reduce((sum, d) => sum + d.monthsPerYear, 0) / Math.min(3, data.length)
-    : 0);
-  
-  return (
-    <MovementBadge 
-      data={data} 
-      velocity={calculatedVelocity}
-      isCurrent={isCurrent}
-      className={className} 
-    />
   );
 }
