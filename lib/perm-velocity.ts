@@ -629,14 +629,15 @@ export function calculateVelocity(
     confidence = 0.6; // ROW can be unpredictable
   }
   
-  // Generate explanation based on advancement rate
+  // Generate explanation based on advancement rate (round for display)
+  const displayRate = Math.round(bulletinAdvancementMonthsPerYear * 10) / 10;
   let explanation: string;
   if (bulletinAdvancementMonthsPerYear <= 3) {
-    explanation = `Severe backlog: visa bulletin advances only ~${bulletinAdvancementMonthsPerYear} months/year. Each month behind = ~${velocityRatio.toFixed(0)} month wait.`;
+    explanation = `Severe backlog: visa bulletin advances only ~${displayRate} months/year. Each month behind = ~${velocityRatio.toFixed(0)} month wait.`;
   } else if (bulletinAdvancementMonthsPerYear <= 6) {
-    explanation = `Significant backlog: visa bulletin advances ~${bulletinAdvancementMonthsPerYear} months/year.`;
+    explanation = `Significant backlog: visa bulletin advances ~${displayRate} months/year.`;
   } else if (bulletinAdvancementMonthsPerYear < 12) {
-    explanation = `Moderate backlog: visa bulletin advances ~${bulletinAdvancementMonthsPerYear} months/year.`;
+    explanation = `Moderate backlog: visa bulletin advances ~${displayRate} months/year.`;
   } else {
     explanation = `Category is current or nearly current. No significant wait expected.`;
   }
@@ -758,16 +759,19 @@ export function calculateVelocityBasedWait(
   const years = Math.round(estimatedMonths / 12);
   let explanation: string;
   
+  // Round velocity for display to avoid floating-point precision issues
+  const displayRate = Math.round(velocityData.bulletinAdvancementMonthsPerYear * 10) / 10;
+  
   if (estimatedMonths <= 6) {
-    explanation = `Short wait expected. Bulletin advances ~${velocityData.bulletinAdvancementMonthsPerYear} months/year.`;
+    explanation = `Short wait expected. Bulletin advances ~${displayRate} months/year.`;
   } else if (estimatedMonths <= 24) {
-    explanation = `Moderate backlog: ~${monthsBehind} months behind cutoff. Bulletin advances ~${velocityData.bulletinAdvancementMonthsPerYear} mo/yr.`;
+    explanation = `Moderate backlog: ~${monthsBehind} months behind cutoff. Bulletin advances ~${displayRate} mo/yr.`;
   } else if (estimatedMonths <= 120) {
-    explanation = `Significant backlog: ~${Math.round(monthsBehind / 12)} years behind. At ~${velocityData.bulletinAdvancementMonthsPerYear} mo/yr advancement, expect ~${years} year wait.`;
+    explanation = `Significant backlog: ~${Math.round(monthsBehind / 12)} years behind. At ~${displayRate} mo/yr advancement, expect ~${years} year wait.`;
   } else if (isCapped) {
     explanation = `Extreme backlog: ${Math.round(monthsBehind / 12)}+ years behind cutoff. Wait time is effectively indefinite (50+ years). Consider alternative paths.`;
   } else {
-    explanation = `Severe backlog: ~${Math.round(monthsBehind / 12)} years behind. Bulletin advances ~${velocityData.bulletinAdvancementMonthsPerYear} mo/yr. ~${years}+ year wait.`;
+    explanation = `Severe backlog: ~${Math.round(monthsBehind / 12)} years behind. Bulletin advances ~${displayRate} mo/yr. ~${years}+ year wait.`;
   }
   
   // Update velocity data with the correct explanation
