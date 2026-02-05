@@ -28,16 +28,15 @@ export function parseVisaBulletinDate(dateStr: string): number | null {
 
 /**
  * Get text color based on velocity (months advanced per year)
- * Uses blue/slate tones to differentiate from wait time colors
- * This is informational (how fast things move) vs judgmental (is my wait good/bad)
+ * Uses neutral gray tones - purely informational, no judgment implied
  */
 function getVelocityColor(monthsPerYear: number): string {
-  // Blue scale: darker = faster movement, lighter = slower
-  if (monthsPerYear >= 11) return "text-blue-600";    // Fast: 11-12 mo/yr
-  if (monthsPerYear >= 10) return "text-blue-500";    // Good: 10 mo/yr
-  if (monthsPerYear >= 9) return "text-slate-600";    // Moderate: 9 mo/yr
-  if (monthsPerYear >= 6) return "text-slate-500";    // Slow: 6-8 mo/yr
-  return "text-slate-400";                             // Very slow: <6 mo/yr
+  // Neutral gray - darker for faster (more visible), lighter for slower
+  if (monthsPerYear >= 11) return "text-gray-700";    // Fast: 11-12 mo/yr
+  if (monthsPerYear >= 10) return "text-gray-600";    // Good: 10 mo/yr
+  if (monthsPerYear >= 9) return "text-gray-600";     // Moderate: 9 mo/yr
+  if (monthsPerYear >= 6) return "text-gray-500";     // Slow: 6-8 mo/yr
+  return "text-gray-500";                              // Very slow: <6 mo/yr
 }
 
 /**
