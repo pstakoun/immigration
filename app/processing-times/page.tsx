@@ -454,9 +454,9 @@ export default function ProcessingTimesPage() {
             Actual wait times vary based on policy changes and visa availability.
           </p>
           <p>
-            <strong>Movement</strong> shows months advanced per year. Badge color indicates speed (green = fast, red = slow).
-            The dot shows trend: <span className="inline-block w-2 h-2 rounded-full bg-green-500 align-middle"></span> speeding up, 
-            <span className="inline-block w-2 h-2 rounded-full bg-amber-500 align-middle"></span> slowing down.
+            <strong>Movement</strong> shows how many months the cutoff advances per year. 
+            Color indicates speed: <span className="text-green-600 font-medium">green</span> = fast, 
+            <span className="text-orange-600 font-medium">orange</span>/<span className="text-red-600 font-medium">red</span> = slow.
           </p>
         </div>
       </section>

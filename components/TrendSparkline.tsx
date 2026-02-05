@@ -53,23 +53,15 @@ export function parseBulletinMonth(dateStr: string): number {
 // =============================================================================
 
 /**
- * Get color classes based on velocity (months advanced per year)
- * Heatmap scale: green (fast) → teal → yellow → orange → red (slow)
+ * Get text color based on velocity (months advanced per year)
+ * Heatmap scale: green (fast) → teal → amber → orange → red (slow)
  */
-function getVelocityColors(monthsPerYear: number): { bg: string; text: string } {
-  if (monthsPerYear >= 10) {
-    return { bg: "bg-green-100", text: "text-green-700" };
-  }
-  if (monthsPerYear >= 6) {
-    return { bg: "bg-teal-50", text: "text-teal-700" };
-  }
-  if (monthsPerYear >= 4) {
-    return { bg: "bg-amber-50", text: "text-amber-700" };
-  }
-  if (monthsPerYear >= 2) {
-    return { bg: "bg-orange-100", text: "text-orange-700" };
-  }
-  return { bg: "bg-red-100", text: "text-red-700" };
+function getVelocityColor(monthsPerYear: number): string {
+  if (monthsPerYear >= 10) return "text-green-600";
+  if (monthsPerYear >= 6) return "text-teal-600";
+  if (monthsPerYear >= 4) return "text-amber-600";
+  if (monthsPerYear >= 2) return "text-orange-600";
+  return "text-red-600";
 }
 
 // =============================================================================
@@ -144,14 +136,12 @@ interface MovementBadgeProps {
 }
 
 /**
- * MovementBadge - Heatmap velocity badge with separate trend dot
+ * MovementBadge - Simple colored text showing velocity
  * 
  * Design:
- * - Badge shows velocity with unit: "8 mo/yr"
- * - Color = speed (heatmap)
- * - Small colored dot shows trend (green = speeding up, amber = slowing)
- * 
- * Examples: [8 mo/yr] ● (green dot), [3 mo/yr] ● (amber dot)
+ * - Just text: "8 mo/yr"
+ * - Text color = speed (green = fast, red = slow)
+ * - No backgrounds, no dots, no arrows
  */
 export function MovementBadge({ 
   velocity,
@@ -159,34 +149,21 @@ export function MovementBadge({
   isCurrent = false,
   className = "" 
 }: MovementBadgeProps) {
-  const trend = useMemo(() => calculateTrend(data), [data]);
-  
   // Current - no backlog
   if (isCurrent || velocity >= 12) {
     return (
-      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-green-100 text-green-700 ${className}`}>
+      <span className={`text-sm font-medium text-green-600 ${className}`}>
         Current
       </span>
     );
   }
   
-  const colors = getVelocityColors(velocity);
+  const color = getVelocityColor(velocity);
   const roundedVelocity = Math.round(velocity);
   
-  // Trend dot color
-  let trendDot = null;
-  if (trend.direction === "improving") {
-    trendDot = <span className="w-2 h-2 rounded-full bg-green-500" title="Speeding up" />;
-  } else if (trend.direction === "worsening") {
-    trendDot = <span className="w-2 h-2 rounded-full bg-amber-500" title="Slowing down" />;
-  }
-  
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
-      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium ${colors.bg} ${colors.text}`}>
-        {roundedVelocity} mo/yr
-      </span>
-      {trendDot}
+    <span className={`text-sm font-medium ${color} ${className}`}>
+      {roundedVelocity} mo/yr
     </span>
   );
 }
@@ -232,16 +209,16 @@ export function VelocityBadge({
 }) {
   if (isCurrent || monthsPerYear >= 12) {
     return (
-      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium bg-green-100 text-green-700 ${className}`}>
+      <span className={`text-sm font-medium text-green-600 ${className}`}>
         Current
       </span>
     );
   }
   
-  const colors = getVelocityColors(monthsPerYear);
+  const color = getVelocityColor(monthsPerYear);
   
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium ${colors.bg} ${colors.text} ${className}`}>
+    <span className={`text-sm font-medium ${color} ${className}`}>
       {Math.round(monthsPerYear)} mo/yr
     </span>
   );
