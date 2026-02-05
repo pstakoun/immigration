@@ -321,7 +321,7 @@ export default function ProcessingTimesPage() {
                             {formatWaitTime(wait.years, wait.rangeMin, wait.rangeMax)}
                           </td>
                           <td className="py-2.5">
-                            <SparklineCell data={waitTimeData} />
+                            <SparklineCell data={waitTimeData} currentIsCurrent={isPriorityDateCurrent(priorityDate)} />
                           </td>
                         </tr>
                       );
@@ -374,7 +374,7 @@ export default function ProcessingTimesPage() {
                             {formatWaitTime(filingWait.years, filingWait.rangeMin, filingWait.rangeMax)}
                           </td>
                           <td className="py-2.5">
-                            <SparklineCell data={waitTimeData} />
+                            <SparklineCell data={waitTimeData} currentIsCurrent={isPriorityDateCurrent(filingDate)} />
                           </td>
                         </tr>
                       );

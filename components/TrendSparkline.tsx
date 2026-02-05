@@ -65,28 +65,43 @@ export function calculateWaitTimeMonths(bulletinMonth: string, priorityDate: str
 // Calculate trend from wait time data
 // For wait times: INCREASING = worsening (bad), DECREASING = improving (good)
 function calculateWaitTrend(data: WaitTimeDataPoint[]): {
-  direction: "improving" | "worsening" | "stable" | "current";
+  direction: "improving" | "worsening" | "stable";
   changePerYear: number;
 } {
   if (data.length < 2) {
     return { direction: "stable", changePerYear: 0 };
   }
 
-  // Check if mostly current (0 wait)
-  const currentCount = data.filter(d => d.waitMonths === 0).length;
-  if (currentCount >= data.length * 0.7) {
-    return { direction: "current", changePerYear: 0 };
-  }
-
-  // Filter out zeros for trend calculation
+  // Filter out zeros for trend calculation (we'll handle "all current" separately)
   const validData = data.filter(d => d.waitMonths > 0);
+  
+  // If less than 2 non-zero data points, we can't calculate a meaningful trend
   if (validData.length < 2) {
-    return { direction: "current", changePerYear: 0 };
+    // Check if we're transitioning from current to having a wait
+    const recentData = data.slice(-4);
+    const olderData = data.slice(0, 4);
+    const recentHasWait = recentData.some(d => d.waitMonths > 0);
+    const olderMostlyCurrent = olderData.filter(d => d.waitMonths === 0).length >= olderData.length * 0.5;
+    
+    if (recentHasWait && olderMostlyCurrent) {
+      // Transitioning from current to having wait = worsening
+      const recentWait = recentData.filter(d => d.waitMonths > 0);
+      const avgWait = recentWait.length > 0 
+        ? recentWait.reduce((a, b) => a + b.waitMonths, 0) / recentWait.length 
+        : 0;
+      return { direction: "worsening", changePerYear: avgWait / 2 }; // Rough estimate
+    }
+    
+    return { direction: "stable", changePerYear: 0 };
   }
 
   // Compare recent to older wait times
   const recentValues = validData.slice(-4).map(d => d.waitMonths);
-  const olderValues = validData.slice(0, 4).map(d => d.waitMonths);
+  const olderValues = validData.slice(0, Math.min(4, validData.length - 1)).map(d => d.waitMonths);
+  
+  if (olderValues.length === 0) {
+    return { direction: "stable", changePerYear: 0 };
+  }
   
   const recentAvg = recentValues.reduce((a, b) => a + b, 0) / recentValues.length;
   const olderAvg = olderValues.reduce((a, b) => a + b, 0) / olderValues.length;
@@ -96,40 +111,47 @@ function calculateWaitTrend(data: WaitTimeDataPoint[]): {
   const yearsOfData = Math.max(1, (validData.length - 1) / 4);
   const changePerYear = totalChange / yearsOfData;
   
-  // Any measurable change in wait time matters to people waiting
-  // Even 1 month/year increase over 5 years = 5 more months of waiting
+  // Any measurable change matters
   if (changePerYear < -1) {
-    return { direction: "improving", changePerYear }; // Wait decreasing at all
+    return { direction: "improving", changePerYear };
   } else if (changePerYear > 1) {
-    return { direction: "worsening", changePerYear }; // Wait increasing at all
+    return { direction: "worsening", changePerYear };
   }
   return { direction: "stable", changePerYear };
 }
 
-// Sparkline showing wait times over time
-// Visual: UP = longer wait (bad), DOWN = shorter wait (good)
+// Sparkline component - shows wait time trend over time
+// Pass currentIsCurrent=true if the CURRENT priority date is "Current" (no wait)
 interface SparklineCellProps {
   data: WaitTimeDataPoint[];
+  currentIsCurrent?: boolean; // Is the current priority date "Current"?
   className?: string;
 }
 
-export function SparklineCell({ data, className = "" }: SparklineCellProps) {
+export function SparklineCell({ data, currentIsCurrent = false, className = "" }: SparklineCellProps) {
   const { path, trend, color } = useMemo(() => {
+    // If currently current, show green indicator
+    if (currentIsCurrent) {
+      return { 
+        path: "", 
+        trend: { direction: "stable" as const, changePerYear: 0 }, 
+        color: "#22c55e" 
+      };
+    }
+    
     const trend = calculateWaitTrend(data);
     
     if (data.length < 2) {
       return { path: "", trend, color: "#9ca3af" };
     }
 
-    // Check if mostly current
-    const currentCount = data.filter(d => d.waitMonths === 0).length;
-    if (currentCount >= data.length * 0.7) {
-      return { path: "", trend: { direction: "current" as const, changePerYear: 0 }, color: "#22c55e" };
-    }
-
+    // Get data points with actual wait times for the sparkline
     const validData = data.filter(d => d.waitMonths > 0);
     if (validData.length < 2) {
-      return { path: "", trend: { direction: "current" as const, changePerYear: 0 }, color: "#22c55e" };
+      // Not enough data for sparkline, but we might still have a trend
+      const color = trend.direction === "improving" ? "#22c55e" : 
+                    trend.direction === "worsening" ? "#ef4444" : "#6b7280";
+      return { path: "", trend, color };
     }
 
     const waitValues = validData.map(d => d.waitMonths);
@@ -147,9 +169,8 @@ export function SparklineCell({ data, className = "" }: SparklineCellProps) {
     const pts: { x: number; y: number }[] = [];
     validData.forEach((d, i) => {
       const x = padding + (i / (validData.length - 1)) * chartWidth;
-      // In SVG, y=0 is top. High wait should be at top (low y), low wait at bottom (high y)
-      const normalizedWait = (d.waitMonths - min) / range; // 0 to 1
-      const y = padding + (1 - normalizedWait) * chartHeight; // Flip so high=top
+      const normalizedWait = (d.waitMonths - min) / range;
+      const y = padding + (1 - normalizedWait) * chartHeight;
       pts.push({ x, y });
     });
 
@@ -157,16 +178,14 @@ export function SparklineCell({ data, className = "" }: SparklineCellProps) {
       i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`
     ).join(" ");
 
-    // Color: improving (wait going down) = green, worsening (wait going up) = red
     const color = trend.direction === "improving" ? "#22c55e" : 
-                  trend.direction === "worsening" ? "#ef4444" : 
-                  trend.direction === "current" ? "#22c55e" : "#6b7280";
+                  trend.direction === "worsening" ? "#ef4444" : "#6b7280";
 
     return { path: pathStr, trend, color };
-  }, [data]);
+  }, [data, currentIsCurrent]);
 
-  // For "current" categories
-  if (trend.direction === "current") {
+  // If currently current, show simple green indicator
+  if (currentIsCurrent) {
     return (
       <span className={`inline-flex items-center gap-1.5 ${className}`}>
         <span className="text-green-600 text-xs font-medium">●</span>
@@ -175,11 +194,7 @@ export function SparklineCell({ data, className = "" }: SparklineCellProps) {
     );
   }
 
-  if (!path) {
-    return <span className={`text-gray-400 ${className}`}>—</span>;
-  }
-
-  // Trend indicator
+  // Trend indicator arrow
   const TrendArrow = () => {
     if (trend.direction === "improving") {
       return (
@@ -206,18 +221,28 @@ export function SparklineCell({ data, className = "" }: SparklineCellProps) {
     );
   };
 
+  // If we have a sparkline path, show it with the trend arrow
+  if (path) {
+    return (
+      <span className={`inline-flex items-center gap-1.5 ${className}`}>
+        <svg width={44} height={14} viewBox="0 0 44 14">
+          <path
+            d={path}
+            fill="none"
+            stroke={color}
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <TrendArrow />
+      </span>
+    );
+  }
+
+  // No sparkline but we have a trend direction
   return (
     <span className={`inline-flex items-center gap-1.5 ${className}`}>
-      <svg width={44} height={14} viewBox="0 0 44 14">
-        <path
-          d={path}
-          fill="none"
-          stroke={color}
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
       <TrendArrow />
     </span>
   );
