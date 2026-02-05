@@ -551,6 +551,48 @@ export function getAdvancementRates(): Record<EBCategory, Record<"india" | "chin
 }
 
 /**
+ * Get the dynamically calculated Filing Date advancement rate for a category/country
+ */
+function getFilingAdvancementRate(
+  category: EBCategory,
+  country: "india" | "china" | "other"
+): number {
+  const history = HISTORICAL_FILING_DATES_DATA[category][country];
+  return calculateHistoricalAdvancementRate(history);
+}
+
+// Cache for calculated filing advancement rates
+let cachedFilingAdvancementRates: Record<EBCategory, Record<"india" | "china" | "other", number>> | null = null;
+
+/**
+ * Get all Filing Date advancement rates (cached for performance)
+ * These are used for the "Dates for Filing" table to show when you can FILE I-485
+ */
+export function getFilingAdvancementRates(): Record<EBCategory, Record<"india" | "china" | "other", number>> {
+  if (cachedFilingAdvancementRates) return cachedFilingAdvancementRates;
+  
+  cachedFilingAdvancementRates = {
+    eb1: {
+      india: getFilingAdvancementRate("eb1", "india"),
+      china: getFilingAdvancementRate("eb1", "china"),
+      other: getFilingAdvancementRate("eb1", "other"),
+    },
+    eb2: {
+      india: getFilingAdvancementRate("eb2", "india"),
+      china: getFilingAdvancementRate("eb2", "china"),
+      other: getFilingAdvancementRate("eb2", "other"),
+    },
+    eb3: {
+      india: getFilingAdvancementRate("eb3", "india"),
+      china: getFilingAdvancementRate("eb3", "china"),
+      other: getFilingAdvancementRate("eb3", "other"),
+    },
+  };
+  
+  return cachedFilingAdvancementRates;
+}
+
+/**
  * Calculate the velocity ratio for a category/country combination
  * Uses dynamically calculated historical bulletin movement rates
  */

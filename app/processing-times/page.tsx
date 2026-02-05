@@ -7,6 +7,7 @@ import {
   HISTORICAL_BULLETIN_DATA,
   HISTORICAL_FILING_DATES_DATA,
   getAdvancementRates,
+  getFilingAdvancementRates,
 } from "@/lib/perm-velocity";
 import { 
   parseVisaBulletinDate,
@@ -164,6 +165,7 @@ export default function ProcessingTimesPage() {
   }, []);
 
   const advancementRates = useMemo(() => getAdvancementRates(), []);
+  const filingAdvancementRates = useMemo(() => getFilingAdvancementRates(), []);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -414,7 +416,8 @@ export default function ProcessingTimesPage() {
                     {(["other", "china", "india"] as const).map((country, countryIdx) => {
                       const countryLabel = country === "other" ? "ROW" : country.charAt(0).toUpperCase() + country.slice(1);
                       const filingDate = country === "other" ? datesForFiling[cat].allOther : datesForFiling[cat][country];
-                      const velocity = advancementRates[cat][country];
+                      // Use Filing Date velocity for Dates for Filing table
+                      const velocity = filingAdvancementRates[cat][country];
                       const filingWait = calculateNewFilerWait(filingDate, velocity);
                       const velocityData = getVelocityData(cat, country, "filing");
                       const isCurrent = isPriorityDateCurrent(filingDate);
