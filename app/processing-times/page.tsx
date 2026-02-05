@@ -10,9 +10,9 @@ import {
 } from "@/lib/perm-velocity";
 import { 
   parseVisaBulletinDate,
-  calculateWaitTimeMonths,
-  SparklineCell,
-  WaitTimeDataPoint,
+  VelocitySparkline,
+  VelocityBadge,
+  VelocityDataPoint,
 } from "@/components/TrendSparkline";
 
 interface ProcessingData {
@@ -55,12 +55,12 @@ function calculateNewFilerWait(
 
 // Get color class based on wait time
 function getWaitTimeColor(years: number): string {
-  if (years === 0) return "text-green-600";  // Current
-  if (years <= 1) return "text-green-600";   // Very short wait
-  if (years <= 3) return "text-yellow-600";  // Short wait
-  if (years <= 7) return "text-orange-500";  // Medium wait  
-  if (years <= 15) return "text-orange-600"; // Long wait
-  return "text-red-600";                      // Very long wait (15+ years)
+  if (years === 0) return "text-green-600";
+  if (years <= 1) return "text-green-600";
+  if (years <= 3) return "text-yellow-600";
+  if (years <= 7) return "text-orange-500";
+  if (years <= 15) return "text-orange-600";
+  return "text-red-600";
 }
 
 // Format wait time for display
@@ -70,16 +70,68 @@ function formatWaitTime(years: number, rangeMin: number, rangeMax: number): stri
   return `${rangeMin}-${rangeMax} yr`;
 }
 
-// Convert historical bulletin data to WAIT TIME format
-function getWaitTimeData(category: EBCategory, country: Country, source: "finalAction" | "filing" = "finalAction"): WaitTimeDataPoint[] {
+// Calculate velocity (months advanced per year) from historical data
+function calculateVelocityFromHistory(
+  entries: { bulletinMonth: string; finalActionDate: string }[]
+): VelocityDataPoint[] {
+  const velocityData: VelocityDataPoint[] = [];
+  
+  // Group entries by year and calculate yearly velocity
+  const entriesByYear: Record<number, { bulletinMonth: string; finalActionDate: string }[]> = {};
+  
+  entries.forEach(entry => {
+    const match = entry.bulletinMonth.match(/(\d{4})/);
+    if (match) {
+      const year = parseInt(match[1]);
+      if (!entriesByYear[year]) entriesByYear[year] = [];
+      entriesByYear[year].push(entry);
+    }
+  });
+  
+  const years = Object.keys(entriesByYear).map(Number).sort();
+  
+  for (let i = 0; i < years.length; i++) {
+    const year = years[i];
+    const yearEntries = entriesByYear[year];
+    
+    // Get first and last entry of the year
+    const firstEntry = yearEntries[0];
+    const lastEntry = yearEntries[yearEntries.length - 1];
+    
+    // Check if current
+    if (lastEntry.finalActionDate.toLowerCase() === "current") {
+      velocityData.push({ label: year.toString(), monthsPerYear: 12 });
+      continue;
+    }
+    
+    // Calculate how much the date advanced during this year
+    const firstDate = parseVisaBulletinDate(firstEntry.finalActionDate);
+    const lastDate = parseVisaBulletinDate(lastEntry.finalActionDate);
+    
+    if (firstDate !== null && lastDate !== null) {
+      const monthsAdvanced = lastDate - firstDate;
+      // Annualize based on how many quarters we have data for
+      const quartersInYear = yearEntries.length;
+      const annualizedVelocity = (monthsAdvanced / quartersInYear) * 4;
+      velocityData.push({ 
+        label: year.toString(), 
+        monthsPerYear: Math.max(0, annualizedVelocity) 
+      });
+    } else if (lastDate !== null) {
+      // First was current, now has a date - this is retrogression
+      velocityData.push({ label: year.toString(), monthsPerYear: 0 });
+    }
+  }
+  
+  return velocityData;
+}
+
+// Get velocity trend data for a category/country
+function getVelocityData(category: EBCategory, country: Country, source: "finalAction" | "filing" = "finalAction"): VelocityDataPoint[] {
   const countryKey = country === "other" ? "other" : country;
   const dataSource = source === "finalAction" ? HISTORICAL_BULLETIN_DATA : HISTORICAL_FILING_DATES_DATA;
   const entries = dataSource[category][countryKey];
-  
-  return entries.map(entry => ({
-    label: entry.bulletinMonth,
-    waitMonths: calculateWaitTimeMonths(entry.bulletinMonth, entry.finalActionDate)
-  }));
+  return calculateVelocityFromHistory(entries);
 }
 
 export default function ProcessingTimesPage() {
@@ -279,7 +331,7 @@ export default function ProcessingTimesPage() {
         <h2 className="text-lg font-semibold text-gray-900 mb-2">Visa Bulletin</h2>
         <p className="text-sm text-gray-600 mb-6">
           Visa availability determines when you can file I-485 and when your green card can be approved.
-          Trends show 5-year changes: <span className="text-red-600 font-medium">▲</span> wait increasing, <span className="text-gray-500 font-medium">→</span> stable, <span className="text-green-600 font-medium">●</span> current.
+          Velocity shows how fast dates advance. Sparklines show velocity trends: <span className="text-green-600 font-medium">↑</span> speeding up, <span className="text-red-600 font-medium">↓</span> slowing down.
         </p>
 
         {/* Final Action Dates */}
@@ -294,8 +346,9 @@ export default function ProcessingTimesPage() {
                   <th className="text-left py-3 pr-3 font-medium text-gray-700 w-16">Category</th>
                   <th className="text-left py-3 pr-3 font-medium text-gray-700">Country</th>
                   <th className="text-left py-3 pr-3 font-medium text-gray-700">Date</th>
+                  <th className="text-left py-3 pr-3 font-medium text-gray-700">Velocity</th>
                   <th className="text-left py-3 pr-3 font-medium text-gray-700">Est. Wait</th>
-                  <th className="text-left py-3 font-medium text-gray-700">5yr Trend</th>
+                  <th className="text-left py-3 font-medium text-gray-700">Trend</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -305,7 +358,9 @@ export default function ProcessingTimesPage() {
                       const countryLabel = country === "other" ? "ROW" : country.charAt(0).toUpperCase() + country.slice(1);
                       const priorityDate = country === "other" ? priorityDates[cat].allOther : priorityDates[cat][country];
                       const wait = waitTimeEstimates[cat][country];
-                      const waitTimeData = getWaitTimeData(cat, country, "finalAction");
+                      const velocity = advancementRates[cat][country];
+                      const velocityData = getVelocityData(cat, country, "finalAction");
+                      const isCurrent = isPriorityDateCurrent(priorityDate);
                       
                       return (
                         <tr key={`${cat}-${country}`} className={countryIdx === 0 ? "border-t-2 border-gray-200" : ""}>
@@ -315,14 +370,17 @@ export default function ProcessingTimesPage() {
                             </td>
                           )}
                           <td className="py-2.5 pr-3 text-gray-600">{countryLabel}</td>
-                          <td className={`py-2.5 pr-3 ${isPriorityDateCurrent(priorityDate) ? "text-green-600 font-medium" : "text-gray-900"}`}>
+                          <td className={`py-2.5 pr-3 ${isCurrent ? "text-green-600 font-medium" : "text-gray-900"}`}>
                             {priorityDate}
                           </td>
-                          <td className={`py-2.5 pr-3 font-medium ${getWaitTimeColor(wait.years)}`}>
+                          <td className="py-2.5 pr-3">
+                            <VelocityBadge monthsPerYear={velocity} />
+                          </td>
+                          <td className={`py-2.5 pr-3 ${getWaitTimeColor(wait.years)}`}>
                             {formatWaitTime(wait.years, wait.rangeMin, wait.rangeMax)}
                           </td>
                           <td className="py-2.5">
-                            <SparklineCell data={waitTimeData} currentIsCurrent={isPriorityDateCurrent(priorityDate)} />
+                            <VelocitySparkline data={velocityData} currentIsCurrent={isCurrent} />
                           </td>
                         </tr>
                       );
@@ -346,8 +404,9 @@ export default function ProcessingTimesPage() {
                   <th className="text-left py-3 pr-3 font-medium text-gray-700 w-16">Category</th>
                   <th className="text-left py-3 pr-3 font-medium text-gray-700">Country</th>
                   <th className="text-left py-3 pr-3 font-medium text-gray-700">Date</th>
+                  <th className="text-left py-3 pr-3 font-medium text-gray-700">Velocity</th>
                   <th className="text-left py-3 pr-3 font-medium text-gray-700">Est. Wait</th>
-                  <th className="text-left py-3 font-medium text-gray-700">5yr Trend</th>
+                  <th className="text-left py-3 font-medium text-gray-700">Trend</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -356,9 +415,10 @@ export default function ProcessingTimesPage() {
                     {(["other", "china", "india"] as const).map((country, countryIdx) => {
                       const countryLabel = country === "other" ? "ROW" : country.charAt(0).toUpperCase() + country.slice(1);
                       const filingDate = country === "other" ? datesForFiling[cat].allOther : datesForFiling[cat][country];
-                      // Calculate filing wait estimate using same advancement rates
-                      const filingWait = calculateNewFilerWait(filingDate, advancementRates[cat][country]);
-                      const waitTimeData = getWaitTimeData(cat, country, "filing");
+                      const velocity = advancementRates[cat][country];
+                      const filingWait = calculateNewFilerWait(filingDate, velocity);
+                      const velocityData = getVelocityData(cat, country, "filing");
+                      const isCurrent = isPriorityDateCurrent(filingDate);
                       
                       return (
                         <tr key={`filing-${cat}-${country}`} className={countryIdx === 0 ? "border-t-2 border-gray-200" : ""}>
@@ -368,14 +428,17 @@ export default function ProcessingTimesPage() {
                             </td>
                           )}
                           <td className="py-2.5 pr-3 text-gray-600">{countryLabel}</td>
-                          <td className={`py-2.5 pr-3 ${isPriorityDateCurrent(filingDate) ? "text-green-600 font-medium" : "text-gray-900"}`}>
+                          <td className={`py-2.5 pr-3 ${isCurrent ? "text-green-600 font-medium" : "text-gray-900"}`}>
                             {filingDate}
                           </td>
-                          <td className={`py-2.5 pr-3 font-medium ${getWaitTimeColor(filingWait.years)}`}>
+                          <td className="py-2.5 pr-3">
+                            <VelocityBadge monthsPerYear={velocity} />
+                          </td>
+                          <td className={`py-2.5 pr-3 ${getWaitTimeColor(filingWait.years)}`}>
                             {formatWaitTime(filingWait.years, filingWait.rangeMin, filingWait.rangeMax)}
                           </td>
                           <td className="py-2.5">
-                            <SparklineCell data={waitTimeData} currentIsCurrent={isPriorityDateCurrent(filingDate)} />
+                            <VelocitySparkline data={velocityData} currentIsCurrent={isCurrent} />
                           </td>
                         </tr>
                       );
@@ -397,13 +460,14 @@ export default function ProcessingTimesPage() {
             <strong> Dates for Filing</strong> determine when you can submit I-485 and get work/travel permits.
           </p>
           <p>
-            <strong>Trends:</strong> <span className="text-red-600">▲</span> = wait times increased over 5 years (worsening), 
-            <span className="text-gray-600">→</span> = stable, 
-            <span className="text-green-600">●</span> = no backlog (current).
+            <strong>Velocity</strong> shows how many months the cutoff advances per year. Higher = faster progress.
+            <strong> Est. Wait</strong> is based on current backlog ÷ velocity.
           </p>
           <p>
-            <strong>Wait estimates</strong> are for new filers starting today based on historical velocity.
-            India &amp; China face long backlogs due to the 7% per-country cap.
+            <strong>Trends:</strong> Sparklines show velocity over 5 years. 
+            <span className="text-green-600"> ↑ = speeding up (good)</span>, 
+            <span className="text-red-600"> ↓ = slowing down (bad)</span>, 
+            <span className="text-gray-600"> → = stable</span>.
           </p>
         </div>
       </section>

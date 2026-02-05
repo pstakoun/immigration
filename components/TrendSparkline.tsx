@@ -2,10 +2,10 @@
 
 import { useMemo } from "react";
 
-// Wait time data point - tracks wait time at each bulletin month
-export interface WaitTimeDataPoint {
-  label: string;      // Bulletin month (e.g., "January 2023")
-  waitMonths: number; // Wait time in months at that point (0 = current)
+// Velocity data point - tracks advancement rate at each bulletin period
+export interface VelocityDataPoint {
+  label: string;        // Period label (e.g., "2023")
+  monthsPerYear: number; // How many months the cutoff advanced per year
 }
 
 // Parse date string like "Jul 2013" or "Current" to months since 2000
@@ -48,115 +48,75 @@ export function parseBulletinMonth(dateStr: string): number {
   return year * 12 + monthNum;
 }
 
-// Calculate wait time: bulletin date - priority date cutoff
-export function calculateWaitTimeMonths(bulletinMonth: string, priorityDate: string): number {
-  if (!priorityDate || priorityDate.toLowerCase() === "current") {
-    return 0; // Current = no wait
-  }
-  
-  const bulletinMonths = parseBulletinMonth(bulletinMonth);
-  const priorityMonths = parseVisaBulletinDate(priorityDate);
-  
-  if (priorityMonths === null) return 0;
-  
-  return Math.max(0, bulletinMonths - priorityMonths);
-}
-
-// Calculate trend from wait time data
-// For wait times: INCREASING = worsening (bad), DECREASING = improving (good)
-function calculateWaitTrend(data: WaitTimeDataPoint[]): {
-  direction: "improving" | "worsening" | "stable";
-  changePerYear: number;
+// Calculate velocity trend from velocity data
+// For velocity: INCREASING = improving (good), DECREASING = worsening (bad)
+function calculateVelocityTrend(data: VelocityDataPoint[]): {
+  direction: "improving" | "worsening" | "stable" | "current";
+  change: number;
 } {
   if (data.length < 2) {
-    return { direction: "stable", changePerYear: 0 };
+    return { direction: "stable", change: 0 };
   }
 
-  // Filter out zeros for trend calculation (we'll handle "all current" separately)
-  const validData = data.filter(d => d.waitMonths > 0);
-  
-  // If less than 2 non-zero data points, we can't calculate a meaningful trend
-  if (validData.length < 2) {
-    // Check if we're transitioning from current to having a wait
-    const recentData = data.slice(-4);
-    const olderData = data.slice(0, 4);
-    const recentHasWait = recentData.some(d => d.waitMonths > 0);
-    const olderMostlyCurrent = olderData.filter(d => d.waitMonths === 0).length >= olderData.length * 0.5;
-    
-    if (recentHasWait && olderMostlyCurrent) {
-      // Transitioning from current to having wait = worsening
-      const recentWait = recentData.filter(d => d.waitMonths > 0);
-      const avgWait = recentWait.length > 0 
-        ? recentWait.reduce((a, b) => a + b.waitMonths, 0) / recentWait.length 
-        : 0;
-      return { direction: "worsening", changePerYear: avgWait / 2 }; // Rough estimate
-    }
-    
-    return { direction: "stable", changePerYear: 0 };
+  // Check if mostly current (high velocity = 12+ mo/yr)
+  const currentCount = data.filter(d => d.monthsPerYear >= 12).length;
+  if (currentCount >= data.length * 0.7) {
+    return { direction: "current", change: 0 };
   }
 
-  // Compare recent to older wait times
-  const recentValues = validData.slice(-4).map(d => d.waitMonths);
-  const olderValues = validData.slice(0, Math.min(4, validData.length - 1)).map(d => d.waitMonths);
-  
-  if (olderValues.length === 0) {
-    return { direction: "stable", changePerYear: 0 };
-  }
+  // Compare recent to older velocities
+  const recentValues = data.slice(-3).map(d => d.monthsPerYear);
+  const olderValues = data.slice(0, 3).map(d => d.monthsPerYear);
   
   const recentAvg = recentValues.reduce((a, b) => a + b, 0) / recentValues.length;
   const olderAvg = olderValues.reduce((a, b) => a + b, 0) / olderValues.length;
   
-  // Change in wait time (positive = wait increasing = BAD)
-  const totalChange = recentAvg - olderAvg;
-  const yearsOfData = Math.max(1, (validData.length - 1) / 4);
-  const changePerYear = totalChange / yearsOfData;
+  // Change in velocity (positive = speeding up = GOOD)
+  const change = recentAvg - olderAvg;
   
-  // Any measurable change matters
-  if (changePerYear < -1) {
-    return { direction: "improving", changePerYear };
-  } else if (changePerYear > 1) {
-    return { direction: "worsening", changePerYear };
+  // Threshold: 1 month/year change is meaningful
+  if (change > 1) {
+    return { direction: "improving", change }; // Velocity increasing = good
+  } else if (change < -1) {
+    return { direction: "worsening", change }; // Velocity decreasing = bad
   }
-  return { direction: "stable", changePerYear };
+  return { direction: "stable", change };
 }
 
-// Sparkline component - shows wait time trend over time
-// Pass currentIsCurrent=true if the CURRENT priority date is "Current" (no wait)
-interface SparklineCellProps {
-  data: WaitTimeDataPoint[];
-  currentIsCurrent?: boolean; // Is the current priority date "Current"?
+// Sparkline component showing velocity over time
+// UP = faster (good), DOWN = slower (bad) - intuitive!
+interface VelocitySparklineProps {
+  data: VelocityDataPoint[];
+  currentIsCurrent?: boolean;
   className?: string;
 }
 
-export function SparklineCell({ data, currentIsCurrent = false, className = "" }: SparklineCellProps) {
+export function VelocitySparkline({ data, currentIsCurrent = false, className = "" }: VelocitySparklineProps) {
   const { path, trend, color } = useMemo(() => {
     // If currently current, show green indicator
     if (currentIsCurrent) {
       return { 
         path: "", 
-        trend: { direction: "stable" as const, changePerYear: 0 }, 
+        trend: { direction: "current" as const, change: 0 }, 
         color: "#22c55e" 
       };
     }
     
-    const trend = calculateWaitTrend(data);
+    const trend = calculateVelocityTrend(data);
     
     if (data.length < 2) {
       return { path: "", trend, color: "#9ca3af" };
     }
 
-    // Get data points with actual wait times for the sparkline
-    const validData = data.filter(d => d.waitMonths > 0);
-    if (validData.length < 2) {
-      // Not enough data for sparkline, but we might still have a trend
-      const color = trend.direction === "improving" ? "#22c55e" : 
-                    trend.direction === "worsening" ? "#ef4444" : "#6b7280";
-      return { path: "", trend, color };
+    // Check if mostly current
+    const currentCount = data.filter(d => d.monthsPerYear >= 12).length;
+    if (currentCount >= data.length * 0.7) {
+      return { path: "", trend: { direction: "current" as const, change: 0 }, color: "#22c55e" };
     }
 
-    const waitValues = validData.map(d => d.waitMonths);
-    const min = Math.min(...waitValues);
-    const max = Math.max(...waitValues);
+    const velocities = data.map(d => d.monthsPerYear);
+    const min = Math.min(...velocities);
+    const max = Math.max(...velocities);
     const range = max - min || 1;
 
     const width = 44;
@@ -165,12 +125,13 @@ export function SparklineCell({ data, currentIsCurrent = false, className = "" }
     const chartWidth = width - padding * 2;
     const chartHeight = height - padding * 2;
 
-    // Build path - HIGH wait = TOP (bad), LOW wait = BOTTOM (good)
+    // Build path - HIGH velocity = TOP (good), LOW velocity = BOTTOM (bad)
+    // This is INTUITIVE: up = faster = better!
     const pts: { x: number; y: number }[] = [];
-    validData.forEach((d, i) => {
-      const x = padding + (i / (validData.length - 1)) * chartWidth;
-      const normalizedWait = (d.waitMonths - min) / range;
-      const y = padding + (1 - normalizedWait) * chartHeight;
+    data.forEach((d, i) => {
+      const x = padding + (i / (data.length - 1)) * chartWidth;
+      const normalizedVelocity = (d.monthsPerYear - min) / range;
+      const y = padding + (1 - normalizedVelocity) * chartHeight; // High velocity = top
       pts.push({ x, y });
     });
 
@@ -178,6 +139,7 @@ export function SparklineCell({ data, currentIsCurrent = false, className = "" }
       i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`
     ).join(" ");
 
+    // Color: improving (velocity up) = green, worsening (velocity down) = red
     const color = trend.direction === "improving" ? "#22c55e" : 
                   trend.direction === "worsening" ? "#ef4444" : "#6b7280";
 
@@ -194,22 +156,22 @@ export function SparklineCell({ data, currentIsCurrent = false, className = "" }
     );
   }
 
-  // Trend indicator arrow
+  // Trend indicator arrow - UP = good (green), DOWN = bad (red)
   const TrendArrow = () => {
     if (trend.direction === "improving") {
       return (
-        <span className="inline-flex items-center text-green-600" title="Wait times decreasing">
+        <span className="inline-flex items-center text-green-600" title="Velocity increasing (good)">
           <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-            <path d="M5 8L1 3h8L5 8Z" />
+            <path d="M5 2L9 7H1L5 2Z" />
           </svg>
         </span>
       );
     }
     if (trend.direction === "worsening") {
       return (
-        <span className="inline-flex items-center text-red-600" title="Wait times increasing">
+        <span className="inline-flex items-center text-red-600" title="Velocity decreasing (bad)">
           <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-            <path d="M5 2L9 7H1L5 2Z" />
+            <path d="M5 8L1 3h8L5 8Z" />
           </svg>
         </span>
       );
@@ -248,30 +210,57 @@ export function SparklineCell({ data, currentIsCurrent = false, className = "" }
   );
 }
 
-// Simple velocity badge
+// Velocity badge showing current speed
 export function VelocityBadge({ monthsPerYear, className = "" }: { monthsPerYear: number; className?: string }) {
-  let colorClass = "bg-red-100 text-red-700";
-  let label = "Very Slow";
+  let colorClass: string;
   
   if (monthsPerYear >= 12) {
-    colorClass = "bg-green-100 text-green-700";
-    label = "Current";
-  } else if (monthsPerYear >= 9) {
-    colorClass = "bg-green-100 text-green-700";
-    label = "Fast";
+    colorClass = "text-green-600";
   } else if (monthsPerYear >= 6) {
-    colorClass = "bg-yellow-100 text-yellow-700";
-    label = "Moderate";
+    colorClass = "text-yellow-600";
   } else if (monthsPerYear >= 3) {
-    colorClass = "bg-orange-100 text-orange-700";
-    label = "Slow";
+    colorClass = "text-orange-500";
+  } else {
+    colorClass = "text-red-600";
+  }
+
+  if (monthsPerYear >= 12) {
+    return <span className={`font-medium ${colorClass} ${className}`}>Current</span>;
   }
 
   return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${colorClass} ${className}`}>
-      {Math.round(monthsPerYear)} mo/yr
-      <span className="opacity-70">·</span>
-      {label}
+    <span className={`font-medium ${colorClass} ${className}`}>
+      {monthsPerYear.toFixed(0)} mo/yr
     </span>
   );
+}
+
+// Keep these exports for backward compatibility
+export interface WaitTimeDataPoint {
+  label: string;
+  waitMonths: number;
+}
+
+export function calculateWaitTimeMonths(bulletinMonth: string, priorityDate: string): number {
+  if (!priorityDate || priorityDate.toLowerCase() === "current") {
+    return 0;
+  }
+  
+  const bulletinMonths = parseBulletinMonth(bulletinMonth);
+  const priorityMonths = parseVisaBulletinDate(priorityDate);
+  
+  if (priorityMonths === null) return 0;
+  
+  return Math.max(0, bulletinMonths - priorityMonths);
+}
+
+// Legacy SparklineCell - redirect to VelocitySparkline
+export function SparklineCell({ data, currentIsCurrent = false, className = "" }: { 
+  data: WaitTimeDataPoint[] | VelocityDataPoint[]; 
+  currentIsCurrent?: boolean;
+  className?: string;
+}) {
+  // Convert if needed
+  const velocityData = data as VelocityDataPoint[];
+  return <VelocitySparkline data={velocityData} currentIsCurrent={currentIsCurrent} className={className} />;
 }
