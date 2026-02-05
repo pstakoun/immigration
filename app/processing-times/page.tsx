@@ -345,10 +345,7 @@ export default function ProcessingTimesPage() {
                   <th className="text-left py-3 pr-4 font-medium text-gray-700">Country</th>
                   <th className="text-left py-3 pr-4 font-medium text-gray-700">Cutoff Date</th>
                   <th className="text-left py-3 pr-4 font-medium text-gray-700">Est. Wait</th>
-                  <th className="text-left py-3 font-medium text-gray-700">
-                    <span className="block">If You Wait</span>
-                    <span className="text-xs font-normal text-gray-500">1yr delay cost</span>
-                  </th>
+                  <th className="text-left py-3 font-medium text-gray-700">Movement</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -402,10 +399,7 @@ export default function ProcessingTimesPage() {
                   <th className="text-left py-3 pr-4 font-medium text-gray-700">Country</th>
                   <th className="text-left py-3 pr-4 font-medium text-gray-700">Cutoff Date</th>
                   <th className="text-left py-3 pr-4 font-medium text-gray-700">Est. Wait</th>
-                  <th className="text-left py-3 font-medium text-gray-700">
-                    <span className="block">If You Wait</span>
-                    <span className="text-xs font-normal text-gray-500">1yr delay cost</span>
-                  </th>
+                  <th className="text-left py-3 font-medium text-gray-700">Movement</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -456,14 +450,18 @@ export default function ProcessingTimesPage() {
             <strong> Dates for Filing</strong> determine when you can submit I-485 and get work/travel permits.
           </p>
           <p>
-            <strong>Est. Wait</strong> is a rough estimate based on current backlog and how fast the cutoff date advances.
-            Actual wait times can vary based on policy changes, visa availability, and USCIS processing speeds.
+            <strong>Est. Wait</strong> is a rough estimate based on current backlog and historical movement patterns.
+            Actual wait times can vary significantly based on policy changes and visa availability.
           </p>
           <p>
-            <strong>If You Wait (1yr delay cost)</strong> shows how much longer you&apos;ll wait if you delay filing by 1 year.
-            For example, <span className="font-semibold text-red-600">+3 yr</span> means waiting 1 year to file adds ~3 years to your total wait.
-            <span className="font-semibold text-green-600 ml-1">No penalty</span> means the category is current with no delay cost.
+            <strong>Movement</strong> shows how fast the cutoff date advances and whether it&apos;s changing:
           </p>
+          <ul className="list-none space-y-1 ml-4">
+            <li><span className="text-green-600 font-medium">↑ Speeding up</span> — line moving faster than before</li>
+            <li><span className="text-amber-600 font-medium">↓ Slowing</span> — line moving slower than before</li>
+            <li><span className="text-gray-600 font-medium">→ Steady</span> — consistent pace</li>
+            <li><span className="text-green-600 font-medium">● Current</span> — no backlog</li>
+          </ul>
         </div>
       </section>
 
