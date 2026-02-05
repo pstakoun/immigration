@@ -374,7 +374,7 @@ export default function ProcessingTimesPage() {
                             {priorityDate}
                           </td>
                           <td className="py-2.5 pr-3">
-                            <VelocityBadge monthsPerYear={velocity} />
+                            <VelocityBadge monthsPerYear={velocity} isCurrent={isCurrent} />
                           </td>
                           <td className={`py-2.5 pr-3 ${getWaitTimeColor(wait.years)}`}>
                             {formatWaitTime(wait.years, wait.rangeMin, wait.rangeMax)}
@@ -432,7 +432,7 @@ export default function ProcessingTimesPage() {
                             {filingDate}
                           </td>
                           <td className="py-2.5 pr-3">
-                            <VelocityBadge monthsPerYear={velocity} />
+                            <VelocityBadge monthsPerYear={velocity} isCurrent={isCurrent} />
                           </td>
                           <td className={`py-2.5 pr-3 ${getWaitTimeColor(filingWait.years)}`}>
                             {formatWaitTime(filingWait.years, filingWait.rangeMin, filingWait.rangeMax)}

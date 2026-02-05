@@ -211,7 +211,20 @@ export function VelocitySparkline({ data, currentIsCurrent = false, className = 
 }
 
 // Velocity badge showing current speed
-export function VelocityBadge({ monthsPerYear, className = "" }: { monthsPerYear: number; className?: string }) {
+export function VelocityBadge({ 
+  monthsPerYear, 
+  isCurrent = false,
+  className = "" 
+}: { 
+  monthsPerYear: number; 
+  isCurrent?: boolean;
+  className?: string;
+}) {
+  // If the date is "Current", show that consistently
+  if (isCurrent) {
+    return <span className={`font-medium text-green-600 ${className}`}>Current</span>;
+  }
+  
   let colorClass: string;
   
   if (monthsPerYear >= 12) {
