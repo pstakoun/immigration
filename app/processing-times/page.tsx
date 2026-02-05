@@ -55,11 +55,12 @@ function calculateNewFilerWait(
 
 // Get color class based on wait time
 function getWaitTimeColor(years: number): string {
-  if (years === 0) return "text-green-600";
-  if (years <= 2) return "text-green-600";
-  if (years <= 5) return "text-yellow-600";
-  if (years <= 10) return "text-orange-600";
-  return "text-red-600";
+  if (years === 0) return "text-green-600";  // Current
+  if (years <= 1) return "text-green-600";   // Very short wait
+  if (years <= 3) return "text-yellow-600";  // Short wait
+  if (years <= 7) return "text-orange-500";  // Medium wait  
+  if (years <= 15) return "text-orange-600"; // Long wait
+  return "text-red-600";                      // Very long wait (15+ years)
 }
 
 // Format wait time for display
@@ -278,7 +279,7 @@ export default function ProcessingTimesPage() {
         <h2 className="text-lg font-semibold text-gray-900 mb-2">Visa Bulletin</h2>
         <p className="text-sm text-gray-600 mb-6">
           Visa availability determines when you can file I-485 and when your green card can be approved.
-          Sparklines show 5-year wait time trends: <span className="text-green-600">▼</span> = wait decreasing (good), <span className="text-red-600">▲</span> = wait increasing (bad).
+          Trends show 5-year changes: <span className="text-red-600 font-medium">▲</span> wait increasing, <span className="text-gray-500 font-medium">→</span> stable, <span className="text-green-600 font-medium">●</span> current.
         </p>
 
         {/* Final Action Dates */}
@@ -396,9 +397,9 @@ export default function ProcessingTimesPage() {
             <strong> Dates for Filing</strong> determine when you can submit I-485 and get work/travel permits.
           </p>
           <p>
-            <strong>Wait time trends:</strong> Sparklines show how wait times have changed over 5 years. 
-            <span className="text-green-600"> ▼ = wait times decreasing (good)</span>, 
-            <span className="text-red-600"> ▲ = wait times increasing (bad)</span>.
+            <strong>Trends:</strong> <span className="text-red-600">▲</span> = wait times increased over 5 years (worsening), 
+            <span className="text-gray-600">→</span> = stable, 
+            <span className="text-green-600">●</span> = no backlog (current).
           </p>
           <p>
             <strong>Wait estimates</strong> are for new filers starting today based on historical velocity.
