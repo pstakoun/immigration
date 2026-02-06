@@ -1,12 +1,143 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { DynamicData } from "@/lib/dynamic-data";
+import { 
+  HISTORICAL_BULLETIN_DATA,
+  HISTORICAL_FILING_DATES_DATA,
+  getAdvancementRates,
+  getFilingAdvancementRates,
+} from "@/lib/perm-velocity";
+import { 
+  parseVisaBulletinDate,
+  VelocitySparkline,
+  VelocityDataPoint,
+} from "@/components/TrendSparkline";
 
 interface ProcessingData {
   success: boolean;
   data: DynamicData;
+}
+
+type EBCategory = "eb1" | "eb2" | "eb3";
+type Country = "india" | "china" | "other";
+
+// Calculate estimated wait time for a new filer
+function calculateNewFilerWait(
+  currentCutoff: string,
+  monthsPerYear: number
+): { years: number; rangeMin: number; rangeMax: number } {
+  if (currentCutoff.toLowerCase() === "current") {
+    return { years: 0, rangeMin: 0, rangeMax: 0 };
+  }
+  
+  const cutoffMonths = parseVisaBulletinDate(currentCutoff);
+  if (cutoffMonths === null) {
+    return { years: 0, rangeMin: 0, rangeMax: 0 };
+  }
+  
+  const today = new Date();
+  const todayMonths = (today.getFullYear() - 2000) * 12 + today.getMonth();
+  const backlogMonths = todayMonths - cutoffMonths;
+  
+  if (backlogMonths <= 0) {
+    return { years: 0, rangeMin: 0, rangeMax: 0 };
+  }
+  
+  const waitMonths = monthsPerYear > 0 ? (backlogMonths / monthsPerYear) * 12 : 600;
+  const years = Math.round(waitMonths / 12);
+  const rangeMin = Math.round(years * 0.8);
+  const rangeMax = Math.round(years * 1.2);
+  
+  return { years, rangeMin, rangeMax };
+}
+
+// Get color class based on wait time
+// Thresholds calibrated for current EB category wait times:
+// - Green: <2 years (fast, realistic timeline)
+// - Yellow: 2-4 years (moderate wait)
+// - Orange-500: 4-8 years (significant wait)
+// - Orange-600: 8-15 years (long wait)
+// - Red: 15+ years (extreme backlog)
+function getWaitTimeColor(years: number): string {
+  if (years === 0) return "text-green-600";
+  if (years < 2) return "text-green-600";
+  if (years <= 4) return "text-yellow-600";
+  if (years <= 8) return "text-orange-500";
+  if (years <= 15) return "text-orange-600";
+  return "text-red-600";
+}
+
+// Format wait time for display
+function formatWaitTime(years: number, rangeMin: number, rangeMax: number): string {
+  if (years === 0) return "Current";
+  if (rangeMin === rangeMax || years < 2) return `~${years} yr`;
+  return `${rangeMin}-${rangeMax} yr`;
+}
+
+// Calculate velocity (months advanced per year) from historical data
+function calculateVelocityFromHistory(
+  entries: { bulletinMonth: string; finalActionDate: string }[]
+): VelocityDataPoint[] {
+  const velocityData: VelocityDataPoint[] = [];
+  
+  // Group entries by year and calculate yearly velocity
+  const entriesByYear: Record<number, { bulletinMonth: string; finalActionDate: string }[]> = {};
+  
+  entries.forEach(entry => {
+    const match = entry.bulletinMonth.match(/(\d{4})/);
+    if (match) {
+      const year = parseInt(match[1]);
+      if (!entriesByYear[year]) entriesByYear[year] = [];
+      entriesByYear[year].push(entry);
+    }
+  });
+  
+  const years = Object.keys(entriesByYear).map(Number).sort();
+  
+  for (let i = 0; i < years.length; i++) {
+    const year = years[i];
+    const yearEntries = entriesByYear[year];
+    
+    // Get first and last entry of the year
+    const firstEntry = yearEntries[0];
+    const lastEntry = yearEntries[yearEntries.length - 1];
+    
+    // Check if current
+    if (lastEntry.finalActionDate.toLowerCase() === "current") {
+      velocityData.push({ label: year.toString(), monthsPerYear: 12 });
+      continue;
+    }
+    
+    // Calculate how much the date advanced during this year
+    const firstDate = parseVisaBulletinDate(firstEntry.finalActionDate);
+    const lastDate = parseVisaBulletinDate(lastEntry.finalActionDate);
+    
+    if (firstDate !== null && lastDate !== null) {
+      const monthsAdvanced = lastDate - firstDate;
+      // Annualize based on how many quarters we have data for
+      const quartersInYear = yearEntries.length;
+      const annualizedVelocity = (monthsAdvanced / quartersInYear) * 4;
+      velocityData.push({ 
+        label: year.toString(), 
+        monthsPerYear: Math.max(0, annualizedVelocity) 
+      });
+    } else if (lastDate !== null) {
+      // First was current, now has a date - this is retrogression
+      velocityData.push({ label: year.toString(), monthsPerYear: 0 });
+    }
+  }
+  
+  return velocityData;
+}
+
+// Get velocity trend data for a category/country
+function getVelocityData(category: EBCategory, country: Country, source: "finalAction" | "filing" = "finalAction"): VelocityDataPoint[] {
+  const countryKey = country === "other" ? "other" : country;
+  const dataSource = source === "finalAction" ? HISTORICAL_BULLETIN_DATA : HISTORICAL_FILING_DATES_DATA;
+  const entries = dataSource[category][countryKey];
+  return calculateVelocityFromHistory(entries);
 }
 
 export default function ProcessingTimesPage() {
@@ -33,13 +164,12 @@ export default function ProcessingTimesPage() {
     fetchData();
   }, []);
 
+  const advancementRates = useMemo(() => getAdvancementRates(), []);
+  const filingAdvancementRates = useMemo(() => getFilingAdvancementRates(), []);
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   };
 
   const formatMonths = (min: number, max: number, premiumDays?: number) => {
@@ -55,21 +185,18 @@ export default function ProcessingTimesPage() {
     if (premiumDays && premiumDays > 0) {
       return (
         <>
-          {timeStr}{" "}
-          <span className="text-green-600">({premiumDays}d premium)</span>
+          {timeStr} <span className="text-green-600 text-xs">({premiumDays}d premium)</span>
         </>
       );
     }
     return timeStr;
   };
 
-  const isPriorityDateCurrent = (dateStr: string) => {
-    return dateStr.toLowerCase() === "current";
-  };
+  const isPriorityDateCurrent = (dateStr: string) => dateStr.toLowerCase() === "current";
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-12">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-64 mb-4"></div>
           <div className="h-4 bg-gray-200 rounded w-96 mb-8"></div>
@@ -85,10 +212,8 @@ export default function ProcessingTimesPage() {
 
   if (error || !data) {
     return (
-      <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-          Processing Times
-        </h1>
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-12">
+        <h1 className="text-2xl font-semibold text-gray-900 mb-2">Processing Times</h1>
         <p className="text-red-600">{error || "Unable to load data"}</p>
       </div>
     );
@@ -96,8 +221,27 @@ export default function ProcessingTimesPage() {
 
   const { processingTimes, priorityDates, datesForFiling } = data;
 
+  // Prepare wait time estimates
+  const waitTimeEstimates = {
+    eb1: {
+      india: calculateNewFilerWait(priorityDates.eb1.india, advancementRates.eb1.india),
+      china: calculateNewFilerWait(priorityDates.eb1.china, advancementRates.eb1.china),
+      other: calculateNewFilerWait(priorityDates.eb1.allOther, advancementRates.eb1.other),
+    },
+    eb2: {
+      india: calculateNewFilerWait(priorityDates.eb2.india, advancementRates.eb2.india),
+      china: calculateNewFilerWait(priorityDates.eb2.china, advancementRates.eb2.china),
+      other: calculateNewFilerWait(priorityDates.eb2.allOther, advancementRates.eb2.other),
+    },
+    eb3: {
+      india: calculateNewFilerWait(priorityDates.eb3.india, advancementRates.eb3.india),
+      china: calculateNewFilerWait(priorityDates.eb3.china, advancementRates.eb3.china),
+      other: calculateNewFilerWait(priorityDates.eb3.allOther, advancementRates.eb3.other),
+    },
+  };
+
   return (
-    <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
+    <div className="max-w-5xl mx-auto px-4 md:px-6 py-12">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-gray-900 mb-2">
           Immigration Processing Times
@@ -112,89 +256,41 @@ export default function ProcessingTimesPage() {
 
       {/* USCIS Forms */}
       <section className="mb-10">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          USCIS Forms
-        </h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">USCIS Forms</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">
-                  Form
-                </th>
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">
-                  Purpose
-                </th>
-                <th className="text-left py-3 font-medium text-gray-700">
-                  Processing Time
-                </th>
+                <th className="text-left py-3 pr-4 font-medium text-gray-700">Form</th>
+                <th className="text-left py-3 pr-4 font-medium text-gray-700">Purpose</th>
+                <th className="text-left py-3 font-medium text-gray-700">Processing Time</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               <tr>
                 <td className="py-3 pr-4 font-medium text-gray-900">I-140</td>
-                <td className="py-3 pr-4 text-gray-600">
-                  Immigrant Petition (EB-1, EB-2, EB-3)
-                </td>
-                <td className="py-3 text-gray-900">
-                  {formatMonths(
-                    processingTimes.i140.min,
-                    processingTimes.i140.max,
-                    processingTimes.i140.premiumDays
-                  )}
-                </td>
+                <td className="py-3 pr-4 text-gray-600">Immigrant Petition (EB-1, EB-2, EB-3)</td>
+                <td className="py-3 text-gray-900">{formatMonths(processingTimes.i140.min, processingTimes.i140.max, processingTimes.i140.premiumDays)}</td>
               </tr>
               <tr>
                 <td className="py-3 pr-4 font-medium text-gray-900">I-485</td>
-                <td className="py-3 pr-4 text-gray-600">
-                  Adjustment of Status (Green Card)
-                </td>
-                <td className="py-3 text-gray-900">
-                  {formatMonths(
-                    processingTimes.i485.min,
-                    processingTimes.i485.max,
-                    processingTimes.i485.premiumDays
-                  )}
-                </td>
+                <td className="py-3 pr-4 text-gray-600">Adjustment of Status (Green Card)</td>
+                <td className="py-3 text-gray-900">{formatMonths(processingTimes.i485.min, processingTimes.i485.max, processingTimes.i485.premiumDays)}</td>
               </tr>
               <tr>
                 <td className="py-3 pr-4 font-medium text-gray-900">I-765</td>
-                <td className="py-3 pr-4 text-gray-600">
-                  Employment Authorization (EAD)
-                </td>
-                <td className="py-3 text-gray-900">
-                  {formatMonths(
-                    processingTimes.i765.min,
-                    processingTimes.i765.max,
-                    processingTimes.i765.premiumDays
-                  )}
-                </td>
+                <td className="py-3 pr-4 text-gray-600">Employment Authorization (EAD)</td>
+                <td className="py-3 text-gray-900">{formatMonths(processingTimes.i765.min, processingTimes.i765.max, processingTimes.i765.premiumDays)}</td>
               </tr>
               <tr>
                 <td className="py-3 pr-4 font-medium text-gray-900">I-130</td>
-                <td className="py-3 pr-4 text-gray-600">
-                  Petition for Alien Relative
-                </td>
-                <td className="py-3 text-gray-900">
-                  {formatMonths(
-                    processingTimes.i130.min,
-                    processingTimes.i130.max,
-                    processingTimes.i130.premiumDays
-                  )}
-                </td>
+                <td className="py-3 pr-4 text-gray-600">Petition for Alien Relative</td>
+                <td className="py-3 text-gray-900">{formatMonths(processingTimes.i130.min, processingTimes.i130.max, processingTimes.i130.premiumDays)}</td>
               </tr>
               <tr>
                 <td className="py-3 pr-4 font-medium text-gray-900">I-129</td>
-                <td className="py-3 pr-4 text-gray-600">
-                  Work Visa (H-1B, L-1, O-1)
-                </td>
-                <td className="py-3 text-gray-900">
-                  {formatMonths(
-                    processingTimes.i129.min,
-                    processingTimes.i129.max,
-                    processingTimes.i129.premiumDays
-                  )}
-                </td>
+                <td className="py-3 pr-4 text-gray-600">Work Visa (H-1B, L-1, O-1)</td>
+                <td className="py-3 text-gray-900">{formatMonths(processingTimes.i129.min, processingTimes.i129.max, processingTimes.i129.premiumDays)}</td>
               </tr>
             </tbody>
           </table>
@@ -203,270 +299,168 @@ export default function ProcessingTimesPage() {
 
       {/* Department of Labor */}
       <section className="mb-10">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Department of Labor
-        </h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Department of Labor</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">
-                  Process
-                </th>
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">
-                  Currently Processing
-                </th>
-                <th className="text-left py-3 font-medium text-gray-700">
-                  Wait Time
-                </th>
+                <th className="text-left py-3 pr-4 font-medium text-gray-700">Process</th>
+                <th className="text-left py-3 pr-4 font-medium text-gray-700">Currently Processing</th>
+                <th className="text-left py-3 font-medium text-gray-700">Wait Time</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               <tr>
-                <td className="py-3 pr-4 font-medium text-gray-900">
-                  Prevailing Wage (PWD)
-                </td>
-                <td className="py-3 pr-4 text-gray-600">
-                  {processingTimes.pwd.currentlyProcessing}
-                </td>
-                <td className="py-3 text-gray-900">
-                  ~{processingTimes.pwd.months} months
-                </td>
+                <td className="py-3 pr-4 font-medium text-gray-900">Prevailing Wage (PWD)</td>
+                <td className="py-3 pr-4 text-gray-600">{processingTimes.pwd.currentlyProcessing}</td>
+                <td className="py-3 text-gray-900">~{processingTimes.pwd.months} months</td>
               </tr>
               <tr>
-                <td className="py-3 pr-4 font-medium text-gray-900">
-                  PERM (Analyst Review)
-                </td>
-                <td className="py-3 pr-4 text-gray-600">
-                  {processingTimes.perm.currentlyProcessing}
-                </td>
-                <td className="py-3 text-gray-900">
-                  ~{processingTimes.perm.months} months
-                </td>
+                <td className="py-3 pr-4 font-medium text-gray-900">PERM (Analyst Review)</td>
+                <td className="py-3 pr-4 text-gray-600">{processingTimes.perm.currentlyProcessing}</td>
+                <td className="py-3 text-gray-900">~{processingTimes.perm.months} months</td>
               </tr>
               <tr>
-                <td className="py-3 pr-4 font-medium text-gray-900">
-                  PERM (Audit Review)
-                </td>
-                <td className="py-3 pr-4 text-gray-600">
-                  {processingTimes.permAudit.currentlyProcessing}
-                </td>
-                <td className="py-3 text-gray-900">
-                  ~{processingTimes.permAudit.months} months
-                </td>
+                <td className="py-3 pr-4 font-medium text-gray-900">PERM (Audit Review)</td>
+                <td className="py-3 pr-4 text-gray-600">{processingTimes.permAudit.currentlyProcessing}</td>
+                <td className="py-3 text-gray-900">~{processingTimes.permAudit.months} months</td>
               </tr>
             </tbody>
           </table>
         </div>
         <p className="text-xs text-gray-500 mt-3">
-          Audit Review shows when DOL processes audit responses. Total time for audited cases is typically 6-12 months longer than non-audited cases.
+          Audit Review shows when DOL processes audit responses. Total time for audited cases is typically 6-12 months longer.
         </p>
       </section>
 
-      {/* Visa Bulletin Section Header */}
+      {/* Visa Bulletin Section */}
       <section className="mb-10">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">
-          Visa Bulletin
-        </h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">Visa Bulletin</h2>
         <p className="text-sm text-gray-600 mb-6">
-          The Visa Bulletin has two charts: <span className="font-medium">Dates for Filing</span> determines when you can submit your I-485, while <span className="font-medium">Final Action Dates</span> determines when your green card can be approved.
+          Priority dates determine when you can file I-485 and when your green card can be approved.
         </p>
 
         {/* Final Action Dates */}
-        <h3 className="text-base font-medium text-gray-900 mb-3">
-          Final Action Dates
-        </h3>
-        <p className="text-sm text-gray-600 mb-4">
-          When your priority date is current here, your I-485 can be approved and green card issued.
-        </p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">
-                  Category
-                </th>
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">
-                  All Other Countries
-                </th>
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">
-                  China
-                </th>
-                <th className="text-left py-3 font-medium text-gray-700">
-                  India
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              <tr>
-                <td className="py-3 pr-4 font-medium text-gray-900">EB-1</td>
-                <td
-                  className={`py-3 pr-4 ${isPriorityDateCurrent(priorityDates.eb1.allOther) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {priorityDates.eb1.allOther}
-                </td>
-                <td
-                  className={`py-3 pr-4 ${isPriorityDateCurrent(priorityDates.eb1.china) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {priorityDates.eb1.china}
-                </td>
-                <td
-                  className={`py-3 ${isPriorityDateCurrent(priorityDates.eb1.india) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {priorityDates.eb1.india}
-                </td>
-              </tr>
-              <tr>
-                <td className="py-3 pr-4 font-medium text-gray-900">EB-2</td>
-                <td
-                  className={`py-3 pr-4 ${isPriorityDateCurrent(priorityDates.eb2.allOther) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {priorityDates.eb2.allOther}
-                </td>
-                <td
-                  className={`py-3 pr-4 ${isPriorityDateCurrent(priorityDates.eb2.china) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {priorityDates.eb2.china}
-                </td>
-                <td
-                  className={`py-3 ${isPriorityDateCurrent(priorityDates.eb2.india) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {priorityDates.eb2.india}
-                </td>
-              </tr>
-              <tr>
-                <td className="py-3 pr-4 font-medium text-gray-900">EB-3</td>
-                <td
-                  className={`py-3 pr-4 ${isPriorityDateCurrent(priorityDates.eb3.allOther) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {priorityDates.eb3.allOther}
-                </td>
-                <td
-                  className={`py-3 pr-4 ${isPriorityDateCurrent(priorityDates.eb3.china) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {priorityDates.eb3.china}
-                </td>
-                <td
-                  className={`py-3 ${isPriorityDateCurrent(priorityDates.eb3.india) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {priorityDates.eb3.india}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="mb-8">
+          <h3 className="text-base font-medium text-gray-900 mb-3">Final Action Dates</h3>
+          <p className="text-sm text-gray-500 mb-4">When your priority date is current here, your green card can be approved.</p>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 pr-4 font-medium text-gray-700 w-16">Category</th>
+                  <th className="text-left py-3 pr-4 font-medium text-gray-700">Country</th>
+                  <th className="text-left py-3 pr-4 font-medium text-gray-700">Cutoff Date</th>
+                  <th className="text-left py-3 pr-4 font-medium text-gray-700">Est. Wait</th>
+                  <th className="text-left py-3 font-medium text-gray-700">Movement</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {(["eb1", "eb2", "eb3"] as const).map((cat) => (
+                  <>
+                    {(["other", "china", "india"] as const).map((country, countryIdx) => {
+                      const countryLabel = country === "other" ? "ROW" : country.charAt(0).toUpperCase() + country.slice(1);
+                      const priorityDate = country === "other" ? priorityDates[cat].allOther : priorityDates[cat][country];
+                      const wait = waitTimeEstimates[cat][country];
+                      const velocity = advancementRates[cat][country];
+                      const velocityData = getVelocityData(cat, country, "finalAction");
+                      const isCurrent = isPriorityDateCurrent(priorityDate);
+                      
+                      return (
+                        <tr key={`${cat}-${country}`} className={countryIdx === 0 ? "border-t-2 border-gray-200" : ""}>
+                          {countryIdx === 0 && (
+                            <td className="py-3 pr-4 font-semibold text-gray-900 align-top" rowSpan={3}>
+                              {cat.toUpperCase().replace("EB", "EB-")}
+                            </td>
+                          )}
+                          <td className="py-3 pr-4 text-gray-600">{countryLabel}</td>
+                          <td className={`py-3 pr-4 ${isCurrent ? "text-green-600 font-medium" : "text-gray-900"}`}>
+                            {priorityDate}
+                          </td>
+                          <td className={`py-3 pr-4 font-medium ${getWaitTimeColor(wait.years)}`}>
+                            {formatWaitTime(wait.years, wait.rangeMin, wait.rangeMax)}
+                          </td>
+                          <td className="py-3">
+                            <VelocitySparkline data={velocityData} velocity={velocity} currentIsCurrent={isCurrent} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Dates for Filing */}
-        <h3 className="text-base font-medium text-gray-900 mb-3 mt-8">
-          Dates for Filing
-        </h3>
-        <p className="text-sm text-gray-600 mb-4">
-          When your priority date is current here, you can file I-485 and get work/travel authorization while waiting for approval.
-        </p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">
-                  Category
-                </th>
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">
-                  All Other Countries
-                </th>
-                <th className="text-left py-3 pr-4 font-medium text-gray-700">
-                  China
-                </th>
-                <th className="text-left py-3 font-medium text-gray-700">
-                  India
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              <tr>
-                <td className="py-3 pr-4 font-medium text-gray-900">EB-1</td>
-                <td
-                  className={`py-3 pr-4 ${isPriorityDateCurrent(datesForFiling.eb1.allOther) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {datesForFiling.eb1.allOther}
-                </td>
-                <td
-                  className={`py-3 pr-4 ${isPriorityDateCurrent(datesForFiling.eb1.china) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {datesForFiling.eb1.china}
-                </td>
-                <td
-                  className={`py-3 ${isPriorityDateCurrent(datesForFiling.eb1.india) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {datesForFiling.eb1.india}
-                </td>
-              </tr>
-              <tr>
-                <td className="py-3 pr-4 font-medium text-gray-900">EB-2</td>
-                <td
-                  className={`py-3 pr-4 ${isPriorityDateCurrent(datesForFiling.eb2.allOther) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {datesForFiling.eb2.allOther}
-                </td>
-                <td
-                  className={`py-3 pr-4 ${isPriorityDateCurrent(datesForFiling.eb2.china) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {datesForFiling.eb2.china}
-                </td>
-                <td
-                  className={`py-3 ${isPriorityDateCurrent(datesForFiling.eb2.india) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {datesForFiling.eb2.india}
-                </td>
-              </tr>
-              <tr>
-                <td className="py-3 pr-4 font-medium text-gray-900">EB-3</td>
-                <td
-                  className={`py-3 pr-4 ${isPriorityDateCurrent(datesForFiling.eb3.allOther) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {datesForFiling.eb3.allOther}
-                </td>
-                <td
-                  className={`py-3 pr-4 ${isPriorityDateCurrent(datesForFiling.eb3.china) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {datesForFiling.eb3.china}
-                </td>
-                <td
-                  className={`py-3 ${isPriorityDateCurrent(datesForFiling.eb3.india) ? "text-green-600 font-medium" : "text-gray-900"}`}
-                >
-                  {datesForFiling.eb3.india}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div>
+          <h3 className="text-base font-medium text-gray-900 mb-3">Dates for Filing</h3>
+          <p className="text-sm text-gray-500 mb-4">When you can submit I-485 and get EAD/Advance Parole while waiting for approval.</p>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 pr-4 font-medium text-gray-700 w-16">Category</th>
+                  <th className="text-left py-3 pr-4 font-medium text-gray-700">Country</th>
+                  <th className="text-left py-3 pr-4 font-medium text-gray-700">Cutoff Date</th>
+                  <th className="text-left py-3 pr-4 font-medium text-gray-700">Est. Wait</th>
+                  <th className="text-left py-3 font-medium text-gray-700">Movement</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {(["eb1", "eb2", "eb3"] as const).map((cat) => (
+                  <>
+                    {(["other", "china", "india"] as const).map((country, countryIdx) => {
+                      const countryLabel = country === "other" ? "ROW" : country.charAt(0).toUpperCase() + country.slice(1);
+                      const filingDate = country === "other" ? datesForFiling[cat].allOther : datesForFiling[cat][country];
+                      // Use Filing Date velocity for Dates for Filing table
+                      const velocity = filingAdvancementRates[cat][country];
+                      const filingWait = calculateNewFilerWait(filingDate, velocity);
+                      const velocityData = getVelocityData(cat, country, "filing");
+                      const isCurrent = isPriorityDateCurrent(filingDate);
+                      
+                      return (
+                        <tr key={`filing-${cat}-${country}`} className={countryIdx === 0 ? "border-t-2 border-gray-200" : ""}>
+                          {countryIdx === 0 && (
+                            <td className="py-3 pr-4 font-semibold text-gray-900 align-top" rowSpan={3}>
+                              {cat.toUpperCase().replace("EB", "EB-")}
+                            </td>
+                          )}
+                          <td className="py-3 pr-4 text-gray-600">{countryLabel}</td>
+                          <td className={`py-3 pr-4 ${isCurrent ? "text-green-600 font-medium" : "text-gray-900"}`}>
+                            {filingDate}
+                          </td>
+                          <td className={`py-3 pr-4 font-medium ${getWaitTimeColor(filingWait.years)}`}>
+                            {formatWaitTime(filingWait.years, filingWait.rangeMin, filingWait.rangeMax)}
+                          </td>
+                          <td className="py-3">
+                            <VelocitySparkline data={velocityData} velocity={velocity} currentIsCurrent={isCurrent} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-        <p className="text-xs text-gray-500 mt-3">
-          USCIS authorizes I-485 filing based on these dates for employment-based categories. Filing early gets you EAD (work permit) and Advance Parole (travel document) while waiting for Final Action Date to become current.
-        </p>
       </section>
 
       {/* CTA */}
       <div className="border-t border-gray-200 pt-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <p className="text-gray-600">
-            See how these times affect your specific immigration path.
-          </p>
+          <p className="text-gray-600">See how these times affect your specific immigration path.</p>
           <Link
             href="/"
             className="flex-shrink-0 inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-brand-500 text-white font-medium hover:bg-brand-600 transition-colors"
           >
             See your timeline
-            <svg
-              className="ml-2 w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
+            <svg className="ml-2 w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </Link>
         </div>

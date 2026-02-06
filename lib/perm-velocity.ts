@@ -237,9 +237,14 @@ export interface HistoricalBulletinData {
 // Historical visa bulletin Final Action dates (from State Dept archives)
 // This data is used to calculate ACTUAL velocity dynamically
 // Format: { bulletinMonth: "Month Year", finalActionDate: "Mon YYYY" or "Current" }
-const HISTORICAL_BULLETIN_DATA: HistoricalBulletinData = {
+// EXPORTED for use in processing times page trends visualization
+// 
+// Data includes quarterly data points from 2022-2025 for better trend visualization
+// Source: https://travel.state.gov/content/travel/en/legal/visa-law0/visa-bulletin.html
+export const HISTORICAL_BULLETIN_DATA: HistoricalBulletinData = {
   eb1: {
     india: [
+      // Use yearly data for consistent velocity calculation
       { bulletinMonth: "January 2020", finalActionDate: "Current" },
       { bulletinMonth: "January 2021", finalActionDate: "Current" },
       { bulletinMonth: "January 2022", finalActionDate: "Jan 2021" },
@@ -248,12 +253,104 @@ const HISTORICAL_BULLETIN_DATA: HistoricalBulletinData = {
       { bulletinMonth: "January 2025", finalActionDate: "Feb 2023" },
     ],
     china: [
+      // Use yearly data for consistent velocity calculation
       { bulletinMonth: "January 2020", finalActionDate: "Current" },
       { bulletinMonth: "January 2021", finalActionDate: "Current" },
       { bulletinMonth: "January 2022", finalActionDate: "Nov 2020" },
       { bulletinMonth: "January 2023", finalActionDate: "Feb 2022" },
       { bulletinMonth: "January 2024", finalActionDate: "Jan 2022" },
       { bulletinMonth: "January 2025", finalActionDate: "Feb 2023" },
+    ],
+    other: [
+      // Use yearly data for consistent format (EB-1 ROW is always Current)
+      { bulletinMonth: "January 2020", finalActionDate: "Current" },
+      { bulletinMonth: "January 2021", finalActionDate: "Current" },
+      { bulletinMonth: "January 2022", finalActionDate: "Current" },
+      { bulletinMonth: "January 2023", finalActionDate: "Current" },
+      { bulletinMonth: "January 2024", finalActionDate: "Current" },
+      { bulletinMonth: "January 2025", finalActionDate: "Current" },
+    ],
+  },
+  eb2: {
+    india: [
+      // Use yearly data for consistent velocity calculation
+      { bulletinMonth: "January 2020", finalActionDate: "Apr 2009" },
+      { bulletinMonth: "January 2021", finalActionDate: "Jun 2009" },
+      { bulletinMonth: "January 2022", finalActionDate: "Apr 2010" },
+      { bulletinMonth: "January 2023", finalActionDate: "Aug 2011" },
+      { bulletinMonth: "January 2024", finalActionDate: "Jun 2012" },
+      { bulletinMonth: "January 2025", finalActionDate: "Jul 2013" },
+    ],
+    china: [
+      // Use yearly data for consistent velocity calculation
+      { bulletinMonth: "January 2020", finalActionDate: "Dec 2016" },
+      { bulletinMonth: "January 2021", finalActionDate: "May 2017" },
+      { bulletinMonth: "January 2022", finalActionDate: "Sep 2018" },
+      { bulletinMonth: "January 2023", finalActionDate: "Nov 2019" },
+      { bulletinMonth: "January 2024", finalActionDate: "Jul 2020" },
+      { bulletinMonth: "January 2025", finalActionDate: "Sep 2021" },
+    ],
+    other: [
+      // Use yearly data for more stable long-term average
+      { bulletinMonth: "January 2020", finalActionDate: "Current" },
+      { bulletinMonth: "January 2021", finalActionDate: "Current" },
+      { bulletinMonth: "January 2022", finalActionDate: "Current" },
+      { bulletinMonth: "January 2023", finalActionDate: "Current" },
+      { bulletinMonth: "January 2024", finalActionDate: "Nov 2023" },
+      { bulletinMonth: "January 2025", finalActionDate: "Apr 2024" },
+    ],
+  },
+  eb3: {
+    india: [
+      // Use yearly data for consistent velocity calculation
+      { bulletinMonth: "January 2020", finalActionDate: "Jan 2009" },
+      { bulletinMonth: "January 2021", finalActionDate: "Jun 2009" },
+      { bulletinMonth: "January 2022", finalActionDate: "Oct 2010" },
+      { bulletinMonth: "January 2023", finalActionDate: "Sep 2011" },
+      { bulletinMonth: "January 2024", finalActionDate: "Oct 2012" },
+      { bulletinMonth: "January 2025", finalActionDate: "Nov 2013" },
+    ],
+    china: [
+      // Use yearly data for consistent velocity calculation
+      { bulletinMonth: "January 2020", finalActionDate: "Jan 2017" },
+      { bulletinMonth: "January 2021", finalActionDate: "May 2018" },
+      { bulletinMonth: "January 2022", finalActionDate: "Mar 2019" },
+      { bulletinMonth: "January 2023", finalActionDate: "Aug 2019" },
+      { bulletinMonth: "January 2024", finalActionDate: "Mar 2020" },
+      { bulletinMonth: "January 2025", finalActionDate: "May 2021" },
+    ],
+    other: [
+      // Use yearly data for more stable long-term average
+      { bulletinMonth: "January 2020", finalActionDate: "Mar 2019" },
+      { bulletinMonth: "January 2021", finalActionDate: "Current" },
+      { bulletinMonth: "January 2022", finalActionDate: "Current" },
+      { bulletinMonth: "January 2023", finalActionDate: "Jan 2022" },
+      { bulletinMonth: "January 2024", finalActionDate: "Nov 2022" },
+      { bulletinMonth: "January 2025", finalActionDate: "Jun 2023" },
+    ],
+  },
+};
+
+// Historical Dates for Filing data (typically more current than Final Action)
+// These dates determine when you can FILE I-485, not when it will be approved
+// Historical Dates for Filing data - use yearly data for consistent velocity calculation
+export const HISTORICAL_FILING_DATES_DATA: HistoricalBulletinData = {
+  eb1: {
+    india: [
+      { bulletinMonth: "January 2020", finalActionDate: "Current" },
+      { bulletinMonth: "January 2021", finalActionDate: "Current" },
+      { bulletinMonth: "January 2022", finalActionDate: "Current" },
+      { bulletinMonth: "January 2023", finalActionDate: "Feb 2022" },
+      { bulletinMonth: "January 2024", finalActionDate: "Jun 2022" },
+      { bulletinMonth: "January 2025", finalActionDate: "Aug 2023" },
+    ],
+    china: [
+      { bulletinMonth: "January 2020", finalActionDate: "Current" },
+      { bulletinMonth: "January 2021", finalActionDate: "Current" },
+      { bulletinMonth: "January 2022", finalActionDate: "Current" },
+      { bulletinMonth: "January 2023", finalActionDate: "Feb 2022" },
+      { bulletinMonth: "January 2024", finalActionDate: "Jun 2022" },
+      { bulletinMonth: "January 2025", finalActionDate: "Aug 2023" },
     ],
     other: [
       { bulletinMonth: "January 2020", finalActionDate: "Current" },
@@ -266,54 +363,54 @@ const HISTORICAL_BULLETIN_DATA: HistoricalBulletinData = {
   },
   eb2: {
     india: [
-      { bulletinMonth: "January 2020", finalActionDate: "Apr 2009" },
-      { bulletinMonth: "January 2021", finalActionDate: "Jun 2009" },
-      { bulletinMonth: "January 2022", finalActionDate: "Apr 2010" },
-      { bulletinMonth: "January 2023", finalActionDate: "Aug 2011" },
-      { bulletinMonth: "January 2024", finalActionDate: "Jun 2012" },
-      { bulletinMonth: "January 2025", finalActionDate: "Jul 2013" },
+      { bulletinMonth: "January 2020", finalActionDate: "May 2009" },
+      { bulletinMonth: "January 2021", finalActionDate: "Nov 2009" },
+      { bulletinMonth: "January 2022", finalActionDate: "Jan 2011" },
+      { bulletinMonth: "January 2023", finalActionDate: "Apr 2012" },
+      { bulletinMonth: "January 2024", finalActionDate: "Apr 2013" },
+      { bulletinMonth: "January 2025", finalActionDate: "Dec 2013" },
     ],
     china: [
-      { bulletinMonth: "January 2020", finalActionDate: "Dec 2016" },
-      { bulletinMonth: "January 2021", finalActionDate: "May 2017" },
-      { bulletinMonth: "January 2022", finalActionDate: "Sep 2018" },
-      { bulletinMonth: "January 2023", finalActionDate: "Nov 2019" },
-      { bulletinMonth: "January 2024", finalActionDate: "Jul 2020" },
-      { bulletinMonth: "January 2025", finalActionDate: "Sep 2021" },
+      { bulletinMonth: "January 2020", finalActionDate: "Aug 2017" },
+      { bulletinMonth: "January 2021", finalActionDate: "Jun 2018" },
+      { bulletinMonth: "January 2022", finalActionDate: "Jul 2019" },
+      { bulletinMonth: "January 2023", finalActionDate: "Aug 2020" },
+      { bulletinMonth: "January 2024", finalActionDate: "Sep 2021" },
+      { bulletinMonth: "January 2025", finalActionDate: "Jan 2022" },
     ],
     other: [
       { bulletinMonth: "January 2020", finalActionDate: "Current" },
       { bulletinMonth: "January 2021", finalActionDate: "Current" },
       { bulletinMonth: "January 2022", finalActionDate: "Current" },
       { bulletinMonth: "January 2023", finalActionDate: "Current" },
-      { bulletinMonth: "January 2024", finalActionDate: "Nov 2023" },
-      { bulletinMonth: "January 2025", finalActionDate: "Apr 2024" },
+      { bulletinMonth: "January 2024", finalActionDate: "Current" },
+      { bulletinMonth: "January 2025", finalActionDate: "Oct 2024" },
     ],
   },
   eb3: {
     india: [
-      { bulletinMonth: "January 2020", finalActionDate: "Jan 2009" },
-      { bulletinMonth: "January 2021", finalActionDate: "Jun 2009" },
-      { bulletinMonth: "January 2022", finalActionDate: "Oct 2010" },
-      { bulletinMonth: "January 2023", finalActionDate: "Sep 2011" },
-      { bulletinMonth: "January 2024", finalActionDate: "Oct 2012" },
-      { bulletinMonth: "January 2025", finalActionDate: "Nov 2013" },
+      { bulletinMonth: "January 2020", finalActionDate: "Jun 2009" },
+      { bulletinMonth: "January 2021", finalActionDate: "Apr 2010" },
+      { bulletinMonth: "January 2022", finalActionDate: "Jun 2011" },
+      { bulletinMonth: "January 2023", finalActionDate: "Jul 2012" },
+      { bulletinMonth: "January 2024", finalActionDate: "Aug 2013" },
+      { bulletinMonth: "January 2025", finalActionDate: "Aug 2014" },
     ],
     china: [
-      { bulletinMonth: "January 2020", finalActionDate: "Jan 2017" },
-      { bulletinMonth: "January 2021", finalActionDate: "May 2018" },
-      { bulletinMonth: "January 2022", finalActionDate: "Mar 2019" },
-      { bulletinMonth: "January 2023", finalActionDate: "Aug 2019" },
-      { bulletinMonth: "January 2024", finalActionDate: "Mar 2020" },
-      { bulletinMonth: "January 2025", finalActionDate: "May 2021" },
+      { bulletinMonth: "January 2020", finalActionDate: "Jun 2018" },
+      { bulletinMonth: "January 2021", finalActionDate: "Jul 2019" },
+      { bulletinMonth: "January 2022", finalActionDate: "Aug 2020" },
+      { bulletinMonth: "January 2023", finalActionDate: "Sep 2021" },
+      { bulletinMonth: "January 2024", finalActionDate: "Sep 2021" },
+      { bulletinMonth: "January 2025", finalActionDate: "Jan 2022" },
     ],
     other: [
-      { bulletinMonth: "January 2020", finalActionDate: "Mar 2019" },
+      { bulletinMonth: "January 2020", finalActionDate: "Current" },
       { bulletinMonth: "January 2021", finalActionDate: "Current" },
       { bulletinMonth: "January 2022", finalActionDate: "Current" },
-      { bulletinMonth: "January 2023", finalActionDate: "Jan 2022" },
-      { bulletinMonth: "January 2024", finalActionDate: "Nov 2022" },
-      { bulletinMonth: "January 2025", finalActionDate: "Apr 2023" },
+      { bulletinMonth: "January 2023", finalActionDate: "Current" },
+      { bulletinMonth: "January 2024", finalActionDate: "Sep 2023" },
+      { bulletinMonth: "January 2025", finalActionDate: "Oct 2023" },
     ],
   },
 };
@@ -454,19 +551,66 @@ export function getAdvancementRates(): Record<EBCategory, Record<"india" | "chin
 }
 
 /**
+ * Get the dynamically calculated Filing Date advancement rate for a category/country
+ */
+function getFilingAdvancementRate(
+  category: EBCategory,
+  country: "india" | "china" | "other"
+): number {
+  const history = HISTORICAL_FILING_DATES_DATA[category][country];
+  return calculateHistoricalAdvancementRate(history);
+}
+
+// Cache for calculated filing advancement rates
+let cachedFilingAdvancementRates: Record<EBCategory, Record<"india" | "china" | "other", number>> | null = null;
+
+/**
+ * Get all Filing Date advancement rates (cached for performance)
+ * These are used for the "Dates for Filing" table to show when you can FILE I-485
+ */
+export function getFilingAdvancementRates(): Record<EBCategory, Record<"india" | "china" | "other", number>> {
+  if (cachedFilingAdvancementRates) return cachedFilingAdvancementRates;
+  
+  cachedFilingAdvancementRates = {
+    eb1: {
+      india: getFilingAdvancementRate("eb1", "india"),
+      china: getFilingAdvancementRate("eb1", "china"),
+      other: getFilingAdvancementRate("eb1", "other"),
+    },
+    eb2: {
+      india: getFilingAdvancementRate("eb2", "india"),
+      china: getFilingAdvancementRate("eb2", "china"),
+      other: getFilingAdvancementRate("eb2", "other"),
+    },
+    eb3: {
+      india: getFilingAdvancementRate("eb3", "india"),
+      china: getFilingAdvancementRate("eb3", "china"),
+      other: getFilingAdvancementRate("eb3", "other"),
+    },
+  };
+  
+  return cachedFilingAdvancementRates;
+}
+
+/**
  * Calculate the velocity ratio for a category/country combination
  * Uses dynamically calculated historical bulletin movement rates
+ * @param velocitySource - "finalAction" for Final Action Dates, "filing" for Dates for Filing
  */
 export function calculateVelocity(
   category: EBCategory,
-  countryOfBirth: CountryOfBirth
+  countryOfBirth: CountryOfBirth,
+  velocitySource: "finalAction" | "filing" = "finalAction"
 ): VelocityData {
   // Get dynamically calculated advancement rate from historical data
   const countryKey = (countryOfBirth === "india" || countryOfBirth === "china") 
     ? countryOfBirth 
     : "other";
   
-  const advancementRates = getAdvancementRates();
+  // Use the appropriate velocity data source
+  const advancementRates = velocitySource === "filing" 
+    ? getFilingAdvancementRates() 
+    : getAdvancementRates();
   const bulletinAdvancementMonthsPerYear = advancementRates[category][countryKey];
   
   // Calculate velocity ratio (12 months / actual advancement = how many years per year of backlog)
@@ -485,14 +629,15 @@ export function calculateVelocity(
     confidence = 0.6; // ROW can be unpredictable
   }
   
-  // Generate explanation based on advancement rate
+  // Generate explanation based on advancement rate (round for display)
+  const displayRate = Math.round(bulletinAdvancementMonthsPerYear * 10) / 10;
   let explanation: string;
   if (bulletinAdvancementMonthsPerYear <= 3) {
-    explanation = `Severe backlog: visa bulletin advances only ~${bulletinAdvancementMonthsPerYear} months/year. Each month behind = ~${velocityRatio.toFixed(0)} month wait.`;
+    explanation = `Severe backlog: visa bulletin advances only ~${displayRate} months/year. Each month behind = ~${velocityRatio.toFixed(0)} month wait.`;
   } else if (bulletinAdvancementMonthsPerYear <= 6) {
-    explanation = `Significant backlog: visa bulletin advances ~${bulletinAdvancementMonthsPerYear} months/year.`;
+    explanation = `Significant backlog: visa bulletin advances ~${displayRate} months/year.`;
   } else if (bulletinAdvancementMonthsPerYear < 12) {
-    explanation = `Moderate backlog: visa bulletin advances ~${bulletinAdvancementMonthsPerYear} months/year.`;
+    explanation = `Moderate backlog: visa bulletin advances ~${displayRate} months/year.`;
   } else {
     explanation = `Category is current or nearly current. No significant wait expected.`;
   }
@@ -509,12 +654,14 @@ export function calculateVelocity(
 /**
  * Calculate estimated wait time based on PERM velocity data
  * This replaces the simplistic formula in processing-times.ts
+ * @param velocitySource - "finalAction" for Final Action Dates, "filing" for Dates for Filing
  */
 export function calculateVelocityBasedWait(
   userPriorityDate: { month: number; year: number },
   visaBulletinCutoff: string,
   category: EBCategory,
-  countryOfBirth: CountryOfBirth
+  countryOfBirth: CountryOfBirth,
+  velocitySource: "finalAction" | "filing" = "finalAction"
 ): {
   estimatedMonths: number;
   confidence: number;
@@ -585,8 +732,8 @@ export function calculateVelocityBasedWait(
     (userDate.getFullYear() - bulletinDate.getFullYear()) * 12 +
     (userDate.getMonth() - bulletinDate.getMonth());
   
-  // Get velocity data (base calculations)
-  const velocityData = calculateVelocity(category, countryOfBirth);
+  // Get velocity data (base calculations) using the appropriate source
+  const velocityData = calculateVelocity(category, countryOfBirth, velocitySource);
   
   // Calculate estimated wait
   let estimatedMonths = Math.round(monthsBehind * velocityData.waitMultiplier);
@@ -612,16 +759,19 @@ export function calculateVelocityBasedWait(
   const years = Math.round(estimatedMonths / 12);
   let explanation: string;
   
+  // Round velocity for display to avoid floating-point precision issues
+  const displayRate = Math.round(velocityData.bulletinAdvancementMonthsPerYear * 10) / 10;
+  
   if (estimatedMonths <= 6) {
-    explanation = `Short wait expected. Bulletin advances ~${velocityData.bulletinAdvancementMonthsPerYear} months/year.`;
+    explanation = `Short wait expected. Bulletin advances ~${displayRate} months/year.`;
   } else if (estimatedMonths <= 24) {
-    explanation = `Moderate backlog: ~${monthsBehind} months behind cutoff. Bulletin advances ~${velocityData.bulletinAdvancementMonthsPerYear} mo/yr.`;
+    explanation = `Moderate backlog: ~${monthsBehind} months behind cutoff. Bulletin advances ~${displayRate} mo/yr.`;
   } else if (estimatedMonths <= 120) {
-    explanation = `Significant backlog: ~${Math.round(monthsBehind / 12)} years behind. At ~${velocityData.bulletinAdvancementMonthsPerYear} mo/yr advancement, expect ~${years} year wait.`;
+    explanation = `Significant backlog: ~${Math.round(monthsBehind / 12)} years behind. At ~${displayRate} mo/yr advancement, expect ~${years} year wait.`;
   } else if (isCapped) {
     explanation = `Extreme backlog: ${Math.round(monthsBehind / 12)}+ years behind cutoff. Wait time is effectively indefinite (50+ years). Consider alternative paths.`;
   } else {
-    explanation = `Severe backlog: ~${Math.round(monthsBehind / 12)} years behind. Bulletin advances ~${velocityData.bulletinAdvancementMonthsPerYear} mo/yr. ~${years}+ year wait.`;
+    explanation = `Severe backlog: ~${Math.round(monthsBehind / 12)} years behind. Bulletin advances ~${displayRate} mo/yr. ~${years}+ year wait.`;
   }
   
   // Update velocity data with the correct explanation

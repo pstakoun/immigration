@@ -753,16 +753,31 @@ export default function TimelineChart({
                       let pdTop = multiTrack ? TRACK_HEIGHT + TRACK_GAP : 0;
 
                       // Color based on wait length (or gray if completed)
+                      // Thresholds match processing times page for consistency
                       const waitYears = pdDuration;
-                      let bgColor = isApproved ? "bg-gray-400" : "bg-orange-500";
-                      let borderColor = isApproved ? "border-gray-500" : "border-orange-600";
+                      let bgColor = isApproved ? "bg-gray-400" : "bg-amber-500";
+                      let borderColor = isApproved ? "border-gray-500" : "border-amber-600";
                       if (!isApproved) {
-                        if (waitYears >= 10) {
+                        if (waitYears >= 15) {
+                          // Extreme backlog (15+ years) - EB-2 India
                           bgColor = "bg-red-600";
                           borderColor = "border-red-700";
-                        } else if (waitYears >= 5) {
-                          bgColor = "bg-red-500";
-                          borderColor = "border-red-600";
+                        } else if (waitYears >= 8) {
+                          // Very long wait (8-15 years) - EB-3 India
+                          bgColor = "bg-orange-600";
+                          borderColor = "border-orange-700";
+                        } else if (waitYears >= 4) {
+                          // Significant wait (4-8 years) - EB-2/EB-3 China
+                          bgColor = "bg-orange-500";
+                          borderColor = "border-orange-600";
+                        } else if (waitYears >= 2) {
+                          // Moderate wait (2-4 years) - EB-1, ROW categories
+                          bgColor = "bg-amber-500";
+                          borderColor = "border-amber-600";
+                        } else {
+                          // Short wait (<2 years) - nearly current
+                          bgColor = "bg-yellow-500";
+                          borderColor = "border-yellow-600";
                         }
                       }
 
