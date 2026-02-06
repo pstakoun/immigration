@@ -41,6 +41,7 @@ function getVelocityColor(monthsPerYear: number): string {
 
 /**
  * VelocitySparkline - Displays velocity as colored text
+ * Shows actual movement rate in mo/yr (12 mo/yr for Current categories)
  */
 export function VelocitySparkline({ 
   data, 
@@ -53,18 +54,17 @@ export function VelocitySparkline({
   currentIsCurrent?: boolean;
   className?: string;
 }) {
-  // Calculate velocity from data if not provided
-  const displayVelocity = velocity || (data.length > 0 
-    ? data.slice(-3).reduce((sum, d) => sum + d.monthsPerYear, 0) / Math.min(3, data.length)
-    : 0);
-  
-  // Current - no backlog (use green to match wait time "Current" color)
-  if (currentIsCurrent || displayVelocity >= 12) {
-    return (
-      <span className={`text-sm font-medium text-green-600 ${className}`}>
-        Current
-      </span>
-    );
+  // For Current categories, show 12 mo/yr (keeping pace with time = no backlog growth)
+  // Otherwise use provided velocity or calculate from data
+  let displayVelocity: number;
+  if (currentIsCurrent) {
+    displayVelocity = 12;
+  } else if (velocity) {
+    displayVelocity = velocity;
+  } else if (data.length > 0) {
+    displayVelocity = data.slice(-3).reduce((sum, d) => sum + d.monthsPerYear, 0) / Math.min(3, data.length);
+  } else {
+    displayVelocity = 0;
   }
   
   const color = getVelocityColor(displayVelocity);
