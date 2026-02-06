@@ -28,15 +28,11 @@ export function parseVisaBulletinDate(dateStr: string): number | null {
 
 /**
  * Get text color based on velocity (months advanced per year)
- * Uses neutral gray tones - purely informational, no judgment implied
+ * Uses light neutral gray tones to match Country column styling
  */
-function getVelocityColor(monthsPerYear: number): string {
-  // Neutral gray - darker for faster (more visible), lighter for slower
-  if (monthsPerYear >= 11) return "text-gray-700";    // Fast: 11-12 mo/yr
-  if (monthsPerYear >= 10) return "text-gray-600";    // Good: 10 mo/yr
-  if (monthsPerYear >= 9) return "text-gray-600";     // Moderate: 9 mo/yr
-  if (monthsPerYear >= 6) return "text-gray-500";     // Slow: 6-8 mo/yr
-  return "text-gray-500";                              // Very slow: <6 mo/yr
+function getVelocityColor(): string {
+  // Single consistent gray tone matching Country column (text-gray-600)
+  return "text-gray-600";
 }
 
 /**
@@ -67,11 +63,11 @@ export function VelocitySparkline({
     displayVelocity = 0;
   }
   
-  const color = getVelocityColor(displayVelocity);
+  const color = getVelocityColor();
   const rounded = Math.round(displayVelocity);
   
   return (
-    <span className={`text-sm font-medium ${color} ${className}`}>
+    <span className={`text-sm ${color} ${className}`}>
       {rounded} mo/yr
     </span>
   );
