@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DynamicData } from "@/lib/dynamic-data";
 import { calculateNewFilerWait } from "@/lib/processing-times";
 import { CountryTabs, TimelineBar, TimelineBarSkeleton, useCountrySelection } from "@/components/GuideComponents";
+import JsonLd from "@/components/JsonLd";
 
 export default function EB2NIWGuide() {
   const { selectedCountry, setCountry, isLoaded } = useCountrySelection("other");
@@ -60,6 +61,18 @@ export default function EB2NIWGuide() {
   };
 
   return (
+    <>
+      <JsonLd
+        data={{
+          "@type": "Article",
+          headline: "EB-2 NIW (National Interest Waiver): Complete Guide",
+          description:
+            "How to self-petition for a US green card through EB-2 National Interest Waiver without employer sponsorship.",
+          url: "https://stateside.app/guides/eb2-niw",
+          publisher: { "@type": "Organization", name: "Stateside", url: "https://stateside.app" },
+          mainEntityOfPage: "https://stateside.app/guides/eb2-niw",
+        }}
+      />
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
       <Link href="/guides" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors">
         <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -293,5 +306,6 @@ export default function EB2NIWGuide() {
         </div>
       </article>
     </div>
+    </>
   );
 }

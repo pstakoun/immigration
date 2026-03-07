@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DynamicData } from "@/lib/dynamic-data";
 import { calculateNewFilerWait } from "@/lib/processing-times";
 import { CountryTabs, TimelineBar, TimelineBarSkeleton, LiveTime, useCountrySelection } from "@/components/GuideComponents";
+import JsonLd from "@/components/JsonLd";
 
 export default function H1BToGreenCardGuide() {
   const { selectedCountry, setCountry, isLoaded } = useCountrySelection("other");
@@ -71,6 +72,18 @@ export default function H1BToGreenCardGuide() {
   };
 
   return (
+    <>
+      <JsonLd
+        data={{
+          "@type": "Article",
+          headline: "H-1B to Green Card: Complete Timeline Guide",
+          description:
+            "Step-by-step guide for H-1B visa holders to get a US green card through employer sponsorship, including PERM, I-140, and I-485 timelines.",
+          url: "https://stateside.app/guides/h1b-to-green-card",
+          publisher: { "@type": "Organization", name: "Stateside", url: "https://stateside.app" },
+          mainEntityOfPage: "https://stateside.app/guides/h1b-to-green-card",
+        }}
+      />
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
       <Link href="/guides" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors">
         <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -312,5 +325,6 @@ export default function H1BToGreenCardGuide() {
         </div>
       </article>
     </div>
+    </>
   );
 }
