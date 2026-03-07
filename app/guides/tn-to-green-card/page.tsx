@@ -277,6 +277,28 @@ export default function TNToGreenCardGuide() {
             </p>
           </section>
 
+          <section className="pt-6 border-t border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Related guides</h2>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/guides/h1b-to-green-card" className="text-brand-600 hover:text-brand-700">H-1B to Green Card</Link>
+                <span className="text-gray-500"> — the same PERM-based process, with dual intent advantages</span>
+              </li>
+              <li>
+                <Link href="/guides/perm-process" className="text-brand-600 hover:text-brand-700">PERM Process Deep-Dive</Link>
+                <span className="text-gray-500"> — detailed breakdown of labor certification</span>
+              </li>
+              <li>
+                <Link href="/guides/visa-bulletin-explained" className="text-brand-600 hover:text-brand-700">Visa Bulletin Explained</Link>
+                <span className="text-gray-500"> — understand priority dates and your wait time</span>
+              </li>
+              <li>
+                <Link href="/guides/eb2-niw" className="text-brand-600 hover:text-brand-700">EB-2 NIW</Link>
+                <span className="text-gray-500"> — self-petition option you can pursue in parallel</span>
+              </li>
+            </ul>
+          </section>
+
           <section className="pt-6 mt-6 border-t border-gray-200">
             <p className="text-gray-600 mb-4">Build a timeline based on your situation.</p>
             <Link

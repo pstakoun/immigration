@@ -101,6 +101,30 @@ const guides: GuideData[] = [
     ],
   },
   {
+    slug: "l1-to-green-card",
+    title: "L-1 to Green Card",
+    subtitle: "Intracompany transferees — EB-1C & PERM",
+    category: "eb1",
+    preWaitSteps: [
+      { label: "I-140", months: 0.5, color: "emerald" },
+    ],
+    postWaitSteps: [
+      { label: "I-485", months: 18, color: "amber" },
+    ],
+  },
+  {
+    slug: "o1-visa-guide",
+    title: "O-1 Visa Guide",
+    subtitle: "Extraordinary ability — EB-1A & NIW paths",
+    category: "eb1",
+    preWaitSteps: [
+      { label: "I-140", months: 0.5, color: "emerald" },
+    ],
+    postWaitSteps: [
+      { label: "I-485", months: 18, color: "amber" },
+    ],
+  },
+  {
     slug: "eb2-niw",
     title: "EB-2 NIW",
     subtitle: "Self-petition, no employer needed",
@@ -111,6 +135,14 @@ const guides: GuideData[] = [
     postWaitSteps: [
       { label: "I-485", months: 18, color: "amber" },
     ],
+  },
+  {
+    slug: "visa-bulletin-explained",
+    title: "Visa Bulletin Explained",
+    subtitle: "Priority dates, categories & how to read it",
+    category: "eb2",
+    preWaitSteps: [],
+    postWaitSteps: [], // Reference guide, no timeline
   },
   {
     slug: "perm-process",
@@ -234,17 +266,19 @@ export default function GuidesPage() {
                   </h2>
                   <p className="text-sm text-gray-500">{guide.subtitle}</p>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <div className="text-xl font-semibold text-gray-900">
-                    {formatTotalTime(guide.totalMonths)}
+                {guide.steps.length > 0 && (
+                  <div className="text-right flex-shrink-0">
+                    <div className="text-xl font-semibold text-gray-900">
+                      {formatTotalTime(guide.totalMonths)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      total
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    total
-                  </div>
-                </div>
+                )}
               </div>
               
-              <GuideTimeline steps={guide.steps} />
+              {guide.steps.length > 0 && <GuideTimeline steps={guide.steps} />}
             </Link>
           ))}
         </div>

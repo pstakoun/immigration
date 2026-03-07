@@ -116,8 +116,10 @@ export default function H1BToGreenCardGuide() {
           <p>
             The employer-sponsored green card has three steps: PERM labor certification, 
             I-140 petition, and I-485 adjustment of status. Your <strong className="text-gray-900">priority date</strong> is 
-            when DOL receives your PERM application. This date determines your place in the 
-            visa queue.
+            when DOL receives your PERM application. This date determines your place in the{" "}
+            <Link href="/guides/visa-bulletin-explained" className="text-brand-600 hover:text-brand-700">
+              visa bulletin queue
+            </Link>.
           </p>
 
           <section id="perm" className="pt-6 border-t border-gray-100">
@@ -212,7 +214,11 @@ export default function H1BToGreenCardGuide() {
               <p className="text-sm text-gray-600">
                 <strong className="text-gray-900">While waiting:</strong> Your H-1B 
                 can be extended past 6 years. You can change jobs and keep your priority 
-                date. Some people file EB-1 or NIW petitions in parallel.
+                date. Some people file{" "}
+                <Link href="/guides/o1-visa-guide" className="text-brand-600 hover:text-brand-700">EB-1</Link>{" "}
+                or{" "}
+                <Link href="/guides/eb2-niw" className="text-brand-600 hover:text-brand-700">NIW</Link>{" "}
+                petitions in parallel.
               </p>
             </section>
           )}
@@ -304,6 +310,28 @@ export default function H1BToGreenCardGuide() {
                   has been pending for 180 days, you can switch employers if the new 
                   job is similar to the original.
                 </span>
+              </li>
+            </ul>
+          </section>
+
+          <section className="pt-6 border-t border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Related guides</h2>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/guides/perm-process" className="text-brand-600 hover:text-brand-700">PERM Process Deep-Dive</Link>
+                <span className="text-gray-500"> — detailed breakdown of the labor certification step</span>
+              </li>
+              <li>
+                <Link href="/guides/visa-bulletin-explained" className="text-brand-600 hover:text-brand-700">Visa Bulletin Explained</Link>
+                <span className="text-gray-500"> — how to read priority dates and understand your wait</span>
+              </li>
+              <li>
+                <Link href="/guides/eb2-niw" className="text-brand-600 hover:text-brand-700">EB-2 NIW</Link>
+                <span className="text-gray-500"> — self-petition option to file in parallel</span>
+              </li>
+              <li>
+                <Link href="/guides/o1-visa-guide" className="text-brand-600 hover:text-brand-700">O-1 Visa Guide</Link>
+                <span className="text-gray-500"> — extraordinary ability path (no PERM needed)</span>
               </li>
             </ul>
           </section>

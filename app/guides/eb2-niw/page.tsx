@@ -289,6 +289,24 @@ export default function EB2NIWGuide() {
             </p>
           </section>
 
+          <section className="pt-6 border-t border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Related guides</h2>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/guides/o1-visa-guide" className="text-brand-600 hover:text-brand-700">O-1 Visa Guide</Link>
+                <span className="text-gray-500"> — extraordinary ability visa with overlapping evidence</span>
+              </li>
+              <li>
+                <Link href="/guides/h1b-to-green-card" className="text-brand-600 hover:text-brand-700">H-1B to Green Card</Link>
+                <span className="text-gray-500"> — employer-sponsored PERM path (run in parallel with NIW)</span>
+              </li>
+              <li>
+                <Link href="/guides/visa-bulletin-explained" className="text-brand-600 hover:text-brand-700">Visa Bulletin Explained</Link>
+                <span className="text-gray-500"> — NIW uses the EB-2 queue; understand your wait</span>
+              </li>
+            </ul>
+          </section>
+
           <section className="pt-6 mt-6 border-t border-gray-200">
             <p className="text-gray-600 mb-4">
               Compare NIW to employer-sponsored routes for your situation.

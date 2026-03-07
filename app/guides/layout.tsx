@@ -5,7 +5,7 @@ import SiteFooter from "@/components/SiteFooter";
 export const metadata: Metadata = {
   title: "Immigration Guides",
   description:
-    "Practical guides for US immigration pathways including H-1B to green card, TN visa, EB-2 NIW, and PERM labor certification.",
+    "Practical guides for US immigration pathways including H-1B, L-1, O-1, and TN visa to green card, EB-2 NIW, PERM labor certification, and visa bulletin priority dates.",
 };
 
 export default function GuidesLayout({

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
+import JsonLd from "@/components/JsonLd";
 import TimelineChart from "@/components/TimelineChart";
 import MobileTimelineView from "@/components/MobileTimelineView";
 import PathDetail from "@/components/PathDetail";
@@ -576,6 +577,120 @@ export default function Home() {
             <PathDetail nodeId={selectedNode} onClose={() => setSelectedNode(null)} />
           </>
         )}
+      </div>
+
+      {/* FAQ Section — targets featured snippets */}
+      <JsonLd
+        data={{
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "How long does it take to get a green card from H-1B?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "For most countries, the H-1B to green card process takes about 3-4 years: ~2 years for PERM labor certification, 15 days for I-140 (premium processing), and 10-18 months for I-485 adjustment of status. For Indian nationals, add years of priority date wait due to visa backlogs.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "What is a priority date for immigration?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Your priority date is your place in line for a green card. For employer-sponsored cases, it's the date the DOL receives your PERM application. For self-petitions (EB-1A, NIW), it's when USCIS receives your I-140. The visa bulletin shows which priority dates can currently file I-485.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Can I self-sponsor my own green card?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Yes, through EB-2 National Interest Waiver (NIW) or EB-1A extraordinary ability. Both skip the PERM labor certification and don't require an employer sponsor. NIW requires a master's degree (or bachelor's + 5 years experience) and proof your work benefits the US.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "What is the fastest way to get a US green card through employment?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "EB-1A (extraordinary ability) and EB-1C (multinational manager via L-1A) are the fastest employment-based paths — no PERM required, and EB-1 priority dates are usually current. EB-2 NIW is also fast since it skips PERM. For most countries, these can be completed in 1-2 years.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "How do I read the visa bulletin?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "The visa bulletin shows two charts: Final Action Dates and Dates for Filing. Find your employment category (EB-1, EB-2, EB-3) and country of birth. If it shows 'C' (Current), you can file immediately. If it shows a date, your priority date must be before that date to proceed.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "What is the difference between EB-2 and EB-3?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "EB-2 requires a master's degree or bachelor's plus 5 years of progressive experience. EB-3 requires a bachelor's degree. Both go through the same PERM process. EB-2 historically has shorter backlogs, but sometimes EB-3 moves faster — you can downgrade from EB-2 to EB-3 and keep your priority date.",
+              },
+            },
+          ],
+        }}
+      />
+      <div className="border-t border-gray-200 bg-gray-50">
+        <div className="max-w-4xl mx-auto px-4 md:px-6 py-10">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Frequently Asked Questions</h2>
+          <div className="space-y-5">
+            <div>
+              <h3 className="font-medium text-gray-900 mb-1">How long does it take to get a green card from H-1B?</h3>
+              <p className="text-sm text-gray-600">
+                For most countries, about 3-4 years: ~2 years for PERM, 15 days for I-140 (premium), and 10-18 months 
+                for I-485. Indian nationals face additional years of{" "}
+                <Link href="/guides/visa-bulletin-explained" className="text-brand-600 hover:text-brand-700">priority date wait</Link>.{" "}
+                <Link href="/guides/h1b-to-green-card" className="text-brand-600 hover:text-brand-700">Read the full guide →</Link>
+              </p>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900 mb-1">What is a priority date for immigration?</h3>
+              <p className="text-sm text-gray-600">
+                Your place in line for a green card. For PERM-based cases, it&apos;s when DOL receives your application. 
+                For self-petitions (EB-1A, NIW), it&apos;s when USCIS receives your I-140.{" "}
+                <Link href="/guides/visa-bulletin-explained" className="text-brand-600 hover:text-brand-700">How the visa bulletin works →</Link>
+              </p>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900 mb-1">Can I self-sponsor my own green card?</h3>
+              <p className="text-sm text-gray-600">
+                Yes — through{" "}
+                <Link href="/guides/eb2-niw" className="text-brand-600 hover:text-brand-700">EB-2 NIW</Link> or{" "}
+                <Link href="/guides/o1-visa-guide" className="text-brand-600 hover:text-brand-700">EB-1A extraordinary ability</Link>. 
+                Both skip PERM and don&apos;t require an employer sponsor.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900 mb-1">What is the fastest employment-based green card path?</h3>
+              <p className="text-sm text-gray-600">
+                <Link href="/guides/o1-visa-guide" className="text-brand-600 hover:text-brand-700">EB-1A</Link> and{" "}
+                <Link href="/guides/l1-to-green-card" className="text-brand-600 hover:text-brand-700">EB-1C (via L-1A)</Link>{" "}
+                are fastest — no PERM, and EB-1 dates are usually current. Can be done in 1-2 years for most countries.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900 mb-1">How do I read the visa bulletin?</h3>
+              <p className="text-sm text-gray-600">
+                Find your category (EB-1/2/3) and country of birth. &quot;C&quot; means current — file immediately. 
+                A date means your priority date must be earlier to proceed.{" "}
+                <Link href="/guides/visa-bulletin-explained" className="text-brand-600 hover:text-brand-700">Full explanation →</Link>
+              </p>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900 mb-1">What is the difference between EB-2 and EB-3?</h3>
+              <p className="text-sm text-gray-600">
+                EB-2 needs a master&apos;s (or bachelor&apos;s + 5 years experience). EB-3 needs a bachelor&apos;s. 
+                Same PERM process. You can downgrade from EB-2 to EB-3 and keep your priority date if EB-3 is moving faster.{" "}
+                <Link href="/guides/h1b-to-green-card" className="text-brand-600 hover:text-brand-700">Learn more →</Link>
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Screen reader only - detailed description for accessibility and AI crawlers */}
