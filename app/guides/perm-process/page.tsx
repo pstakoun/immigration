@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import JsonLd from "@/components/JsonLd";
 
 function TimelineBar({ steps }: { steps: { label: string; months: number; color: string }[] }) {
   const totalMonths = steps.reduce((sum, s) => sum + s.months, 0);
@@ -90,6 +91,18 @@ export default function PERMProcessGuide() {
   };
 
   return (
+    <>
+      <JsonLd
+        data={{
+          "@type": "Article",
+          headline: "PERM Labor Certification: Complete Process Guide",
+          description:
+            "Deep-dive into the PERM labor certification process for US employment-based green cards, including PWD, recruitment, and DOL review timelines.",
+          url: "https://stateside.app/guides/perm-process",
+          publisher: { "@type": "Organization", name: "Stateside", url: "https://stateside.app" },
+          mainEntityOfPage: "https://stateside.app/guides/perm-process",
+        }}
+      />
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
       <Link href="/guides" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors">
         <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -337,5 +350,6 @@ export default function PERMProcessGuide() {
         </div>
       </article>
     </div>
+    </>
   );
 }
