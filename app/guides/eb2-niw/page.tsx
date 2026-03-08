@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DynamicData } from "@/lib/dynamic-data";
 import { calculateNewFilerWait } from "@/lib/processing-times";
 import { CountryTabs, TimelineBar, TimelineBarSkeleton, useCountrySelection } from "@/components/GuideComponents";
+import JsonLd from "@/components/JsonLd";
 
 export default function EB2NIWGuide() {
   const { selectedCountry, setCountry, isLoaded } = useCountrySelection("other");
@@ -60,6 +61,18 @@ export default function EB2NIWGuide() {
   };
 
   return (
+    <>
+      <JsonLd
+        data={{
+          "@type": "Article",
+          headline: "EB-2 NIW (National Interest Waiver): Complete Guide",
+          description:
+            "How to self-petition for a US green card through EB-2 National Interest Waiver without employer sponsorship.",
+          url: "https://stateside.app/guides/eb2-niw",
+          publisher: { "@type": "Organization", name: "Stateside", url: "https://stateside.app" },
+          mainEntityOfPage: "https://stateside.app/guides/eb2-niw",
+        }}
+      />
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
       <Link href="/guides" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors">
         <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -276,6 +289,24 @@ export default function EB2NIWGuide() {
             </p>
           </section>
 
+          <section className="pt-6 border-t border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Related guides</h2>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/guides/o1-visa-guide" className="text-brand-600 hover:text-brand-700">O-1 Visa Guide</Link>
+                <span className="text-gray-500"> — extraordinary ability visa with overlapping evidence</span>
+              </li>
+              <li>
+                <Link href="/guides/h1b-to-green-card" className="text-brand-600 hover:text-brand-700">H-1B to Green Card</Link>
+                <span className="text-gray-500"> — employer-sponsored PERM path (run in parallel with NIW)</span>
+              </li>
+              <li>
+                <Link href="/guides/visa-bulletin-explained" className="text-brand-600 hover:text-brand-700">Visa Bulletin Explained</Link>
+                <span className="text-gray-500"> — NIW uses the EB-2 queue; understand your wait</span>
+              </li>
+            </ul>
+          </section>
+
           <section className="pt-6 mt-6 border-t border-gray-200">
             <p className="text-gray-600 mb-4">
               Compare NIW to employer-sponsored routes for your situation.
@@ -293,5 +324,6 @@ export default function EB2NIWGuide() {
         </div>
       </article>
     </div>
+    </>
   );
 }

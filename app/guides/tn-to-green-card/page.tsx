@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DynamicData } from "@/lib/dynamic-data";
 import { calculateNewFilerWait } from "@/lib/processing-times";
 import { CountryTabs, TimelineBar, TimelineBarSkeleton, useCountrySelection } from "@/components/GuideComponents";
+import JsonLd from "@/components/JsonLd";
 
 export default function TNToGreenCardGuide() {
   const { selectedCountry, setCountry, isLoaded } = useCountrySelection("other");
@@ -66,6 +67,18 @@ export default function TNToGreenCardGuide() {
   };
 
   return (
+    <>
+      <JsonLd
+        data={{
+          "@type": "Article",
+          headline: "TN Visa to Green Card: Complete Guide",
+          description:
+            "Step-by-step guide for Canadian and Mexican TN visa holders to get a US green card through employer sponsorship.",
+          url: "https://stateside.app/guides/tn-to-green-card",
+          publisher: { "@type": "Organization", name: "Stateside", url: "https://stateside.app" },
+          mainEntityOfPage: "https://stateside.app/guides/tn-to-green-card",
+        }}
+      />
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
       <Link href="/guides" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors">
         <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -264,6 +277,28 @@ export default function TNToGreenCardGuide() {
             </p>
           </section>
 
+          <section className="pt-6 border-t border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Related guides</h2>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/guides/h1b-to-green-card" className="text-brand-600 hover:text-brand-700">H-1B to Green Card</Link>
+                <span className="text-gray-500"> — the same PERM-based process, with dual intent advantages</span>
+              </li>
+              <li>
+                <Link href="/guides/perm-process" className="text-brand-600 hover:text-brand-700">PERM Process Deep-Dive</Link>
+                <span className="text-gray-500"> — detailed breakdown of labor certification</span>
+              </li>
+              <li>
+                <Link href="/guides/visa-bulletin-explained" className="text-brand-600 hover:text-brand-700">Visa Bulletin Explained</Link>
+                <span className="text-gray-500"> — understand priority dates and your wait time</span>
+              </li>
+              <li>
+                <Link href="/guides/eb2-niw" className="text-brand-600 hover:text-brand-700">EB-2 NIW</Link>
+                <span className="text-gray-500"> — self-petition option you can pursue in parallel</span>
+              </li>
+            </ul>
+          </section>
+
           <section className="pt-6 mt-6 border-t border-gray-200">
             <p className="text-gray-600 mb-4">Build a timeline based on your situation.</p>
             <Link
@@ -279,5 +314,6 @@ export default function TNToGreenCardGuide() {
         </div>
       </article>
     </div>
+    </>
   );
 }
