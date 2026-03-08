@@ -215,7 +215,7 @@ export default function H1BToGreenCardGuide() {
                 <strong className="text-gray-900">While waiting:</strong> Your H-1B 
                 can be extended past 6 years. You can change jobs and keep your priority 
                 date. Some people file{" "}
-                <Link href="/guides/o1-visa-guide" className="text-brand-600 hover:text-brand-700">EB-1</Link>{" "}
+                <Link href="/guides/o1-visa-guide" className="text-brand-600 hover:text-brand-700">EB-1A</Link>{" "}
                 or{" "}
                 <Link href="/guides/eb2-niw" className="text-brand-600 hover:text-brand-700">NIW</Link>{" "}
                 petitions in parallel.
