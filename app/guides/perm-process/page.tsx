@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { LawyerCTA } from "@/components/LawyerCTA";
 
 function TimelineBar({ steps }: { steps: { label: string; months: number; color: string }[] }) {
   const totalMonths = steps.reduce((sum, s) => sum + s.months, 0);
@@ -335,6 +336,7 @@ export default function PERMProcessGuide() {
             </div>
           </section>
         </div>
+        <LawyerCTA visaType="PERM" />
       </article>
     </div>
   );

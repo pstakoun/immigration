@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { LawyerCTA } from "@/components/LawyerCTA";
 import { DynamicData } from "@/lib/dynamic-data";
 import { calculateNewFilerWait } from "@/lib/processing-times";
 import { CountryTabs, TimelineBar, TimelineBarSkeleton, useCountrySelection } from "@/components/GuideComponents";
@@ -277,6 +278,7 @@ export default function TNToGreenCardGuide() {
             </Link>
           </section>
         </div>
+        <LawyerCTA visaType="TN" />
       </article>
     </div>
   );

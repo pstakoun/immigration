@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { LawyerCTA } from "@/components/LawyerCTA";
 import { DynamicData } from "@/lib/dynamic-data";
 import { calculateNewFilerWait } from "@/lib/processing-times";
 import { CountryTabs, TimelineBar, TimelineBarSkeleton, LiveTime, useCountrySelection } from "@/components/GuideComponents";
@@ -310,6 +311,7 @@ export default function H1BToGreenCardGuide() {
             </Link>
           </section>
         </div>
+        <LawyerCTA visaType="H-1B" />
       </article>
     </div>
   );
